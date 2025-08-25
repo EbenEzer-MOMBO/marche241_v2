@@ -1,14 +1,12 @@
 import MainLayout from '@/components/MainLayout';
 import HeroSection from '@/components/HeroSection';
-import CategoriesSection from '@/components/CategoriesSection';
-import FeaturedProducts from '@/components/FeaturedProducts';
+import TrendingByCategory from '@/components/TrendingByCategory';
 
 export default function Home() {
   return (
     <MainLayout>
       <HeroSection />
-      <CategoriesSection />
-      <FeaturedProducts />
+      <TrendingByCategory />
     </MainLayout>
   );
 }

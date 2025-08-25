@@ -84,34 +84,7 @@ export default function Header({ onMenuClick, onCartClick, cartItemsCount = 0 }:
             </Link>
           </div>
 
-          {/* Navigation desktop */}
-          <nav className="hidden lg:flex space-x-8">
-            <Link
-              href="/"
-              className="text-primary hover:text-secondary transition-colors duration-200"
-            >
-              Accueil
-            </Link>
-            <Link
-              href="/produits"
-              className="text-primary hover:text-secondary transition-colors duration-200"
-            >
-              Produits
-            </Link>
-            <Link
-              href="/categories"
-              className="text-primary hover:text-secondary transition-colors duration-200"
-            >
-              Catégories
-            </Link>
-            <Link
-              href="/contact"
-              className="text-primary hover:text-secondary transition-colors duration-200"
-            >
-              Contact
-            </Link>
-          </nav>
-
+          
           {/* Actions à droite */}
           <div className="flex items-center space-x-3">
             <button

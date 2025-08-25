@@ -4,6 +4,7 @@ import { ReactNode, useState } from 'react';
 import Header from './Header';
 import SidebarMenu from './SidebarMenu';
 import CartSidebar from './CartSidebar';
+import FloatingCartButton from './FloatingCartButton';
 import Footer from './Footer';
 
 interface MainLayoutProps {
@@ -38,6 +39,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
       <div className="lg:ml-64 transition-all duration-300">
         <Footer />
       </div>
+
+      {/* Bouton flottant du panier sur mobile */}
+      <FloatingCartButton onCartClick={toggleCart} />
     </div>
   );
 }

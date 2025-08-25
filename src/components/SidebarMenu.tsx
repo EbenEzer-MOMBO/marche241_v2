@@ -57,7 +57,7 @@ export default function SidebarMenu({ isOpen = true, onClose }: SidebarMenuProps
       {/* Overlay pour mobile/tablet */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={onClose}
         />
       )}
@@ -135,7 +135,7 @@ export default function SidebarMenu({ isOpen = true, onClose }: SidebarMenuProps
         </div>
 
         {/* Section informations */}
-        <div className="mt-8 pt-6 border-t border-accent/20">
+        {/*<div className="mt-8 pt-6 border-t border-accent/20">
           <h3 className="text-sm font-semibold text-primary mb-3">
             Informations
           </h3>
@@ -169,30 +169,8 @@ export default function SidebarMenu({ isOpen = true, onClose }: SidebarMenuProps
               <span>Retours</span>
             </Link>
           </div>
-        </div>
+        </div>*/}
 
-        {/* Section compte */}
-        <div className="mt-8 pt-6 border-t border-accent/20 mb-6">
-          <h3 className="text-sm font-semibold text-primary mb-3">
-            Mon Compte
-          </h3>
-          <div className="space-y-2">
-            <Link
-              href="/login"
-              className="flex items-center space-x-3 px-3 py-2 rounded-lg text-sm text-gray-dark hover:bg-secondary/10 hover:text-secondary transition-all duration-200"
-            >
-              <span className="text-lg">👤</span>
-              <span>Se connecter</span>
-            </Link>
-            <Link
-              href="/register"
-              className="flex items-center space-x-3 px-3 py-2 rounded-lg text-sm text-gray-dark hover:bg-secondary/10 hover:text-secondary transition-all duration-200"
-            >
-              <span className="text-lg">📝</span>
-              <span>S'inscrire</span>
-            </Link>
-          </div>
-        </div>
         </div>
       </div>
     </aside>

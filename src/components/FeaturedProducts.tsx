@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface Product {
   id: string;
@@ -18,7 +19,7 @@ export default function FeaturedProducts() {
       name: 'Smartphone Elite Pro',
       price: 299999,
       originalPrice: 349999,
-      image: '📱',
+      image: '/article1.webp',
       category: 'Électronique',
       isSale: true
     },
@@ -26,7 +27,7 @@ export default function FeaturedProducts() {
       id: '2',
       name: 'Robe Élégante',
       price: 45000,
-      image: '👗',
+      image: '/article2.webp',
       category: 'Mode',
       isNew: true
     },
@@ -34,7 +35,7 @@ export default function FeaturedProducts() {
       id: '3',
       name: 'Lampe Design',
       price: 25000,
-      image: '💡',
+      image: '/article3.webp',
       category: 'Maison'
     },
     {
@@ -42,9 +43,17 @@ export default function FeaturedProducts() {
       name: 'Sneakers Comfort',
       price: 75000,
       originalPrice: 85000,
-      image: '👟',
+      image: '/article4.webp',
       category: 'Mode',
       isSale: true
+    },
+    {
+      id: '5',
+      name: 'Accessoire Tendance',
+      price: 35000,
+      image: '/article5.webp',
+      category: 'Mode',
+      isNew: true
     }
   ];
 
@@ -61,7 +70,7 @@ export default function FeaturedProducts() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* En-tête de section */}
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-primary mb-4">
+          <h2 className="text-3xl font-bold text-foreground mb-4">
             Produits Mis en Avant
           </h2>
           <p className="text-gray-dark max-w-2xl mx-auto">
@@ -70,22 +79,29 @@ export default function FeaturedProducts() {
           </p>
         </div>
 
-        {/* Grille des produits */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Grille des produits - 2 colonnes */}
+        <div className="grid grid-cols-2 gap-4 sm:gap-6 max-w-md mx-auto sm:max-w-lg lg:max-w-2xl">
           {featuredProducts.map((product) => (
             <Link
               key={product.id}
               href={`/produits/${product.id}`}
-              className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 hover:scale-105 border border-accent/20"
+              className="group flex flex-col items-center text-center"
             >
-              {/* Image du produit */}
-              <div className="aspect-square bg-accent/10 flex items-center justify-center relative overflow-hidden">
-                <div className="text-6xl group-hover:scale-110 transition-transform duration-300">
-                  {product.image}
+              {/* Image ronde du produit */}
+              <div className="relative mb-3">
+                <div className="w-40 h-40 sm:w-40 sm:h-40 lg:w-48 lg:h-48 rounded-2xl overflow-hidden bg-white shadow-md group-hover:shadow-lg transition-all duration-300">
+                  <Image
+                    src={product.image}
+                    alt={product.name}
+                    width={192}
+                    height={192}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    priority
+                  />
                 </div>
                 
                 {/* Badges */}
-                <div className="absolute top-3 left-3 flex flex-col gap-2">
+                <div className="absolute top-2 left-2 flex flex-col gap-1">
                   {product.isNew && (
                     <span className="bg-secondary text-white px-2 py-1 rounded-full text-xs font-medium">
                       Nouveau
@@ -100,35 +116,28 @@ export default function FeaturedProducts() {
               </div>
 
               {/* Informations du produit */}
-              <div className="p-4">
+              <div className="w-full">
                 {/* Catégorie */}
-                <p className="text-secondary text-sm font-medium mb-1">
+                <p className="text-secondary text-xs sm:text-sm font-medium mb-1">
                   {product.category}
                 </p>
                 
                 {/* Nom du produit */}
-                <h3 className="text-primary font-semibold mb-2 group-hover:text-secondary transition-colors duration-200">
+                <h3 className="text-foreground font-semibold text-sm sm:text-base mb-2 group-hover:text-secondary transition-colors duration-200 line-clamp-2">
                   {product.name}
                 </h3>
                 
                 {/* Prix */}
-                <div className="flex items-center gap-2">
-                  <span className="text-primary font-bold">
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-foreground text-sm sm:text-base">
                     {formatPrice(product.price)}
                   </span>
                   {product.originalPrice && (
-                    <span className="text-gray-medium line-through text-sm">
+                    <span className="text-gray-medium line-through text-xs sm:text-sm">
                       {formatPrice(product.originalPrice)}
                     </span>
                   )}
                 </div>
-              </div>
-
-              {/* Bouton d'action au hover */}
-              <div className="p-4 pt-0">
-                <button className="w-full bg-primary text-white py-2 rounded-lg font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-primary/90">
-                  Voir le produit
-                </button>
               </div>
             </Link>
           ))}
