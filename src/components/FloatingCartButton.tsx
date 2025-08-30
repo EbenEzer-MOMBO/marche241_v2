@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import { formatPrice } from '@/lib/utils';
 
 interface CartItem {
   id: string;
@@ -21,7 +22,7 @@ export default function FloatingCartButton({ onCartClick, cartItems = [] }: Floa
   const pathname = usePathname();
   
   // Ne pas afficher sur les pages produit
-  const isProductPage = pathname?.startsWith('/produits/');
+  const isProductPage = pathname?.includes('/produit/');
   
   // Données de test pour le panier (remplacer par les vraies données)
   const defaultCartItems: CartItem[] = [
@@ -61,7 +62,7 @@ export default function FloatingCartButton({ onCartClick, cartItems = [] }: Floa
           {getTotalItems()}
         </span>
         <span>Panier</span>
-        <span>{getTotalPrice().toLocaleString()} FCFA</span>
+        <span>{formatPrice(getTotalPrice())}</span>
       </button>
     </div>
   );

@@ -12,7 +12,11 @@ interface Product {
   isSale?: boolean;
 }
 
-export default function FeaturedProducts() {
+interface FeaturedProductsProps {
+  boutiqueName?: string;
+}
+
+export default function FeaturedProducts({ boutiqueName = 'marche_241' }: FeaturedProductsProps) {
   const featuredProducts: Product[] = [
     {
       id: '1',
@@ -84,7 +88,7 @@ export default function FeaturedProducts() {
           {featuredProducts.map((product) => (
             <Link
               key={product.id}
-              href={`/produits/${product.id}`}
+              href={`/${boutiqueName}/produit/${product.id}`}
               className="group flex flex-col items-center text-center"
             >
               {/* Image ronde du produit */}

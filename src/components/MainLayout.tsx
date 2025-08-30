@@ -6,12 +6,15 @@ import SidebarMenu from './SidebarMenu';
 import CartSidebar from './CartSidebar';
 import FloatingCartButton from './FloatingCartButton';
 import Footer from './Footer';
+import { BoutiqueConfig } from '@/app/[boutique]/layout';
 
 interface MainLayoutProps {
   children: ReactNode;
+  boutiqueConfig?: BoutiqueConfig;
+  boutiqueName?: string;
 }
 
-export default function MainLayout({ children }: MainLayoutProps) {
+export default function MainLayout({ children, boutiqueConfig, boutiqueName }: MainLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
 
@@ -26,9 +29,15 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header onMenuClick={toggleSidebar} onCartClick={toggleCart} cartItemsCount={cartItemsCount} />
+      <Header 
+        onMenuClick={toggleSidebar} 
+        onCartClick={toggleCart} 
+        cartItemsCount={cartItemsCount}
+        boutiqueConfig={boutiqueConfig}
+        boutiqueName={boutiqueName}
+      />
       <SidebarMenu isOpen={sidebarOpen} onClose={closeSidebar} />
-      <CartSidebar isOpen={cartOpen} onClose={closeCart} />
+      <CartSidebar isOpen={cartOpen} onClose={closeCart} boutiqueName={boutiqueName} />
       
       {/* Contenu principal avec marge pour le sidebar sur desktop */}
       <main className="lg:ml-64 transition-all duration-300">

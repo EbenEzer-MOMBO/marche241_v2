@@ -1,5 +1,7 @@
 'use client';
 
+import { formatPrice } from '@/lib/utils';
+
 interface FloatingAddToCartButtonProps {
   productName: string;
   price: number;
@@ -17,9 +19,7 @@ export default function FloatingAddToCartButton({
 }: FloatingAddToCartButtonProps) {
   const totalPrice = price * quantity;
 
-  const formatPrice = (price: number) => {
-    return `${price.toLocaleString()} FCFA`;
-  };
+
 
   return (
     <div className="fixed bottom-4 left-4 right-4 z-30 lg:hidden">

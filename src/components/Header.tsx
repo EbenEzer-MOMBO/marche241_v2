@@ -3,14 +3,17 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useScrollPosition } from '@/hooks/useScrollPosition';
+import { BoutiqueConfig } from '@/app/[boutique]/layout';
 
 interface HeaderProps {
   onMenuClick?: () => void;
   onCartClick?: () => void;
   cartItemsCount?: number;
+  boutiqueConfig?: BoutiqueConfig;
+  boutiqueName?: string;
 }
 
-export default function Header({ onMenuClick, onCartClick, cartItemsCount = 0 }: HeaderProps) {
+export default function Header({ onMenuClick, onCartClick, cartItemsCount = 0, boutiqueConfig, boutiqueName }: HeaderProps) {
   const scrollY = useScrollPosition();
   
   // Le logo du hero devient invisible après 300px de scroll (mobile uniquement)
@@ -43,10 +46,10 @@ export default function Header({ onMenuClick, onCartClick, cartItemsCount = 0 }:
             </button>
 
             {/* Logo fixe desktop - toujours visible */}
-            <Link href="/" className="hidden lg:flex items-center space-x-2">
+            <Link href={boutiqueName ? `/${boutiqueName}` : "/"} className="hidden lg:flex items-center space-x-2">
               <Image
                 src="/site-logo.png"
-                alt="Marché241 Logo"
+                alt={`${boutiqueConfig?.name || 'Marché241'} Logo`}
                 width={40}
                 height={40}
                 className="rounded-lg"

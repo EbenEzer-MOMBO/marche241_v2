@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { formatPrice } from '@/lib/utils';
 
 interface CartItem {
   id: string;
@@ -23,9 +24,10 @@ interface RecommendedProduct {
 interface CartSidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  boutiqueName?: string;
 }
 
-export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
+export default function CartSidebar({ isOpen, onClose, boutiqueName = 'marche_241' }: CartSidebarProps) {
   // Données de test pour le panier
   const cartItems: CartItem[] = [
     {
@@ -61,13 +63,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
     }
   ];
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'XAF',
-      minimumFractionDigits: 0
-    }).format(price);
-  };
+
 
   const getTotalPrice = () => {
     return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
@@ -158,7 +154,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                             {item.name}
                           </h4>
                           <p className="text-lg font-semibold text-gray-900 mb-2">
-                            {item.price.toLocaleString()} FCFA
+                            {formatPrice(item.price)}
                           </p>
                           {item.variant && (
                             <p className="text-sm text-gray-500 italic mb-3">
@@ -229,7 +225,7 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                             {product.name}
                           </h4>
                           <p className="text-sm font-semibold text-gray-900">
-                            {product.price.toLocaleString()} FCFA
+                            {formatPrice(product.price)}
                           </p>
                         </div>
 
@@ -253,13 +249,17 @@ export default function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
           {/* Footer du panier avec bouton de validation */}
           {cartItems.length > 0 && (
             <div className="border-t border-gray-200 p-4 bg-white">
-              <button className="w-full bg-primary text-white py-4 rounded-2xl font-medium text-lg flex items-center justify-center space-x-3 hover:bg-primary/90 transition-colors duration-200">
+              <Link 
+                href={`/${boutiqueName}/commande`}
+                className="w-full bg-primary text-white py-4 rounded-2xl font-medium text-lg flex items-center justify-center space-x-3 hover:bg-primary/90 transition-colors duration-200 text-decoration-none"
+                onClick={onClose}
+              >
                 <span className="bg-white text-black rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
                   {getTotalItems()}
                 </span>
                 <span>Valider la commande</span>
-                <span>{getTotalPrice().toLocaleString()} FCFA</span>
-              </button>
+                <span>{formatPrice(getTotalPrice())}</span>
+              </Link>
             </div>
           )}
         </div>

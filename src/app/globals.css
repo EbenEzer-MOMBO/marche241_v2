@@ -1,5 +1,41 @@
 @import "tailwindcss";
 
+/* Variables CSS pour les thèmes des boutiques */
+.boutique-container {
+  --primary-color: #10b981;
+  --secondary-color: #059669;
+  --accent-color: #34d399;
+}
+
+/* Styles personnalisés pour les boutiques */
+.boutique-container .bg-foreground {
+  background-color: var(--primary-color) !important;
+}
+
+.boutique-container .text-accent {
+  color: var(--accent-color) !important;
+}
+
+.boutique-container .border-accent {
+  border-color: var(--accent-color) !important;
+}
+
+.boutique-container .hover\:bg-foreground\/90:hover {
+  background-color: color-mix(in srgb, var(--primary-color) 90%, transparent) !important;
+}
+
+.boutique-container .text-foreground {
+  color: var(--primary-color) !important;
+}
+
+.boutique-container .border-foreground {
+  border-color: var(--primary-color) !important;
+}
+
+.boutique-container .hover\:bg-foreground:hover {
+  background-color: var(--primary-color) !important;
+}
+
 :root {
   /* Palette Marché241 */
   --primary: #004030;

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { BoutiqueConfig } from '@/app/[boutique]/layout';
 
 interface Product {
   id: string;
@@ -18,7 +19,12 @@ interface CategorySection {
   products: Product[];
 }
 
-export default function TrendingByCategory() {
+interface TrendingByCategoryProps {
+  boutiqueConfig?: BoutiqueConfig;
+  boutiqueName?: string;
+}
+
+export default function TrendingByCategory({ boutiqueConfig, boutiqueName = 'marche_241' }: TrendingByCategoryProps) {
   const categorySections: CategorySection[] = [
     {
       id: 'fashion',
@@ -140,7 +146,7 @@ export default function TrendingByCategory() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* En-tête de section */}
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-primary mb-4">
+          <h2 className="text-3xl font-bold text-black mb-4">
             Produits Tendance
           </h2>
           <p className="text-gray-dark max-w-2xl mx-auto">
@@ -156,7 +162,7 @@ export default function TrendingByCategory() {
               {/* En-tête de la catégorie */}
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-4">
-                  <h3 className="text-2xl font-bold text-primary">{category.name}</h3>
+                  <h3 className="text-2xl font-bold text-black">{category.name}</h3>
                 </div>
               </div>
 
@@ -165,7 +171,7 @@ export default function TrendingByCategory() {
                 {category.products.map((product) => (
                   <Link
                     key={product.id}
-                    href={`/produits/${product.id}`}
+                    href={`/${boutiqueName}/produit/${product.id}`}
                     className="group bg-white rounded-xl p-4 hover:shadow-lg transition-all duration-300 hover:scale-105"
                   >
                     {/* Image du produit */}
@@ -198,13 +204,13 @@ export default function TrendingByCategory() {
                     {/* Informations du produit */}
                     <div>
                       {/* Nom du produit */}
-                      <h4 className="text-foreground font-medium text-sm mb-2 line-clamp-2 group-hover:text-secondary transition-colors duration-200">
+                      <h4 className="text-black font-medium text-sm mb-2 line-clamp-2 group-hover:text-secondary transition-colors duration-200">
                         {product.name}
                       </h4>
                       
                       {/* Prix */}
                       <div className="flex flex-col gap-1">
-                        <span className="text-foreground font-semibold text-sm">
+                        <span className="text-black font-semibold text-sm">
                           {formatPrice(product.price)}
                         </span>
                         {product.originalPrice && (

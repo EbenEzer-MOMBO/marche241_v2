@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { formatPrice } from '@/lib/utils';
 import FloatingAddToCartButton from './FloatingAddToCartButton';
 
 interface Product {
@@ -52,9 +53,7 @@ export default function ProductDetail({ productId }: ProductDetailProps) {
     reviewCount: 124
   };
 
-  const formatPrice = (price: number) => {
-    return `${price.toLocaleString()} FCFA`;
-  };
+
 
   const handleVariantChange = (variantLabel: string, option: string) => {
     setSelectedVariants(prev => ({
