@@ -7,7 +7,7 @@ const boutiques = {
     name: "Marché241",
     description: "Découvrez Marché241, votre boutique en ligne minimaliste pour une expérience d'achat simple et moderne",
     theme: {
-      primary: "#004030",
+      primary: "#000000",
       secondary: "#4A9782",
       accent: "#DCD0A8"
     }
@@ -16,9 +16,9 @@ const boutiques = {
     name: "Boutique de Joline",
     description: "La boutique de Joline - Mode et accessoires tendance pour tous les goûts",
     theme: {
-      primary: "#ec4899",
+      primary: "#000000",
       secondary: "#db2777",
-      accent: "#f472b6",
+      accent: "#DCD0A8",
       black: "#000000",
     }
   }

@@ -11,9 +11,10 @@ interface HeaderProps {
   cartItemsCount?: number;
   boutiqueConfig?: BoutiqueConfig;
   boutiqueName?: string;
+  hideCartButton?: boolean;
 }
 
-export default function Header({ onMenuClick, onCartClick, cartItemsCount = 0, boutiqueConfig, boutiqueName }: HeaderProps) {
+export default function Header({ onMenuClick, onCartClick, cartItemsCount = 0, boutiqueConfig, boutiqueName, hideCartButton = false }: HeaderProps) {
   const scrollY = useScrollPosition();
   
   // Le logo du hero devient invisible après 300px de scroll (mobile uniquement)
@@ -92,7 +93,7 @@ export default function Header({ onMenuClick, onCartClick, cartItemsCount = 0, b
           <div className="flex items-center space-x-3">
             <button
               type="button"
-              className="text-primary hover:text-secondary transition-colors duration-200"
+              className="text-black hover:text-secondary transition-colors duration-200"
               aria-label="Rechercher"
             >
               <svg
@@ -109,29 +110,31 @@ export default function Header({ onMenuClick, onCartClick, cartItemsCount = 0, b
               </svg>
             </button>
             
-            <button
-              type="button"
-              className="text-primary hover:text-secondary transition-colors duration-200 relative"
-              aria-label="Panier"
-              onClick={onCartClick}
-            >
-              <svg
-                className="h-5 w-5"
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+            {!hideCartButton && (
+              <button
+                type="button"
+                className="text-black hover:text-secondary transition-colors duration-200 relative"
+                aria-label="Panier"
+                onClick={onCartClick}
               >
-                <path d="M3 3h2l.4 2M7 13h10l4-8H5.4m1.6 0L5 3H3m4 10v6a1 1 0 001 1h8a1 1 0 001-1v-6m-10 0v-2a1 1 0 011-1h8a1 1 0 011 1v2"></path>
-              </svg>
-              {cartItemsCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-secondary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  {cartItemsCount > 99 ? '99+' : cartItemsCount}
-                </span>
-              )}
-            </button>
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path d="M3 3h2l.4 2M7 13h10l4-8H5.4m1.6 0L5 3H3m4 10v6a1 1 0 001 1h8a1 1 0 001-1v-6m-10 0v-2a1 1 0 011-1h8a1 1 0 011 1v2"></path>
+                </svg>
+                {cartItemsCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-black text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {cartItemsCount > 99 ? '99+' : cartItemsCount}
+                  </span>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import MainLayout from '@/components/MainLayout';
+import CheckoutLayout from '@/components/CheckoutLayout';
 import { OrderSummary } from '@/components/OrderSummary';
 import { boutiques, type BoutiqueConfig } from '../layout';
 
@@ -33,18 +33,23 @@ export default async function OrderPage({ params }: OrderPageProps) {
   }
 
   return (
-    <MainLayout boutiqueConfig={boutiqueConfig}>
-      <div className="container mx-auto px-4 py-8">
-        <div className="row">
-          <div className="col-12">
-            <h1 className="h2 mb-4" style={{ color: boutiqueConfig.theme.primary }}>
-              Résumé de votre commande
-            </h1>
+    <CheckoutLayout boutiqueConfig={boutiqueConfig} boutiqueName={boutique}>
+      <div className="py-8">
+        <div className="container mx-auto px-4">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-8">
+              <h3 className="text-2xl font-bold mb-2 text-black">
+                Résumé de votre commande
+              </h3>
+              <p className="text-muted-foreground">
+                Vérifiez vos articles et finalisez votre commande
+              </p>
+            </div>
             <OrderSummary boutiqueConfig={boutiqueConfig} />
           </div>
         </div>
       </div>
-    </MainLayout>
+    </CheckoutLayout>
   );
 }
 
