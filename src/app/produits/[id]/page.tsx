@@ -2,15 +2,16 @@ import MainLayout from '@/components/MainLayout';
 import ProductDetail from '@/components/ProductDetail';
 
 interface ProductPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
-export default function ProductPage({ params }: ProductPageProps) {
+export default async function ProductPage({ params }: ProductPageProps) {
+  const { id } = await params;
   return (
     <MainLayout>
-      <ProductDetail productId={params.id} />
+      <ProductDetail productId={id} />
     </MainLayout>
   );
 }
