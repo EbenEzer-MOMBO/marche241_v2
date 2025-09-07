@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useScrollPosition } from '@/hooks/useScrollPosition';
-import { BoutiqueConfig } from '@/app/[boutique]/layout';
+import { BoutiqueConfig } from '@/lib/boutiques';
 
 interface HeaderProps {
   onMenuClick?: () => void;

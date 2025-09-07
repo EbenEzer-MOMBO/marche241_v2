@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import CheckoutLayout from '@/components/CheckoutLayout';
 import { OrderSummary } from '@/components/OrderSummary';
-import { boutiques, type BoutiqueConfig } from '../layout';
+import { boutiques, type BoutiqueConfig } from '@/lib/boutiques';
 
 interface OrderPageProps {
   params: Promise<{ boutique: string }>;

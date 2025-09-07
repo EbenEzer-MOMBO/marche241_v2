@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { BoutiqueConfig } from '@/app/[boutique]/layout';
+import { BoutiqueConfig } from '@/lib/boutiques';
 
 interface Product {
   id: string;

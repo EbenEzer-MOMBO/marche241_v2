@@ -1,7 +1,7 @@
 import MainLayout from '@/components/MainLayout';
 import HeroSection from '@/components/HeroSection';
 import TrendingByCategory from '@/components/TrendingByCategory';
-import { boutiques, type BoutiqueConfig } from './layout';
+import { boutiques, type BoutiqueConfig } from '@/lib/boutiques';
 import { notFound } from 'next/navigation';
 
 interface BoutiquePageProps {

@@ -3,7 +3,7 @@
 import { ReactNode } from 'react';
 import Link from 'next/link';
 import Footer from './Footer';
-import { BoutiqueConfig } from '@/app/[boutique]/layout';
+import { BoutiqueConfig } from '@/lib/boutiques';
 
 interface CheckoutLayoutProps {
   children: ReactNode;

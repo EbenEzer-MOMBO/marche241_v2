@@ -1,5 +1,5 @@
 import MainLayout from '@/components/MainLayout';
-import { boutiques, type BoutiqueConfig } from '../layout';
+import { boutiques, type BoutiqueConfig } from '@/lib/boutiques';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';

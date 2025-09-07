@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { formatPrice } from '@/lib/utils';
-import { BoutiqueConfig } from '@/app/[boutique]/layout';
+import { BoutiqueConfig } from '@/lib/boutiques';
 
 interface CartItem {
   id: string;

@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import ProductDetail from '@/components/ProductDetail';
-import { boutiques, type BoutiqueConfig } from '../../layout';
+import { boutiques, type BoutiqueConfig } from '@/lib/boutiques';
 
 interface ProductPageProps {
   params: Promise<{

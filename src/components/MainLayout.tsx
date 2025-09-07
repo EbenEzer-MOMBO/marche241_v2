@@ -6,7 +6,7 @@ import SidebarMenu from './SidebarMenu';
 import CartSidebar from './CartSidebar';
 import FloatingCartButton from './FloatingCartButton';
 import Footer from './Footer';
-import { BoutiqueConfig } from '@/app/[boutique]/layout';
+import { BoutiqueConfig } from '@/lib/boutiques';
 
 interface MainLayoutProps {
   children: ReactNode;
