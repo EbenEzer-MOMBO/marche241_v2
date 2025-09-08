@@ -138,12 +138,11 @@ CREATE TABLE commandes (
     numero_commande VARCHAR(50) UNIQUE NOT NULL, -- Format: CMD-2024-001234
     boutique_id INTEGER NOT NULL,
     client_nom VARCHAR(100) NOT NULL,
-    client_prenom VARCHAR(100) NOT NULL,
     client_telephone VARCHAR(20) NOT NULL,
-    client_email VARCHAR(255) NULL,
     client_adresse TEXT NOT NULL,
     client_ville VARCHAR(100) NOT NULL,
-    client_pays VARCHAR(100) DEFAULT 'Burkina Faso',
+    client_commune VARCHAR(100) NOT NULL,
+    client_instructions VARCHAR(250) NULL,
     
     -- Montants
     sous_total INTEGER NOT NULL, -- Somme des produits
@@ -162,11 +161,6 @@ CREATE TABLE commandes (
     date_expedition TIMESTAMP NULL,
     date_livraison TIMESTAMP NULL,
     date_modification TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    -- Informations supplémentaires
-    notes_client TEXT NULL,
-    notes_vendeur TEXT NULL,
-    code_suivi VARCHAR(100) NULL,
     
     FOREIGN KEY (boutique_id) REFERENCES boutiques(id) ON DELETE CASCADE
 );
@@ -349,6 +343,37 @@ CREATE TRIGGER trigger_update_produit_note_moyenne
     AFTER INSERT OR UPDATE OR DELETE ON avis_produits
     FOR EACH ROW
     EXECUTE FUNCTION update_produit_note_moyenne();
+
+-- Table des transactions de paiement
+CREATE TABLE transactions (
+    id SERIAL PRIMARY KEY,
+    commande_id INTEGER NOT NULL,
+    reference_transaction VARCHAR(100) UNIQUE NOT NULL, -- Référence unique de la transaction
+    montant INTEGER NOT NULL, -- Montant en centimes
+    methode_paiement methode_paiement NOT NULL,
+    statut statut_paiement NOT NULL DEFAULT 'en_attente',
+    
+    -- Informations de paiement mobile
+    numero_telephone VARCHAR(20) NULL, -- Numéro utilisé pour le paiement mobile
+    reference_operateur VARCHAR(100) NULL, -- Référence fournie par l'opérateur (Airtel/Moov)
+    
+    -- Dates
+    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    date_confirmation TIMESTAMP NULL, -- Date de confirmation du paiement
+    date_modification TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Informations supplémentaires
+    details JSONB NULL, -- Stockage flexible pour les détails spécifiques à chaque méthode de paiement
+    notes TEXT NULL, -- Notes internes
+    
+    FOREIGN KEY (commande_id) REFERENCES commandes(id) ON DELETE CASCADE
+);
+
+-- Index pour la table transactions
+CREATE INDEX idx_transaction_commande ON transactions(commande_id);
+CREATE INDEX idx_transaction_statut ON transactions(statut);
+CREATE INDEX idx_transaction_methode ON transactions(methode_paiement);
+CREATE INDEX idx_transaction_reference ON transactions(reference_transaction);
 
 -- Index pour optimiser les performances
 CREATE INDEX idx_produits_recherche ON produits(nom, description_courte, LEFT(tags, 255));

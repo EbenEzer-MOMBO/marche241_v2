@@ -195,6 +195,7 @@ export interface Commande {
   // Relations
   boutique?: Boutique;
   articles?: CommandeArticle[];
+  transactions?: Transaction[];
 }
 
 // Table commande_articles
@@ -211,6 +212,32 @@ export interface CommandeArticle {
   // Relations
   commande?: Commande;
   produit?: ProduitDB;
+}
+
+// Table transactions
+export interface Transaction {
+  id: number;
+  commande_id: number;
+  reference_transaction: string; // Référence unique de la transaction
+  montant: number; // Montant en centimes
+  methode_paiement: MethodePaiement;
+  statut: StatutPaiement;
+  
+  // Informations de paiement mobile
+  numero_telephone?: string; // Numéro utilisé pour le paiement mobile
+  reference_operateur?: string; // Référence fournie par l'opérateur (Airtel/Moov)
+  
+  // Dates
+  date_creation: Date;
+  date_confirmation?: Date; // Date de confirmation du paiement
+  date_modification: Date;
+  
+  // Informations supplémentaires
+  details?: Record<string, any>; // Stockage flexible pour les détails spécifiques à chaque méthode de paiement
+  notes?: string; // Notes internes
+  
+  // Relations
+  commande?: Commande;
 }
 
 // Table avis_produits
