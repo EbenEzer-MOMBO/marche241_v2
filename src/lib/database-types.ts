@@ -12,17 +12,6 @@ export type StatutPaiement = 'en_attente' | 'paye' | 'echec' | 'rembourse';
 export type MethodePaiement = 'mobile_money' | 'airtel_money' | 'moov_money' | 'especes' | 'virement';
 export type StatutAvis = 'en_attente' | 'approuve' | 'rejete';
 
-// Interface pour les horaires d'ouverture
-export interface HorairesOuverture {
-  lundi?: { ouverture: string; fermeture: string; ferme?: boolean };
-  mardi?: { ouverture: string; fermeture: string; ferme?: boolean };
-  mercredi?: { ouverture: string; fermeture: string; ferme?: boolean };
-  jeudi?: { ouverture: string; fermeture: string; ferme?: boolean };
-  vendredi?: { ouverture: string; fermeture: string; ferme?: boolean };
-  samedi?: { ouverture: string; fermeture: string; ferme?: boolean };
-  dimanche?: { ouverture: string; fermeture: string; ferme?: boolean };
-}
-
 // Interface pour les dimensions
 export interface Dimensions {
   longueur: number;
@@ -47,7 +36,6 @@ export interface Vendeur {
   id: number;
   telephone: string; // Identifiant principal unique
   nom: string;
-  prenom: string;
   email?: string; // Optionnel
   
   // Système d'authentification par code WhatsApp
@@ -60,11 +48,7 @@ export interface Vendeur {
   date_modification: Date;
   statut: StatutVendeur;
   photo_profil?: string;
-  adresse?: string;
   ville?: string;
-  pays: string;
-  date_naissance?: Date;
-  sexe?: Sexe;
   verification_telephone: boolean;
   verification_email: boolean;
   derniere_connexion?: Date;
@@ -78,14 +62,10 @@ export interface Boutique {
   description?: string;
   vendeur_id: number;
   logo?: string;
-  banniere?: string;
   couleur_primaire: string;
   couleur_secondaire: string;
   adresse?: string;
   telephone?: string;
-  email?: string;
-  site_web?: string;
-  horaires_ouverture?: HorairesOuverture;
   statut: StatutBoutique;
   date_creation: Date;
   date_modification: Date;
@@ -103,13 +83,12 @@ export interface Categorie {
   nom: string;
   slug: string;
   description?: string;
-  icone?: string; // Emoji ou nom d'icône
-  image?: string;
   parent_id?: number;
   ordre_affichage: number;
   statut: StatutCategorie;
   date_creation: Date;
   date_modification: Date;
+  boutique_id?: number;
   
   // Relations
   parent?: Categorie;
@@ -128,14 +107,14 @@ export interface ProduitDB {
   sku?: string;
   boutique_id: number;
   categorie_id: number;
-  images?: string[]; // URLs des images
+  images?: any; // JSON dans la base de données
   image_principale?: string;
-  variants?: VarianteProduit[];
+  variants?: any; // JSON dans la base de données
   en_stock: boolean;
   quantite_stock: number;
   poids?: number; // En grammes
-  dimensions?: Dimensions;
-  tags?: string[];
+  dimensions?: any; // JSON dans la base de données
+  tags?: any; // JSON dans la base de données
   note_moyenne: number;
   nombre_avis: number;
   nombre_vues: number;
@@ -161,12 +140,11 @@ export interface Commande {
   
   // Informations client
   client_nom: string;
-  client_prenom: string;
   client_telephone: string;
-  client_email?: string;
   client_adresse: string;
   client_ville: string;
-  client_pays: string;
+  client_commune: string;
+  client_instructions?: string;
   
   // Montants (en centimes)
   sous_total: number;
@@ -187,11 +165,6 @@ export interface Commande {
   date_livraison?: Date;
   date_modification: Date;
   
-  // Informations supplémentaires
-  notes_client?: string;
-  notes_vendeur?: string;
-  code_suivi?: string;
-  
   // Relations
   boutique?: Boutique;
   articles?: CommandeArticle[];
@@ -206,7 +179,7 @@ export interface CommandeArticle {
   nom_produit: string; // Sauvegarde du nom au moment de la commande
   prix_unitaire: number; // En centimes
   quantite: number;
-  variants_selectionnes?: VariantesSelectionnees;
+  variants_selectionnes?: any; // JSON dans la base de données
   sous_total: number; // En centimes
   
   // Relations
@@ -233,7 +206,6 @@ export interface Transaction {
   date_modification: Date;
   
   // Informations supplémentaires
-  details?: Record<string, any>; // Stockage flexible pour les détails spécifiques à chaque méthode de paiement
   notes?: string; // Notes internes
   
   // Relations
@@ -266,7 +238,7 @@ export interface Panier {
   boutique_id: number;
   produit_id: number;
   quantite: number;
-  variants_selectionnes?: VariantesSelectionnees;
+  variants_selectionnes?: any; // JSON dans la base de données
   date_creation: Date;
   date_modification: Date;
   
@@ -298,13 +270,8 @@ export interface CommandeResume extends Commande {
 export interface CreateVendeurData {
   telephone: string;
   nom: string;
-  prenom: string;
   email?: string;
-  adresse?: string;
   ville?: string;
-  pays?: string;
-  date_naissance?: string;
-  sexe?: Sexe;
 }
 
 // ===================================
@@ -376,14 +343,10 @@ export interface CreateBoutiqueData {
   description?: string;
   vendeur_id: number;
   logo?: string;
-  banniere?: string;
   couleur_primaire?: string;
   couleur_secondaire?: string;
   adresse?: string;
   telephone?: string;
-  email?: string;
-  site_web?: string;
-  horaires_ouverture?: HorairesOuverture;
 }
 
 export interface CreateProduitData {
@@ -396,13 +359,13 @@ export interface CreateProduitData {
   sku?: string;
   boutique_id: number;
   categorie_id: number;
-  images?: string[];
+  images?: any; // JSON dans la base de données
   image_principale?: string;
-  variants?: VarianteProduit[];
+  variants?: any; // JSON dans la base de données
   quantite_stock?: number;
   poids?: number;
-  dimensions?: Dimensions;
-  tags?: string[];
+  dimensions?: any; // JSON dans la base de données
+  tags?: any; // JSON dans la base de données
   est_nouveau?: boolean;
   est_en_promotion?: boolean;
   est_featured?: boolean;
@@ -411,20 +374,18 @@ export interface CreateProduitData {
 export interface CreateCommandeData {
   boutique_id: number;
   client_nom: string;
-  client_prenom: string;
   client_telephone: string;
-  client_email?: string;
   client_adresse: string;
   client_ville: string;
-  client_pays?: string;
+  client_commune: string;
+  client_instructions?: string;
   articles: {
     produit_id: number;
     quantite: number;
-    variants_selectionnes?: VariantesSelectionnees;
+    variants_selectionnes?: any; // JSON dans la base de données
   }[];
   frais_livraison?: number;
   methode_paiement?: MethodePaiement;
-  notes_client?: string;
 }
 
 // Types pour les statistiques
