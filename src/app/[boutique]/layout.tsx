@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { boutiques, type BoutiqueConfig } from "@/lib/boutiques";
+import { getBoutiqueConfig, type BoutiqueConfig } from "@/lib/boutiques";
 
 export async function generateMetadata({
   params,
@@ -8,19 +8,20 @@ export async function generateMetadata({
   params: Promise<{ boutique: string }>;
 }): Promise<Metadata> {
   const { boutique } = await params;
-  const boutiqueConfig = boutiques[boutique as keyof typeof boutiques];
   
-  if (!boutiqueConfig) {
+  try {
+    const boutiqueConfig = await getBoutiqueConfig(boutique);
+    return {
+      title: `${boutiqueConfig.name} - Boutique en ligne`,
+      description: boutiqueConfig.description,
+    };
+  } catch (error) {
+    console.error('Erreur lors de la récupération des métadonnées:', error);
     return {
       title: "Boutique non trouvée",
       description: "Cette boutique n'existe pas"
     };
   }
-
-  return {
-    title: `${boutiqueConfig.name} - Boutique en ligne`,
-    description: boutiqueConfig.description,
-  };
 }
 
 export default async function BoutiqueLayout({
@@ -31,9 +32,12 @@ export default async function BoutiqueLayout({
   params: Promise<{ boutique: string }>;
 }) {
   const { boutique } = await params;
-  const boutiqueConfig = boutiques[boutique as keyof typeof boutiques];
   
-  if (!boutiqueConfig) {
+  let boutiqueConfig: BoutiqueConfig;
+  try {
+    boutiqueConfig = await getBoutiqueConfig(boutique);
+  } catch (error) {
+    console.error('Erreur lors de la récupération de la boutique:', error);
     notFound();
   }
 

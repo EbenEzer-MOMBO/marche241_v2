@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import CheckoutLayout from '@/components/CheckoutLayout';
 import { OrderSummary } from '@/components/OrderSummary';
-import { boutiques, type BoutiqueConfig } from '@/lib/boutiques';
+import { getBoutiqueConfig, type BoutiqueConfig } from '@/lib/boutiques';
 
 interface OrderPageProps {
   params: Promise<{ boutique: string }>;
@@ -10,25 +10,29 @@ interface OrderPageProps {
 
 export async function generateMetadata({ params }: OrderPageProps): Promise<Metadata> {
   const { boutique } = await params;
-  const boutiqueConfig = boutiques[boutique as keyof typeof boutiques];
   
-  if (!boutiqueConfig) {
+  try {
+    const boutiqueConfig = await getBoutiqueConfig(boutique);
+    return {
+      title: `Résumé de commande - ${boutiqueConfig.name}`,
+      description: `Finalisez votre commande sur ${boutiqueConfig.name}`,
+    };
+  } catch (error) {
+    console.error('Erreur lors de la récupération des métadonnées:', error);
     return {
       title: 'Boutique non trouvée',
     };
   }
-
-  return {
-    title: `Résumé de commande - ${boutiqueConfig.name}`,
-    description: `Finalisez votre commande sur ${boutiqueConfig.name}`,
-  };
 }
 
 export default async function OrderPage({ params }: OrderPageProps) {
   const { boutique } = await params;
-  const boutiqueConfig = boutiques[boutique as keyof typeof boutiques];
   
-  if (!boutiqueConfig) {
+  let boutiqueConfig: BoutiqueConfig;
+  try {
+    boutiqueConfig = await getBoutiqueConfig(boutique);
+  } catch (error) {
+    console.error('Erreur lors de la récupération de la boutique:', error);
     notFound();
   }
 

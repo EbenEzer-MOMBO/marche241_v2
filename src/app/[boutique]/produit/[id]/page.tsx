@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import ProductDetail from '@/components/ProductDetail';
-import { boutiques, type BoutiqueConfig } from '@/lib/boutiques';
+import { getBoutiqueConfig, type BoutiqueConfig } from '@/lib/boutiques';
 
 interface ProductPageProps {
   params: Promise<{
@@ -11,9 +11,12 @@ interface ProductPageProps {
 
 export default async function ProductPage({ params }: ProductPageProps) {
   const { boutique, id } = await params;
-  const boutiqueConfig = boutiques[boutique as keyof typeof boutiques];
   
-  if (!boutiqueConfig) {
+  let boutiqueConfig: BoutiqueConfig;
+  try {
+    boutiqueConfig = await getBoutiqueConfig(boutique);
+  } catch (error) {
+    console.error('Erreur lors de la récupération de la boutique:', error);
     notFound();
   }
 
@@ -35,8 +38,12 @@ export default async function ProductPage({ params }: ProductPageProps) {
 export async function generateStaticParams() {
   const paths = [];
   
+  // Pour l'instant, on garde les slugs connus
+  // TODO: Récupérer depuis l'API en production
+  const boutiques = ['marche_241', 'boutique_de_joline'];
+  
   // Pour chaque boutique
-  for (const boutique of Object.keys(boutiques)) {
+  for (const boutique of boutiques) {
     // Générer quelques IDs de produits de test
     const productIds = ['1', '2', '3', '4', '5'];
     
@@ -58,17 +65,18 @@ export async function generateMetadata({
   params: Promise<{ boutique: string; id: string }>;
 }) {
   const { boutique, id } = await params;
-  const boutiqueConfig = boutiques[boutique as keyof typeof boutiques];
   
-  if (!boutiqueConfig) {
+  try {
+    const boutiqueConfig = await getBoutiqueConfig(boutique);
+    return {
+      title: `Produit ${id} - ${boutiqueConfig.name}`,
+      description: `Découvrez ce produit sur ${boutiqueConfig.name}`,
+    };
+  } catch (error) {
+    console.error('Erreur lors de la récupération des métadonnées:', error);
     return {
       title: 'Produit non trouvé',
       description: 'Ce produit n\'existe pas'
     };
   }
-
-  return {
-    title: `Produit ${id} - ${boutiqueConfig.name}`,
-    description: `Découvrez ce produit sur ${boutiqueConfig.name}`,
-  };
 }

@@ -1,24 +1,65 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { useScrollPosition } from '@/hooks/useScrollPosition';
+import { useBoutique } from '@/hooks/useBoutique';
+import { HeaderSkeleton } from './LoadingStates';
+import SafeImage from './SafeImage';
 import { BoutiqueConfig } from '@/lib/boutiques';
 
 interface HeaderProps {
   onMenuClick?: () => void;
   onCartClick?: () => void;
   cartItemsCount?: number;
-  boutiqueConfig?: BoutiqueConfig;
-  boutiqueName?: string;
+  boutiqueName: string;
   hideCartButton?: boolean;
 }
 
-export default function Header({ onMenuClick, onCartClick, cartItemsCount = 0, boutiqueConfig, boutiqueName, hideCartButton = false }: HeaderProps) {
+/**
+ * Utilitaire pour obtenir l'URL du logo de la boutique
+ */
+function getBoutiqueLogo(logoUrl?: string | null): string {
+  if (logoUrl && logoUrl.trim() !== '') {
+    // Vérifier si l'URL est valide
+    try {
+      new URL(logoUrl);
+      return logoUrl;
+    } catch {
+      // Si l'URL n'est pas valide, utiliser l'image par défaut
+      console.warn('URL de logo invalide:', logoUrl);
+      return '/default-shop.png';
+    }
+  }
+  return '/default-shop.png';
+}
+
+export default function Header({ onMenuClick, onCartClick, cartItemsCount = 0, boutiqueName, hideCartButton = false }: HeaderProps) {
   const scrollY = useScrollPosition();
+  const { boutique, config, loading, error } = useBoutique(boutiqueName);
   
   // Le logo du hero devient invisible après 300px de scroll (mobile uniquement)
   const showMobileNavbarLogo = scrollY > 300;
+
+  // Afficher le squelette pendant le chargement
+  if (loading) {
+    return <HeaderSkeleton />;
+  }
+
+  // En cas d'erreur, afficher un header minimal
+  if (error || !config) {
+    return (
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm shadow-sm border-b border-red-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center">
+              <span className="text-lg font-bold text-red-600">Erreur de chargement</span>
+            </div>
+            <div className="text-sm text-red-600">Boutique introuvable</div>
+          </div>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm shadow-sm border-b border-accent/20">
@@ -47,17 +88,17 @@ export default function Header({ onMenuClick, onCartClick, cartItemsCount = 0, b
             </button>
 
             {/* Logo fixe desktop - toujours visible */}
-            <Link href={boutiqueName ? `/${boutiqueName}` : "/"} className="hidden lg:flex items-center space-x-2">
-              <Image
-                src="/site-logo.png"
-                alt={`${boutiqueConfig?.name || 'Marché241'} Logo`}
+            <Link href={`/${boutiqueName}`} className="hidden lg:flex items-center space-x-2">
+              <SafeImage
+                src={getBoutiqueLogo(boutique?.logo)}
+                alt={`${config.name} Logo`}
                 width={40}
                 height={40}
-                className="rounded-lg"
+                className="rounded-lg object-cover"
                 priority
               />
               <span className="text-xl font-bold text-primary">
-                Marché241
+                {config.name}
               </span>
             </Link>
           </div>
@@ -65,7 +106,7 @@ export default function Header({ onMenuClick, onCartClick, cartItemsCount = 0, b
           {/* Logo mobile qui apparaît au scroll */}
           <div className="lg:hidden flex-1 flex justify-center">
             <Link 
-              href="/" 
+              href={`/${boutiqueName}`} 
               className={`flex items-center space-x-2 transition-all duration-300 ${
                 showMobileNavbarLogo 
                   ? 'opacity-100 transform translate-y-0' 
@@ -73,17 +114,17 @@ export default function Header({ onMenuClick, onCartClick, cartItemsCount = 0, b
               }`}
             >
               <div className="w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center border-2 border-accent">
-                <Image
-                  src="/site-logo.png"
-                  alt="Marché241 Logo"
+                <SafeImage
+                  src={getBoutiqueLogo(boutique?.logo)}
+                  alt={`${config.name} Logo`}
                   width={20}
                   height={20}
-                  className="rounded-full"
+                  className="rounded-full object-cover"
                   priority
                 />
               </div>
               <span className="text-sm font-bold text-primary">
-                Marché241
+                {config.name}
               </span>
             </Link>
           </div>

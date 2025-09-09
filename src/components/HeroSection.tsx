@@ -1,12 +1,51 @@
+'use client';
+
 import Link from 'next/link';
-import Image from 'next/image';
+import { useBoutique } from '@/hooks/useBoutique';
+import { HeroSkeleton, ErrorState } from './LoadingStates';
+import SafeImage from './SafeImage';
 import { BoutiqueConfig } from '@/lib/boutiques';
 
 interface HeroSectionProps {
-  boutiqueConfig?: BoutiqueConfig;
+  boutiqueName: string;
 }
 
-export default function HeroSection({ boutiqueConfig }: HeroSectionProps) {
+/**
+ * Utilitaire pour obtenir l'URL du logo de la boutique
+ */
+function getBoutiqueLogo(logoUrl?: string | null): string {
+  if (logoUrl && logoUrl.trim() !== '') {
+    // Vérifier si l'URL est valide
+    try {
+      new URL(logoUrl);
+      return logoUrl;
+    } catch {
+      // Si l'URL n'est pas valide, utiliser l'image par défaut
+      console.warn('URL de logo invalide:', logoUrl);
+      return '/default-shop.png';
+    }
+  }
+  return '/default-shop.png';
+}
+
+export default function HeroSection({ boutiqueName }: HeroSectionProps) {
+  const { boutique, config, loading, error, refetch } = useBoutique(boutiqueName);
+
+  // Afficher le squelette pendant le chargement
+  if (loading) {
+    return <HeroSkeleton />;
+  }
+
+  // En cas d'erreur, afficher l'état d'erreur
+  if (error || !config) {
+    return (
+      <ErrorState 
+        title="Boutique introuvable"
+        message={error || "Impossible de charger les informations de la boutique"}
+        onRetry={refetch}
+      />
+    );
+  }
   return (
     <section className="relative pt-10 pb-10">
       {/* Stack avec fond vert */}
@@ -18,12 +57,12 @@ export default function HeroSection({ boutiqueConfig }: HeroSectionProps) {
               {/* Titre principal */}
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">
                 Bienvenue sur{' '}
-                <span className="text-accent">{boutiqueConfig?.name || 'Marché241'}</span>
+                <span className="text-accent">{config.name}</span>
               </h1>
               
               {/* Sous-titre */}
               <p className="text-lg sm:text-xl text-white/90 max-w-2xl mx-auto leading-relaxed">
-                {boutiqueConfig?.description || 'Découvrez notre boutique en ligne minimaliste et moderne'}
+                {config.description}
               </p>
             </div>
           </div>
@@ -31,12 +70,12 @@ export default function HeroSection({ boutiqueConfig }: HeroSectionProps) {
           {/* Logo rond centré sur la bordure inférieure */}
           <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2">
             <div className="w-28 h-28 bg-white rounded-full shadow-lg flex items-center justify-center border-4 border-accent">
-              <Image
-                src="/site-logo.png"
-                alt={`${boutiqueConfig?.name || 'Marché241'} Logo`}
+              <SafeImage
+                src={getBoutiqueLogo(boutique?.logo)}
+                alt={`${config.name} Logo`}
                 width={100}
                 height={100}
-                className="rounded-full"
+                className="rounded-full object-cover"
                 priority
               />
             </div>
@@ -55,13 +94,13 @@ export default function HeroSection({ boutiqueConfig }: HeroSectionProps) {
               {/* Boutons d'action */}
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                 <Link
-                  href="/produits"
+                  href={`/${boutiqueName}/produits`}
                   className="bg-primary text-white px-8 py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors duration-200 w-full sm:w-auto text-center"
                 >
                   Découvrir nos produits
                 </Link>
                 <Link
-                  href="/categories"
+                  href={`/${boutiqueName}/categories`}
                   className="border-2 border-primary text-primary px-8 py-3 rounded-lg font-medium hover:bg-primary hover:text-white transition-colors duration-200 w-full sm:w-auto text-center"
                 >
                   Parcourir les catégories

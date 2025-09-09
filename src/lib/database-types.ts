@@ -266,6 +266,71 @@ export interface CommandeResume extends Commande {
   quantite_totale: number;
 }
 
+// Types pour les réponses API
+export interface ApiBoutiqueResponse {
+  success: boolean;
+  boutique: Boutique;
+}
+
+export interface ApiProduitResponse {
+  success: boolean;
+  produit: ProduitDB;
+}
+
+export interface ApiProduitsResponse {
+  success: boolean;
+  produits: ProduitDB[];
+  total?: number;
+  page?: number;
+  limite?: number;
+}
+
+// Types pour les catégories avec produits
+export interface CategorieAvecProduits {
+  categorie: Categorie;
+  produits: ProduitDB[];
+}
+
+export interface ApiCategoriesProduitsResponse {
+  success: boolean;
+  categories: {
+    [slug: string]: CategorieAvecProduits;
+  };
+}
+
+// Types pour la liste des catégories
+export interface ApiCategoriesResponse {
+  success: boolean;
+  categories: Categorie[];
+}
+
+// Types pour l'affichage simplifié des produits
+export interface ProduitAffichage {
+  id: number;
+  nom: string;
+  slug: string;
+  prix: number;
+  prix_original?: number;
+  image_principale?: string;
+  est_nouveau: boolean;
+  est_en_promotion: boolean;
+  est_featured: boolean;
+  en_stock: boolean;
+  note_moyenne: number;
+  nombre_avis: number;
+  boutique: {
+    id: number;
+    nom: string;
+    logo?: string;
+    slug: string;
+  };
+  categorie: {
+    id: number;
+    nom: string;
+    slug: string;
+  };
+}
+
 // Types pour les formulaires et API
 export interface CreateVendeurData {
   telephone: string;

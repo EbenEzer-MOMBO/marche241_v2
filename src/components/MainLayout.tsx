@@ -10,11 +10,10 @@ import { BoutiqueConfig } from '@/lib/boutiques';
 
 interface MainLayoutProps {
   children: ReactNode;
-  boutiqueConfig?: BoutiqueConfig;
-  boutiqueName?: string;
+  boutiqueName: string;
 }
 
-export default function MainLayout({ children, boutiqueConfig, boutiqueName }: MainLayoutProps) {
+export default function MainLayout({ children, boutiqueName }: MainLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
 
@@ -33,7 +32,6 @@ export default function MainLayout({ children, boutiqueConfig, boutiqueName }: M
         onMenuClick={toggleSidebar} 
         onCartClick={toggleCart} 
         cartItemsCount={cartItemsCount}
-        boutiqueConfig={boutiqueConfig}
         boutiqueName={boutiqueName}
       />
       <SidebarMenu isOpen={sidebarOpen} onClose={closeSidebar} />

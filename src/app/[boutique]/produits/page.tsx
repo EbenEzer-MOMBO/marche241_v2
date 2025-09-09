@@ -1,5 +1,5 @@
 import MainLayout from '@/components/MainLayout';
-import { boutiques, type BoutiqueConfig } from '@/lib/boutiques';
+import { getBoutiqueConfig, type BoutiqueConfig } from '@/lib/boutiques';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -63,16 +63,19 @@ const getProductsForBoutique = (boutiqueName: string) => {
 
 export default async function ProduitsPage({ params }: ProduitsPageProps) {
   const { boutique } = await params;
-  const boutiqueConfig = boutiques[boutique as keyof typeof boutiques];
   
-  if (!boutiqueConfig) {
+  let boutiqueConfig: BoutiqueConfig;
+  try {
+    boutiqueConfig = await getBoutiqueConfig(boutique);
+  } catch (error) {
+    console.error('Erreur lors de la récupération de la boutique:', error);
     notFound();
   }
 
   const products = getProductsForBoutique(boutique);
 
   return (
-    <MainLayout boutiqueConfig={boutiqueConfig} boutiqueName={boutique}>
+    <MainLayout boutiqueName={boutique}>
       <div className="pt-20 pb-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* En-tête */}
@@ -129,8 +132,12 @@ export default async function ProduitsPage({ params }: ProduitsPageProps) {
 }
 
 // Génération statique des routes
+// Note: En production, cette fonction pourrait récupérer la liste depuis l'API
 export async function generateStaticParams() {
-  return Object.keys(boutiques).map((boutique) => ({
-    boutique,
-  }));
+  // Pour l'instant, on garde les slugs connus
+  // TODO: Récupérer depuis l'API en production
+  return [
+    { boutique: 'marche_241' },
+    { boutique: 'boutique_de_joline' }
+  ];
 }

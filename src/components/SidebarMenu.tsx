@@ -1,11 +1,11 @@
-import Link from 'next/link';
+'use client';
 
-interface Category {
-  id: string;
-  name: string;
-  icon: string;
-  href: string;
-}
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { useBoutique } from '@/hooks/useBoutique';
+import { useCategories } from '@/hooks/useCategories';
+import { getIconeCategorie } from '@/lib/services/categories';
+import { Skeleton } from './ui/Skeleton';
 
 interface SidebarMenuProps {
   isOpen?: boolean;
@@ -13,44 +13,17 @@ interface SidebarMenuProps {
 }
 
 export default function SidebarMenu({ isOpen = true, onClose }: SidebarMenuProps) {
-  const categories: Category[] = [
-    {
-      id: 'electronics',
-      name: 'Électronique',
-      icon: '📱',
-      href: '/categories/electronics'
-    },
-    {
-      id: 'fashion',
-      name: 'Mode',
-      icon: '👕',
-      href: '/categories/fashion'
-    },
-    {
-      id: 'home',
-      name: 'Maison',
-      icon: '🏠',
-      href: '/categories/home'
-    },
-    {
-      id: 'beauty',
-      name: 'Beauté',
-      icon: '💄',
-      href: '/categories/beauty'
-    },
-    {
-      id: 'sports',
-      name: 'Sport',
-      icon: '⚽',
-      href: '/categories/sports'
-    },
-    {
-      id: 'books',
-      name: 'Livres',
-      icon: '📚',
-      href: '/categories/books'
-    }
-  ];
+  const params = useParams();
+  const boutiqueName = params?.boutique as string;
+  
+  const { boutique, loading: boutiqueLoading } = useBoutique(boutiqueName);
+  const { categoriesHierarchie: categories, loading: categoriesLoading } = useCategories(
+    boutique?.id || 0,
+    false, // Pas besoin de hiérarchie pour le sidebar
+    true   // Uniquement les catégories actives
+  );
+
+  const isLoading = boutiqueLoading || categoriesLoading;
 
   return (
     <>
@@ -77,20 +50,35 @@ export default function SidebarMenu({ isOpen = true, onClose }: SidebarMenuProps
 
         {/* Liste des catégories */}
         <nav className="space-y-2">
-          {categories.map((category) => (
-            <Link
-              key={category.id}
-              href={category.href}
-              className="flex items-center space-x-3 px-3 py-3 rounded-lg text-gray-dark hover:bg-accent/20 hover:text-primary transition-all duration-200 group"
-            >
-              <span className="text-xl group-hover:scale-110 transition-transform duration-200">
-                {category.icon}
-              </span>
-              <span className="font-medium">
-                {category.name}
-              </span>
-            </Link>
-          ))}
+          {isLoading ? (
+            // Squelettes de chargement
+            Array.from({ length: 5 }, (_, i) => (
+              <div key={i} className="flex items-center space-x-3 px-3 py-3">
+                <Skeleton className="w-6 h-6 rounded" />
+                <Skeleton className="h-4 flex-1" />
+              </div>
+            ))
+          ) : categories.length > 0 ? (
+            categories.map((categorie) => (
+              <Link
+                key={categorie.id}
+                href={`/${boutiqueName}/produits?categorie=${categorie.slug}`}
+                className="flex items-center space-x-3 px-3 py-3 rounded-lg text-gray-dark hover:bg-accent/20 hover:text-primary transition-all duration-200 group"
+                onClick={onClose} // Fermer le sidebar sur mobile après clic
+              >
+                <span className="text-xl group-hover:scale-110 transition-transform duration-200">
+                  {getIconeCategorie(categorie.nom)}
+                </span>
+                <span className="font-medium">
+                  {categorie.nom}
+                </span>
+              </Link>
+            ))
+          ) : (
+            <div className="px-3 py-3 text-sm text-gray-500">
+              Aucune catégorie disponible
+            </div>
+          )}
         </nav>
 
         {/* Section actions rapides */}
@@ -100,25 +88,28 @@ export default function SidebarMenu({ isOpen = true, onClose }: SidebarMenuProps
           </h3>
           <div className="space-y-2">
             <Link
-              href="/promotions"
+              href={`/${boutiqueName}/produits?promotion=true`}
               className="flex items-center space-x-3 px-3 py-2 rounded-lg text-sm text-gray-dark hover:bg-secondary/10 hover:text-secondary transition-all duration-200"
+              onClick={onClose}
             >
               <span className="text-lg">🏷️</span>
               <span>Promotions</span>
             </Link>
             <Link
-              href="/nouveautes"
+              href={`/${boutiqueName}/produits?nouveaux=true`}
               className="flex items-center space-x-3 px-3 py-2 rounded-lg text-sm text-gray-dark hover:bg-secondary/10 hover:text-secondary transition-all duration-200"
+              onClick={onClose}
             >
               <span className="text-lg">✨</span>
               <span>Nouveautés</span>
             </Link>
             <Link
-              href="/meilleures-ventes"
+              href={`/${boutiqueName}/produits?featured=true`}
               className="flex items-center space-x-3 px-3 py-2 rounded-lg text-sm text-gray-dark hover:bg-secondary/10 hover:text-secondary transition-all duration-200"
+              onClick={onClose}
             >
               <span className="text-lg">🔥</span>
-              <span>Meilleures ventes</span>
+              <span>Produits vedettes</span>
             </Link>
           </div>
         </div>
