@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getBoutiqueConfig, type BoutiqueConfig } from "@/lib/boutiques";
 
+// Force le mode dynamique pour éviter les erreurs de génération statique
+export const dynamic = 'force-dynamic';
+
 export async function generateMetadata({
   params,
 }: {
