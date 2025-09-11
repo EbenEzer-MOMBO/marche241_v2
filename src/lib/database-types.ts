@@ -331,6 +331,67 @@ export interface ProduitAffichage {
   };
 }
 
+// Type pour l'affichage détaillé d'un produit (page produit)
+export interface ProduitDetail {
+  id: number;
+  nom: string;
+  slug: string;
+  description?: string;
+  description_courte?: string;
+  prix: number;
+  prix_original?: number;
+  sku?: string;
+  images?: string[]; // Tableau d'URLs d'images
+  image_principale?: string;
+  variants?: { [key: string]: any }; // Variantes (couleur, taille, etc.)
+  en_stock: boolean;
+  quantite_stock: number;
+  poids?: number;
+  dimensions?: { [key: string]: any };
+  tags?: string[];
+  note_moyenne: number;
+  nombre_avis: number;
+  nombre_vues: number;
+  nombre_ventes: number;
+  est_nouveau: boolean;
+  est_en_promotion: boolean;
+  est_featured: boolean;
+  statut: StatutProduit;
+  date_creation: string;
+  date_modification: string;
+  date_publication?: string;
+  boutique: {
+    id: number;
+    nom: string;
+    logo?: string;
+    slug: string;
+    statut: string;
+    adresse?: string;
+    telephone?: string;
+    vendeur_id: number;
+    description?: string;
+    nombre_avis: number;
+    note_moyenne: number;
+    date_creation: string;
+    nombre_produits: number;
+    couleur_primaire?: string;
+    couleur_secondaire?: string;
+    date_modification: string;
+  };
+  categorie: {
+    id: number;
+    nom: string;
+    slug: string;
+    statut: string;
+    parent_id?: number;
+    boutique_id: number;
+    description?: string;
+    date_creation: string;
+    ordre_affichage: number;
+    date_modification: string;
+  };
+}
+
 // Types pour les formulaires et API
 export interface CreateVendeurData {
   telephone: string;
