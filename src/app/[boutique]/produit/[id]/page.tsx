@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation';
 import ProductDetail from '@/components/ProductDetail';
 import { getBoutiqueConfig, type BoutiqueConfig } from '@/lib/boutiques';
+import { getBoutiqueBySlug } from '@/lib/services/boutiques';
+import { getProduitById, formatApiProduitPourDetail } from '@/lib/services/produits';
 
 interface ProductPageProps {
   params: Promise<{
@@ -13,10 +15,31 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const { boutique, id } = await params;
   
   let boutiqueConfig: BoutiqueConfig;
+  let boutiqueData;
+  let productData;
+  
   try {
+    // Récupérer les données de la boutique
     boutiqueConfig = await getBoutiqueConfig(boutique);
+    boutiqueData = await getBoutiqueBySlug(boutique);
   } catch (error) {
     console.error('Erreur lors de la récupération de la boutique:', error);
+    notFound();
+  }
+
+  try {
+    // Récupérer les données du produit
+    const produitDB = await getProduitById(Number(id));
+    productData = formatApiProduitPourDetail({
+      success: true,
+      produit: produitDB
+    });
+  } catch (error) {
+    console.error('Erreur lors de la récupération du produit:', error);
+    notFound();
+  }
+
+  if (!productData) {
     notFound();
   }
 
@@ -29,7 +52,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
         '--accent-color': boutiqueConfig.theme.accent,
       } as React.CSSProperties}
     >
-      <ProductDetail productId={id} />
+      <ProductDetail 
+        productId={id}
+        productData={productData}
+        boutiqueSlug={boutique}
+      />
     </div>
   );
 }

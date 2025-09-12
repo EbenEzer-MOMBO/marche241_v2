@@ -7,6 +7,7 @@ import { formatPrice } from '@/lib/utils';
 import FloatingAddToCartButton from './FloatingAddToCartButton';
 import { ProduitDetail } from '@/lib/database-types';
 import { formatApiProduitPourDetail, formatVariantsPourInterface, getProduitImageUrl } from '@/lib/services/produits';
+import { useAjoutPanier } from '@/hooks/usePanier';
 
 interface ProductDetailProps {
   productId?: string;
@@ -27,6 +28,11 @@ export default function ProductDetail({
   const [product, setProduct] = useState<ProduitDetail | null>(productData || null);
   const [loading, setLoading] = useState(!productData);
   const [error, setError] = useState<string | null>(null);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [addToCartMessage, setAddToCartMessage] = useState<string | null>(null);
+  
+  // Hook pour l'ajout au panier
+  const { ajouterProduit, loading: panierLoading, error: panierError } = useAjoutPanier();
 
   // Charger les données du produit si elles ne sont pas pré-chargées
   useEffect(() => {
@@ -72,6 +78,22 @@ export default function ProductDetail({
     setError('Veuillez fournir les données du produit via la prop productData');
     setLoading(false);
   }, [productId, productSlug, productData]);
+
+  // Sélection automatique du premier élément de chaque variant
+  useEffect(() => {
+    if (product) {
+      const formattedVariants = formatVariantsPourInterface(product.variants || {});
+      const initialVariants: { [key: string]: string } = {};
+      
+      formattedVariants.forEach((variant) => {
+        if (variant.options.length > 0) {
+          initialVariants[variant.label] = variant.options[0];
+        }
+      });
+      
+      setSelectedVariants(initialVariants);
+    }
+  }, [product]);
 
   // État de chargement avec skeleton loader élégant [[memory:8540418]]
   if (loading) {
@@ -148,19 +170,58 @@ export default function ProductDetail({
 
   const handleQuantityChange = (newQuantity: number) => {
     if (newQuantity >= 1) {
-      setQuantity(newQuantity);
+      // Limiter la quantité au stock disponible
+      const maxQuantity = product?.quantite_stock || 1;
+      const limitedQuantity = Math.min(newQuantity, maxQuantity);
+      setQuantity(limitedQuantity);
     }
   };
 
-  const handleAddToCart = () => {
-    // Logique d'ajout au panier
-    console.log('Ajout au panier:', {
-      productId: product.id,
-      productSlug: product.slug,
-      quantity,
-      variants: selectedVariants
-    });
+  // Fonction pour obtenir la quantité maximale disponible
+  const getMaxQuantity = () => {
+    return product?.quantite_stock || 1;
   };
+
+  // Fonction pour vérifier si on peut augmenter la quantité
+  const canIncreaseQuantity = () => {
+    return quantity < getMaxQuantity();
+  };
+
+  const handleAddToCart = async () => {
+    if (!product) return;
+    
+    try {
+      setIsAddingToCart(true);
+      setAddToCartMessage(null);
+      
+      const success = await ajouterProduit(
+        product.boutique.id,
+        product.id,
+        quantity,
+        selectedVariants
+      );
+      
+      if (success) {
+        setAddToCartMessage('Produit ajouté au panier avec succès !');
+        // Optionnel: réinitialiser la quantité
+        // setQuantity(1);
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout au panier:', error);
+    } finally {
+      setIsAddingToCart(false);
+    }
+  };
+  
+  // Effacer le message après 3 secondes
+  useEffect(() => {
+    if (addToCartMessage) {
+      const timer = setTimeout(() => {
+        setAddToCartMessage(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [addToCartMessage]);
 
   return (
     <>
@@ -170,6 +231,7 @@ export default function ProductDetail({
         quantity={quantity}
         onAddToCart={handleAddToCart}
         disabled={!product.en_stock}
+        loading={isAddingToCart || panierLoading}
       />
       
     <div className="min-h-screen bg-white">
@@ -411,7 +473,8 @@ export default function ProductDetail({
                 </span>
                 <button
                   onClick={() => handleQuantityChange(quantity + 1)}
-                  className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors duration-200"
+                  disabled={!canIncreaseQuantity()}
+                  className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:text-gray-400"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <path d="M12 4v16m8-8H4"></path>
@@ -421,28 +484,56 @@ export default function ProductDetail({
             </div>
 
             {/* Statut de stock */}
-            <div className="flex items-center space-x-2">
-              {product.en_stock ? (
-                <>
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span className="text-green-600 font-medium">En stock</span>
-                </>
-              ) : (
-                <>
-                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                  <span className="text-red-600 font-medium">Rupture de stock</span>
-                </>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                {product.en_stock ? (
+                  <>
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                    <span className="text-green-600 font-medium">En stock</span>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                    <span className="text-red-600 font-medium">Rupture de stock</span>
+                  </>
+                )}
+              </div>
+              {product.en_stock && (
+                <span className="text-sm text-gray-600">
+                  {product.quantite_stock} unité{product.quantite_stock > 1 ? 's' : ''} disponible{product.quantite_stock > 1 ? 's' : ''}
+                </span>
               )}
             </div>
+
+            {/* Messages d'état */}
+            {(addToCartMessage || panierError) && (
+              <div className={`p-4 rounded-lg ${
+                addToCartMessage ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+              }`}>
+                <p className="text-sm font-medium">
+                  {addToCartMessage || panierError}
+                </p>
+              </div>
+            )}
 
             {/* Boutons d'action */}
             <div className="space-y-3 pt-6">
               <button
                 onClick={handleAddToCart}
-                disabled={!product.en_stock}
-                className="w-full bg-primary text-white py-4 rounded-xl font-semibold text-lg lg:block hidden hover:bg-primary/90 transition-colors duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                disabled={!product.en_stock || isAddingToCart || panierLoading}
+                className="w-full bg-primary text-white py-4 rounded-xl font-semibold text-lg lg:block hidden hover:bg-primary/90 transition-colors duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
               >
-                {product.en_stock ? 'Ajouter au panier' : 'Produit indisponible'}
+                {(isAddingToCart || panierLoading) ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Ajout en cours...</span>
+                  </>
+                ) : (
+                  <span>{product.en_stock ? 'Ajouter au panier' : 'Produit indisponible'}</span>
+                )}
               </button>
               
             </div>

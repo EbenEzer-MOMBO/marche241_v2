@@ -3,16 +3,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { formatPrice } from '@/lib/utils';
-
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image: string;
-  category: string;
-  variant?: string;
-}
+import { usePanier } from '@/hooks/usePanier';
+import { getProduitImageUrl } from '@/lib/services/produits';
 
 interface RecommendedProduct {
   id: string;
@@ -28,18 +20,16 @@ interface CartSidebarProps {
 }
 
 export default function CartSidebar({ isOpen, onClose, boutiqueName = 'marche_241' }: CartSidebarProps) {
-  // Données de test pour le panier
-  const cartItems: CartItem[] = [
-    {
-      id: '1',
-      name: 'Initial Armandèse',
-      price: 12500,
-      quantity: 1,
-      image: '/article2.webp',
-      category: 'Mode',
-      variant: 'Initial : D'
-    }
-  ];
+  // Hook pour gérer le panier
+  const { 
+    panier, 
+    totalItems, 
+    totalPrix, 
+    loading, 
+    error, 
+    mettreAJourQuantite, 
+    supprimerItem 
+  } = usePanier();
 
   // Produits recommandés
   const recommendedProducts: RecommendedProduct[] = [
@@ -65,12 +55,26 @@ export default function CartSidebar({ isOpen, onClose, boutiqueName = 'marche_24
 
 
 
-  const getTotalPrice = () => {
-    return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+  // Fonction pour formater les variants sélectionnés
+  const formatVariants = (variants: { [key: string]: any } | null) => {
+    if (!variants) return '';
+    return Object.entries(variants)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join(', ');
   };
 
-  const getTotalItems = () => {
-    return cartItems.reduce((total, item) => total + item.quantity, 0);
+  // Fonction pour gérer la mise à jour de quantité
+  const handleQuantityChange = async (itemId: number, newQuantity: number) => {
+    if (newQuantity < 1) {
+      await supprimerItem(itemId);
+    } else {
+      await mettreAJourQuantite(itemId, newQuantity);
+    }
+  };
+
+  // Fonction pour supprimer un item
+  const handleRemoveItem = async (itemId: number) => {
+    await supprimerItem(itemId);
   };
 
   return (
@@ -111,7 +115,35 @@ export default function CartSidebar({ isOpen, onClose, boutiqueName = 'marche_24
 
           {/* Contenu du panier */}
           <div className="flex-1 overflow-y-auto">
-            {cartItems.length === 0 ? (
+            {loading ? (
+              /* État de chargement */
+              <div className="flex items-center justify-center h-full p-8">
+                <div className="text-center">
+                  <svg className="animate-spin h-8 w-8 text-gray-400 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <p className="text-gray-600">Chargement du panier...</p>
+                </div>
+              </div>
+            ) : error ? (
+              /* État d'erreur */
+              <div className="flex items-center justify-center h-full p-8">
+                <div className="text-center">
+                  <div className="text-4xl mb-4">⚠️</div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Erreur de chargement
+                  </h3>
+                  <p className="text-gray-600 mb-4">{error}</p>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors duration-200"
+                  >
+                    Réessayer
+                  </button>
+                </div>
+              </div>
+            ) : panier.length === 0 ? (
               /* Panier vide */
               <div className="flex flex-col items-center justify-center h-full p-8 text-center">
                 <div className="text-6xl mb-4">🛒</div>
@@ -122,7 +154,7 @@ export default function CartSidebar({ isOpen, onClose, boutiqueName = 'marche_24
                   Découvrez nos produits et ajoutez-les à votre panier
                 </p>
                 <Link
-                  href="/produits"
+                  href={`/${boutiqueName}`}
                   onClick={onClose}
                   className="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition-colors duration-200"
                 >
@@ -132,70 +164,81 @@ export default function CartSidebar({ isOpen, onClose, boutiqueName = 'marche_24
             ) : (
               <div className="p-4">
                 {/* Articles du panier */}
-                {cartItems.map((item) => (
+                {panier.map((item) => (
                   <div key={item.id} className="mb-6">
                     <div className="flex items-start space-x-3">
-                      {/* Bouton supprimer en haut à droite */}
-                      <div className="flex-1 flex items-start space-x-3">
-                        {/* Image du produit */}
-                        <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                          <Image 
-                            src={item.image} 
-                            alt={item.name} 
-                            width={80} 
-                            height={80}
-                            className="w-full h-full object-cover"
-                          />
+                      {/* Image du produit */}
+                      <div className="flex-shrink-0">
+                        <Image
+                          src={getProduitImageUrl(item.produit.image_principale)}
+                          alt={item.produit.nom}
+                          width={80}
+                          height={80}
+                          className="w-20 h-20 object-cover rounded-lg"
+                        />
+                      </div>
+
+                      {/* Informations du produit */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h4 className="text-sm font-medium text-gray-900 truncate">
+                              {item.produit.nom}
+                            </h4>
+                            {item.variants_selectionnes && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                {formatVariants(item.variants_selectionnes)}
+                              </p>
+                            )}
+                            <p className="text-sm font-semibold text-gray-900 mt-1">
+                              {formatPrice(item.produit.prix)}
+                            </p>
+                          </div>
+                          
+                          {/* Bouton supprimer */}
+                          <button
+                            onClick={() => handleRemoveItem(item.id)}
+                            className="text-gray-400 hover:text-red-500 transition-colors duration-200 ml-2"
+                            aria-label="Supprimer l'article"
+                          >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
                         </div>
 
-                        {/* Informations du produit */}
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-gray-900 text-sm mb-1 line-clamp-2">
-                            {item.name}
-                          </h4>
-                          <p className="text-lg font-semibold text-gray-900 mb-2">
-                            {formatPrice(item.price)}
-                          </p>
-                          {item.variant && (
-                            <p className="text-sm text-gray-500 italic mb-3">
-                              • {item.variant}
-                            </p>
-                          )}
-                          
-                          {/* Contrôles de quantité */}
-                          <div className="flex items-center space-x-3 mt-3">
+                        {/* Contrôles de quantité */}
+                        <div className="flex items-center justify-between mt-3">
+                          <div className="flex items-center space-x-2">
                             <button
+                              onClick={() => handleQuantityChange(item.id, item.quantite - 1)}
                               className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors duration-200"
-                              aria-label="Diminuer la quantité"
+                              disabled={item.quantite <= 1}
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                                 <path d="M20 12H4"></path>
                               </svg>
                             </button>
-                            <span className="text-lg font-medium text-gray-900 min-w-[2rem] text-center">
-                              {item.quantity}
+                            <span className="text-sm font-medium text-gray-900 min-w-[2rem] text-center">
+                              {item.quantite}
                             </span>
                             <button
+                              onClick={() => handleQuantityChange(item.id, item.quantite + 1)}
                               className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors duration-200"
-                              aria-label="Augmenter la quantité"
+                              disabled={item.quantite >= item.produit.quantite_stock}
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                                 <path d="M12 4v16m8-8H4"></path>
                               </svg>
                             </button>
                           </div>
+                          
+                          {/* Prix total pour cet item */}
+                          <span className="text-sm font-semibold text-gray-900">
+                            {formatPrice(item.produit.prix * item.quantite)}
+                          </span>
                         </div>
                       </div>
-                      
-                      {/* Bouton supprimer */}
-                      <button
-                        className="text-gray-400 hover:text-gray-600 transition-colors duration-200 flex-shrink-0"
-                        aria-label="Supprimer l'article"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                          <path d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                      </button>
                     </div>
                   </div>
                 ))}
@@ -242,26 +285,29 @@ export default function CartSidebar({ isOpen, onClose, boutiqueName = 'marche_24
                     ))}
                   </div>
                 </div>
+
+                {/* Total et bouton de validation */}
+                <div className="border-t border-gray-200 pt-4 mt-6">
+                  <div className="flex items-center justify-between text-lg font-semibold text-gray-900 mb-4">
+                    <span>Total ({totalItems} article{totalItems > 1 ? 's' : ''})</span>
+                    <span>{formatPrice(totalPrix)}</span>
+                  </div>
+                  
+                  <Link 
+                    href={`/${boutiqueName}/commande`}
+                    className="w-full bg-primary text-white py-4 rounded-2xl font-medium text-lg flex items-center justify-center space-x-3 hover:bg-primary/90 transition-colors duration-200 text-decoration-none"
+                    onClick={onClose}
+                  >
+                    <span className="bg-white text-primary rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
+                      {totalItems}
+                    </span>
+                    <span>Valider la commande</span>
+                    <span>{formatPrice(totalPrix)}</span>
+                  </Link>
+                </div>
               </div>
             )}
           </div>
-
-          {/* Footer du panier avec bouton de validation */}
-          {cartItems.length > 0 && (
-            <div className="border-t border-gray-200 p-4 bg-white">
-              <Link 
-                href={`/${boutiqueName}/commande`}
-                className="w-full bg-primary text-white py-4 rounded-2xl font-medium text-lg flex items-center justify-center space-x-3 hover:bg-primary/90 transition-colors duration-200 text-decoration-none"
-                onClick={onClose}
-              >
-                <span className="bg-white text-black rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
-                  {getTotalItems()}
-                </span>
-                <span>Valider la commande</span>
-                <span>{formatPrice(getTotalPrice())}</span>
-              </Link>
-            </div>
-          )}
         </div>
       </aside>
     </>
