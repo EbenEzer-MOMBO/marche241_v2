@@ -141,6 +141,9 @@ export function usePanier(): UsePanierResult {
       // Recharger le panier après ajout
       await chargerPanier();
       
+      // Émettre un événement pour notifier les autres composants
+      window.dispatchEvent(new CustomEvent('cartUpdated'));
+      
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors de l\'ajout au panier';
@@ -162,10 +165,14 @@ export function usePanier(): UsePanierResult {
       // Recharger le panier après mise à jour
       await chargerPanier();
       
+      // Émettre un événement pour notifier les autres composants
+      window.dispatchEvent(new CustomEvent('cartUpdated'));
+      
       return true;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la mise à jour';
-      console.error('Erreur lors de la mise à jour du panier:', err);
+      const errorMessage = err instanceof Error ? 
+        err.message : 'Erreur lors de la mise à jour de la quantité';
+      console.error('Erreur lors de la mise à jour de la quantité:', err);
       setError(errorMessage);
       return false;
     }
@@ -179,6 +186,9 @@ export function usePanier(): UsePanierResult {
       
       // Recharger le panier après suppression
       await chargerPanier();
+      
+      // Émettre un événement pour notifier les autres composants
+      window.dispatchEvent(new CustomEvent('cartUpdated'));
       
       return true;
     } catch (err) {

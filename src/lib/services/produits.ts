@@ -171,7 +171,7 @@ export function getProduitImageUrl(imageUrl?: string | null): string {
       console.warn('URL d\'image de produit invalide:', imageUrl);
     }
   }
-  return '/article1.webp'; // Image par défaut pour les produits
+  return '/default-product.png'; // Image par défaut pour les produits
 }
 
 /**
@@ -208,7 +208,7 @@ export function formatApiProduitPourDetail(apiResponse: { success: boolean; prod
   
   // Si toujours pas d'images, utiliser l'image par défaut
   if (images.length === 0) {
-    images = ['/article1.webp'];
+    images = ['/default-product.png'];
   }
 
   // Traitement des variantes

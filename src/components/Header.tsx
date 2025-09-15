@@ -1,8 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect } from 'react';
+import { List, MagnifyingGlass, ShoppingCart } from '@phosphor-icons/react';
 import { useScrollPosition } from '@/hooks/useScrollPosition';
 import { useBoutique } from '@/hooks/useBoutique';
+import { usePanier } from '@/hooks/usePanier';
 import { HeaderSkeleton } from './LoadingStates';
 import SafeImage from './SafeImage';
 import { BoutiqueConfig } from '@/lib/boutiques';
@@ -10,7 +13,6 @@ import { BoutiqueConfig } from '@/lib/boutiques';
 interface HeaderProps {
   onMenuClick?: () => void;
   onCartClick?: () => void;
-  cartItemsCount?: number;
   boutiqueName: string;
   hideCartButton?: boolean;
 }
@@ -33,9 +35,19 @@ function getBoutiqueLogo(logoUrl?: string | null): string {
   return '/default-shop.png';
 }
 
-export default function Header({ onMenuClick, onCartClick, cartItemsCount = 0, boutiqueName, hideCartButton = false }: HeaderProps) {
+export default function Header({ onMenuClick, onCartClick, boutiqueName, hideCartButton = false }: HeaderProps) {
   const scrollY = useScrollPosition();
   const { boutique, config, loading, error } = useBoutique(boutiqueName);
+  const { totalItems, rafraichir } = usePanier();
+
+  // Rafraîchir le panier périodiquement pour détecter les changements
+  useEffect(() => {
+    const interval = setInterval(() => {
+      rafraichir();
+    }, 2000); // Rafraîchir toutes les 2 secondes
+
+    return () => clearInterval(interval);
+  }, [rafraichir]);
   
   // Le logo du hero devient invisible après 300px de scroll (mobile uniquement)
   const showMobileNavbarLogo = scrollY > 300;
@@ -74,17 +86,7 @@ export default function Header({ onMenuClick, onCartClick, cartItemsCount = 0, b
               aria-label="Menu"
               onClick={onMenuClick}
             >
-              <svg
-                className="h-6 w-6"
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path d="M4 6h16M4 12h16M4 18h16"></path>
-              </svg>
+              <List size={24} />
             </button>
 
             {/* Logo fixe desktop - toujours visible */}
@@ -137,18 +139,7 @@ export default function Header({ onMenuClick, onCartClick, cartItemsCount = 0, b
               className="text-black hover:text-secondary transition-colors duration-200"
               aria-label="Rechercher"
             >
-              <svg
-                className="h-5 w-5"
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <circle cx="11" cy="11" r="8"></circle>
-                <path d="m21 21-4.35-4.35"></path>
-              </svg>
+              <MagnifyingGlass size={20} />
             </button>
             
             {!hideCartButton && (
@@ -158,20 +149,10 @@ export default function Header({ onMenuClick, onCartClick, cartItemsCount = 0, b
                 aria-label="Panier"
                 onClick={onCartClick}
               >
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path d="M3 3h2l.4 2M7 13h10l4-8H5.4m1.6 0L5 3H3m4 10v6a1 1 0 001 1h8a1 1 0 001-1v-6m-10 0v-2a1 1 0 011-1h8a1 1 0 011 1v2"></path>
-                </svg>
-                {cartItemsCount > 0 && (
+                <ShoppingCart size={20} />
+                {totalItems > 0 && (
                   <span className="absolute -top-2 -right-2 bg-black text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                    {cartItemsCount > 99 ? '99+' : cartItemsCount}
+                    {totalItems > 99 ? '99+' : totalItems}
                   </span>
                 )}
               </button>

@@ -162,10 +162,7 @@ export async function mettreAJourQuantitePanier(
   quantite: number
 ): Promise<AjoutPanierResponse> {
   try {
-    const sessionId = getOrCreateSessionId();
-    
-    const response = await api.put<AjoutPanierResponse>(`/panier/${itemId}`, {
-      session_id: sessionId,
+    const response = await api.patch<AjoutPanierResponse>(`/panier/${itemId}/quantite`, {
       quantite
     });
     
@@ -187,9 +184,7 @@ export async function mettreAJourQuantitePanier(
  */
 export async function supprimerDuPanier(itemId: number): Promise<{ success: boolean; message: string }> {
   try {
-    const sessionId = getOrCreateSessionId();
-    
-    const response = await api.delete<{ success: boolean; message: string }>(`/panier/${itemId}?session_id=${sessionId}`);
+    const response = await api.delete<{ success: boolean; message: string }>(`/panier/${itemId}`);
     
     if (!response.success) {
       throw new Error(response.message || 'Erreur lors de la suppression du panier');

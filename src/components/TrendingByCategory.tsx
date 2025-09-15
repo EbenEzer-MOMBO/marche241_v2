@@ -25,7 +25,7 @@ export default function TrendingByCategory({ boutiqueName }: TrendingByCategoryP
             <Skeleton className="h-8 w-64 mx-auto mb-4" />
             <SkeletonText lines={2} className="max-w-2xl mx-auto" />
           </div>
-          
+
           <div className="space-y-16">
             {[1, 2, 3].map((i) => (
               <div key={i} className="shadow-md border border-gray-100 rounded-2xl p-6 lg:p-8">
@@ -55,7 +55,7 @@ export default function TrendingByCategory({ boutiqueName }: TrendingByCategoryP
   // Gestion d'erreur
   if (boutiqueError || categoriesError || !boutique || !categories) {
     return (
-      <ErrorState 
+      <ErrorState
         title="Impossible de charger les produits"
         message={boutiqueError || categoriesError || "Aucun produit trouvé"}
         onRetry={refetch}
@@ -84,7 +84,7 @@ export default function TrendingByCategory({ boutiqueName }: TrendingByCategoryP
             Produits Tendance
           </h2>
           <p className="text-gray-dark max-w-2xl mx-auto">
-            Découvrez les produits les plus populaires dans chaque catégorie, 
+            Découvrez les produits les plus populaires dans chaque catégorie,
             sélectionnés spécialement pour vous.
           </p>
         </div>
@@ -116,33 +116,45 @@ export default function TrendingByCategory({ boutiqueName }: TrendingByCategoryP
                           alt={produit.nom}
                           width={200}
                           height={200}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${!produit.en_stock ? 'grayscale opacity-50' : ''
+                            }`}
                         />
-                      </div>
-                      
-                      {/* Badges */}
-                      <div className="absolute top-2 left-2 flex flex-col gap-1">
-                        {produit.est_nouveau && (
-                          <span className="bg-secondary text-white px-2 py-1 rounded-full text-xs font-medium">
-                            Nouveau
-                          </span>
-                        )}
-                        {produit.est_en_promotion && (
-                          <span className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-                            Promo
-                          </span>
-                        )}
-                        {produit.est_featured && (
-                          <span className="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-                            Vedette
-                          </span>
-                        )}
+
+                        {/* Overlay stock épuisé */}
                         {!produit.en_stock && (
-                          <span className="bg-gray-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-                            Épuisé
-                          </span>
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-lg">
+                            <div className="text-center">
+                              <div className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium mb-2">
+                                Épuisé
+                              </div>
+                              <p className="text-white text-xs">
+                                Stock indisponible
+                              </p>
+                            </div>
+                          </div>
                         )}
                       </div>
+
+                      {/* Badges */}
+                      {produit.en_stock && (
+                        <div className="absolute top-2 left-2 flex flex-col gap-1">
+                          {produit.est_nouveau && (
+                            <span className="bg-secondary text-white px-2 py-1 rounded-full text-xs font-medium">
+                              Nouveau
+                            </span>
+                          )}
+                          {produit.est_en_promotion && (
+                            <span className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+                              Promo
+                            </span>
+                          )}
+                          {produit.est_featured && (
+                            <span className="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+                              Vedette
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Informations du produit */}
@@ -151,7 +163,7 @@ export default function TrendingByCategory({ boutiqueName }: TrendingByCategoryP
                       <h4 className="text-black font-medium text-sm mb-2 line-clamp-2 group-hover:text-secondary transition-colors duration-200">
                         {produit.nom}
                       </h4>
-                      
+
                       {/* Prix */}
                       <div className="flex flex-col gap-1">
                         <span className="text-black font-semibold text-sm">

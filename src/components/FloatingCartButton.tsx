@@ -1,54 +1,39 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import { useEffect } from 'react';
 import { formatPrice } from '@/lib/utils';
-
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image: string;
-  category: string;
-  variant?: string;
-}
+import { usePanier } from '@/hooks/usePanier';
 
 interface FloatingCartButtonProps {
   onCartClick: () => void;
-  cartItems?: CartItem[];
 }
 
-export default function FloatingCartButton({ onCartClick, cartItems = [] }: FloatingCartButtonProps) {
+export default function FloatingCartButton({ onCartClick }: FloatingCartButtonProps) {
   const pathname = usePathname();
+  const { panier, totalItems, totalPrix, loading, rafraichir } = usePanier();
+
+  // Rafraîchir le panier au montage et écouter les changements
+  useEffect(() => {
+    rafraichir(); // Rafraîchir une fois au montage
+    
+    // Écouter les événements de changement du panier
+    const handleCartUpdate = () => {
+      rafraichir();
+    };
+    
+    window.addEventListener('cartUpdated', handleCartUpdate);
+    
+    return () => {
+      window.removeEventListener('cartUpdated', handleCartUpdate);
+    };
+  }, [rafraichir]);
   
   // Ne pas afficher sur les pages produit
   const isProductPage = pathname?.includes('/produit/');
-  
-  // Données de test pour le panier (remplacer par les vraies données)
-  const defaultCartItems: CartItem[] = [
-    {
-      id: '1',
-      name: 'Initial Armandèse',
-      price: 12500,
-      quantity: 1,
-      image: '/article2.webp',
-      category: 'Mode',
-      variant: 'Initial : D'
-    }
-  ];
 
-  const items = cartItems.length > 0 ? cartItems : defaultCartItems;
-
-  const getTotalItems = () => {
-    return items.reduce((total, item) => total + item.quantity, 0);
-  };
-
-  const getTotalPrice = () => {
-    return items.reduce((total, item) => total + (item.price * item.quantity), 0);
-  };
-
-  // Ne pas afficher le bouton s'il n'y a pas d'articles ou si on est sur une page produit
-  if (items.length === 0 || isProductPage) {
+  // Ne pas afficher le bouton s'il n'y a pas d'articles, si on est sur une page produit, ou pendant le chargement
+  if (panier.length === 0 || isProductPage || loading) {
     return null;
   }
 
@@ -59,10 +44,10 @@ export default function FloatingCartButton({ onCartClick, cartItems = [] }: Floa
         className="w-full bg-primary text-white py-4 rounded-2xl font-medium text-lg flex items-center justify-center space-x-4 hover:bg-primary/90 transition-colors duration-200 shadow-lg"
       >
         <span className="bg-white text-primary rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
-          {getTotalItems()}
+          {totalItems}
         </span>
         <span>Panier</span>
-        <span>{formatPrice(getTotalPrice())}</span>
+        <span>{formatPrice(totalPrix)}</span>
       </button>
     </div>
   );
