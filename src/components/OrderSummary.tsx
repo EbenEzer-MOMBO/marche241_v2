@@ -4,15 +4,8 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { formatPrice } from '@/lib/utils';
 import { BoutiqueConfig } from '@/lib/boutiques';
+import { usePanier } from '@/hooks/usePanier';
 
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image: string;
-  variant?: string;
-}
 
 interface OrderSummaryProps {
   boutiqueConfig: BoutiqueConfig;
@@ -43,26 +36,10 @@ export function OrderSummary({ boutiqueConfig }: OrderSummaryProps) {
     additionalInfo: ''
   });
 
-  // Données de test pour le panier
-  const cartItems: CartItem[] = [
-    {
-      id: '1',
-      name: 'Initial Armandèse',
-      price: 12500,
-      quantity: 2,
-      image: '/article2.webp',
-      variant: 'Initial : D, Couleur : Or'
-    },
-    {
-      id: '2',
-      name: 'Robe Élégante',
-      price: 45000,
-      quantity: 1,
-      image: '/article1.webp'
-    }
-  ];
+  // Utilisation du hook panier pour récupérer les vraies données
+  const { panier, totalItems, totalPrix, loading } = usePanier();
 
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const subtotal = totalPrix;
   
   // Calcul des frais de livraison basé sur la commune sélectionnée
   const getDeliveryFee = () => {
@@ -210,7 +187,7 @@ export function OrderSummary({ boutiqueConfig }: OrderSummaryProps) {
 
     // Logique de soumission de commande
     console.log('Commande soumise:', {
-      items: cartItems,
+      items: panier,
       payment: payOnDelivery ? 'cash_on_delivery' : selectedPayment,
       paymentPhone: payOnDelivery ? null : paymentPhone,
       payOnDelivery,
@@ -235,34 +212,57 @@ export function OrderSummary({ boutiqueConfig }: OrderSummaryProps) {
         <div className="bg-white rounded-lg shadow-md mb-6 border border-gray-100">
           <div className="px-6 py-4 border-b border-gray-100">
             <h3 className="text-lg font-semibold text-black">
-              Votre commande ({cartItems.length} articles)
+              Votre commande ({totalItems} articles)
             </h3>
           </div>
           <div className="p-6">
-            {cartItems.map((item, index) => (
-              <div key={item.id} className={`flex items-center py-4 ${index < cartItems.length - 1 ? 'border-b border-gray-200' : ''}`}>
-                <div className="w-20 h-20 relative flex-shrink-0">
-                  <Image
-                    src={item.image}
-                    alt={item.name}
-                    fill
-                    className="rounded-lg object-cover"
-                  />
-                </div>
-                <div className="flex-1 ml-4">
-                  <h4 className="font-medium text-gray-900 mb-1">{item.name}</h4>
-                  {item.variant && (
-                    <p className="text-sm text-gray-500 mb-2">{item.variant}</p>
-                  )}
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Quantité: {item.quantity}</span>
-                    <span className="font-semibold text-lg text-black">
-                      {formatPrice(item.price * item.quantity)}
-                    </span>
-                  </div>
-                </div>
+            {loading ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                <span className="ml-2 text-gray-600">Chargement du panier...</span>
               </div>
-            ))}
+            ) : panier.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">Votre panier est vide</p>
+              </div>
+            ) : (
+              panier.map((item, index) => {
+                // Construire la chaîne de variants
+                const variantText = item.variants_selectionnes 
+                  ? Object.entries(item.variants_selectionnes)
+                      .map(([key, value]) => `${key}: ${value}`)
+                      .join(', ')
+                  : null;
+                
+                // Utiliser l'image principale du produit ou une image par défaut
+                const imageUrl = item.produit.image_principale || '/article1.webp';
+                
+                return (
+                  <div key={item.id} className={`flex items-center py-4 ${index < panier.length - 1 ? 'border-b border-gray-200' : ''}`}>
+                    <div className="w-20 h-20 relative flex-shrink-0">
+                      <Image
+                        src={imageUrl}
+                        alt={item.produit.nom}
+                        fill
+                        className="rounded-lg object-cover"
+                      />
+                    </div>
+                    <div className="flex-1 ml-4">
+                      <h4 className="font-medium text-gray-900 mb-1">{item.produit.nom}</h4>
+                      {variantText && (
+                        <p className="text-sm text-gray-500 mb-2">{variantText}</p>
+                      )}
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Quantité: {item.quantite}</span>
+                        <span className="font-semibold text-lg text-black">
+                          {formatPrice(item.produit.prix * item.quantite)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
 
@@ -481,7 +481,7 @@ export function OrderSummary({ boutiqueConfig }: OrderSummaryProps) {
             
             <div className="space-y-3 mb-4">
               <div className="flex justify-between items-center py-2">
-                <span className="text-gray-600">Sous-total ({cartItems.length} articles)</span>
+                <span className="text-gray-600">Sous-total ({totalItems} articles)</span>
                 <span className="font-medium">{formatPrice(subtotal)}</span>
               </div>
               <div className="flex justify-between items-center py-2">

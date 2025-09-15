@@ -8,6 +8,8 @@ import FloatingAddToCartButton from './FloatingAddToCartButton';
 import { ProduitDetail } from '@/lib/database-types';
 import { formatApiProduitPourDetail, formatVariantsPourInterface, getProduitImageUrl } from '@/lib/services/produits';
 import { useAjoutPanier } from '@/hooks/usePanier';
+import { useToast } from '@/hooks/useToast';
+import { ToastContainer } from '@/components/ui/Toast';
 
 interface ProductDetailProps {
   productId?: string;
@@ -29,10 +31,12 @@ export default function ProductDetail({
   const [loading, setLoading] = useState(!productData);
   const [error, setError] = useState<string | null>(null);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
-  const [addToCartMessage, setAddToCartMessage] = useState<string | null>(null);
   
   // Hook pour l'ajout au panier
   const { ajouterProduit, loading: panierLoading, error: panierError } = useAjoutPanier();
+  
+  // Hook pour les toasts
+  const { toasts, removeToast, success, error: showError } = useToast();
 
   // Charger les données du produit si elles ne sont pas pré-chargées
   useEffect(() => {
@@ -192,17 +196,20 @@ export default function ProductDetail({
     
     try {
       setIsAddingToCart(true);
-      setAddToCartMessage(null);
       
-      const success = await ajouterProduit(
+      const isSuccess = await ajouterProduit(
         product.boutique.id,
         product.id,
         quantity,
         selectedVariants
       );
       
-      if (success) {
-        setAddToCartMessage('Produit ajouté au panier avec succès !');
+      if (isSuccess) {
+        success(
+          `${product.nom} ajouté au panier`,
+          'Succès',
+          4000
+        );
         // Optionnel: réinitialiser la quantité
         // setQuantity(1);
       }
@@ -213,18 +220,18 @@ export default function ProductDetail({
     }
   };
   
-  // Effacer le message après 3 secondes
+  // Afficher les erreurs du panier via toast
   useEffect(() => {
-    if (addToCartMessage) {
-      const timer = setTimeout(() => {
-        setAddToCartMessage(null);
-      }, 3000);
-      return () => clearTimeout(timer);
+    if (panierError) {
+      showError(panierError, 'Erreur', 5000);
     }
-  }, [addToCartMessage]);
+  }, [panierError, showError]);
 
   return (
     <>
+      {/* Container des toasts */}
+      <ToastContainer toasts={toasts} onClose={removeToast} />
+      
       <FloatingAddToCartButton
         productName={product.nom}
         price={product.prix}
@@ -505,16 +512,6 @@ export default function ProductDetail({
               )}
             </div>
 
-            {/* Messages d'état */}
-            {(addToCartMessage || panierError) && (
-              <div className={`p-4 rounded-lg ${
-                addToCartMessage ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-              }`}>
-                <p className="text-sm font-medium">
-                  {addToCartMessage || panierError}
-                </p>
-              </div>
-            )}
 
             {/* Boutons d'action */}
             <div className="space-y-3 pt-6">
