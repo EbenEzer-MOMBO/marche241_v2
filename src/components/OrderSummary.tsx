@@ -1,10 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import { formatPrice } from '@/lib/utils';
 import { BoutiqueConfig } from '@/lib/boutiques';
 import { usePanier } from '@/hooks/usePanier';
+import { useToast } from '@/hooks/useToast';
+import { creerCommande, CreerCommandeData } from '@/lib/services/commandes';
+import { useEffect } from 'react';
 import { getCommunesActives } from '@/lib/services/communes';
 
 interface OrderSummaryProps {
@@ -54,6 +57,8 @@ export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) 
 
   // Utilisation du hook panier pour récupérer les vraies données
   const { panier, totalItems, totalPrix, loading } = usePanier();
+  const { success, error } = useToast();
+  const [submittingOrder, setSubmittingOrder] = useState(false);
 
   // Charger les communes au montage du composant
   useEffect(() => {
@@ -206,28 +211,56 @@ export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) 
     }
   };
 
-  const handleSubmitOrder = () => {
+  const handleSubmitOrder = async () => {
     // Double vérification de sécurité (normalement le bouton est déjà désactivé)
     if (!isFormValid()) {
-      alert('Veuillez compléter toutes les informations requises');
+      error('Veuillez compléter toutes les informations requises');
       return;
     }
 
-    // Logique de soumission de commande
-    console.log('Commande soumise:', {
-      items: panier,
-      payment: payOnDelivery ? 'cash_on_delivery' : selectedPayment,
-      paymentPhone: payOnDelivery ? null : paymentPhone,
-      payOnDelivery,
-      address: deliveryAddress,
-      subtotal,
-      deliveryFee,
-      transactionFee: getTransactionFee(),
-      totalToPay,
-      remainingAmount
-    });
-    
-    alert('Commande confirmée ! Vous allez être redirigé vers le paiement.');
+    if (panier.length === 0) {
+      error('Votre panier est vide');
+      return;
+    }
+
+    setSubmittingOrder(true);
+
+    try {
+      // Préparer les données de la commande selon le format de l'API
+      const commandeData: CreerCommandeData = {
+        boutique_id: panier[0].boutique_id, // Prendre la boutique du premier article
+        client_nom: deliveryAddress.fullName,
+        client_telephone: deliveryAddress.phone,
+        client_adresse: deliveryAddress.address,
+        client_ville: deliveryAddress.city,
+        client_commune: deliveryAddress.city, // Utiliser city pour commune aussi
+        client_instructions: deliveryAddress.additionalInfo,
+        frais_livraison: deliveryFee,
+        taxes: getTransactionFee(),
+        remise: 0,
+        articles: panier.map(item => ({
+          produit_id: item.produit_id,
+          quantite: item.quantite,
+          prix_unitaire: item.produit.prix,
+          nom_produit: item.produit.nom,
+          description: item.produit.description_courte || item.produit.nom
+        }))
+      };
+
+      // Créer la commande
+      const commande = await creerCommande(commandeData);
+      
+      // Afficher le toast de succès
+      success('Commande créée avec succès !', 'Succès', 4000);
+      
+      console.log('Commande créée:', commande);
+      
+    } catch (err) {
+      console.error('Erreur lors de la création de la commande:', err);
+      error('Erreur lors de la création de la commande. Veuillez réessayer.');
+    } finally {
+      setSubmittingOrder(false);
+    }
   };
 
   return (
@@ -584,17 +617,27 @@ export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) 
             
             <button
               onClick={handleSubmitOrder}
-              disabled={!isFormValid()}
+              disabled={!isFormValid() || submittingOrder}
               className={`w-full py-4 px-6 font-semibold rounded-lg transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-opacity-50 ${
-                !isFormValid() 
+                !isFormValid() || submittingOrder
                   ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
                   : 'text-white hover:opacity-90'
               }`}
               style={{ 
-                backgroundColor: !isFormValid() ? undefined : boutiqueConfig.theme.primary
+                backgroundColor: (!isFormValid() || submittingOrder) ? undefined : boutiqueConfig.theme.primary
               }}
             >
-              {getButtonMessage()}
+              {submittingOrder ? (
+                <div className="flex items-center justify-center">
+                  <svg className="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Création en cours...
+                </div>
+              ) : (
+                getButtonMessage()
+              )}
             </button>
             
             <div className="text-center mt-4">
