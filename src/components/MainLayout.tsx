@@ -17,8 +17,6 @@ export default function MainLayout({ children, boutiqueName }: MainLayoutProps) 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
 
-  // Données de test pour le nombre d'articles dans le panier
-  const cartItemsCount = 3;
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
   const closeSidebar = () => setSidebarOpen(false);
@@ -31,7 +29,6 @@ export default function MainLayout({ children, boutiqueName }: MainLayoutProps) 
       <Header 
         onMenuClick={toggleSidebar} 
         onCartClick={toggleCart} 
-        cartItemsCount={cartItemsCount}
         boutiqueName={boutiqueName}
       />
       <SidebarMenu isOpen={sidebarOpen} onClose={closeSidebar} />

@@ -1,14 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { formatPrice } from '@/lib/utils';
 import { BoutiqueConfig } from '@/lib/boutiques';
 import { usePanier } from '@/hooks/usePanier';
-
+import { getCommunesActives } from '@/lib/services/communes';
 
 interface OrderSummaryProps {
   boutiqueConfig: BoutiqueConfig;
+  boutiqueId: number;
 }
 
 type PaymentMethod = 'moov' | 'airtel' | null;
@@ -22,11 +23,26 @@ interface DeliveryAddress {
   additionalInfo: string;
 }
 
-export function OrderSummary({ boutiqueConfig }: OrderSummaryProps) {
+interface Commune {
+  id: number;
+  boutique_id: number;
+  nom_commune: string;
+  code_postal?: string | null;
+  tarif_livraison: number;
+  delai_livraison_min: number;
+  delai_livraison_max: number;
+  est_active: boolean;
+  date_creation: string;
+  date_modification: string;
+}
+
+export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) {
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>(null);
   const [paymentPhone, setPaymentPhone] = useState('');
   const [paymentPhoneError, setPaymentPhoneError] = useState('');
   const [payOnDelivery, setPayOnDelivery] = useState(false);
+  const [communes, setCommunes] = useState<Commune[]>([]);
+  const [communesLoading, setCommunesLoading] = useState(true);
   const [deliveryAddress, setDeliveryAddress] = useState<DeliveryAddress>({
     fullName: '',
     phone: '',
@@ -39,20 +55,32 @@ export function OrderSummary({ boutiqueConfig }: OrderSummaryProps) {
   // Utilisation du hook panier pour récupérer les vraies données
   const { panier, totalItems, totalPrix, loading } = usePanier();
 
+  // Charger les communes au montage du composant
+  useEffect(() => {
+    const loadCommunes = async () => {
+      try {
+        setCommunesLoading(true);
+        const communesData = await getCommunesActives(boutiqueId);
+        setCommunes(communesData);
+      } catch (error) {
+        console.error('Erreur lors du chargement des communes:', error);
+      } finally {
+        setCommunesLoading(false);
+      }
+    };
+
+    loadCommunes();
+  }, [boutiqueId]);
+
   const subtotal = totalPrix;
   
   // Calcul des frais de livraison basé sur la commune sélectionnée
   const getDeliveryFee = () => {
     if (!deliveryAddress.city) return 0;
     
-    // Frais de livraison par commune
-    const deliveryFees: Record<string, number> = {
-      'Libreville': 2000,
-      'Akanda': 2500,
-      'Owendo': 2500,
-    };
-    
-    return deliveryFees[deliveryAddress.city] || 0;
+    // Trouver la commune sélectionnée dans la liste
+    const selectedCommune = communes.find(commune => commune.nom_commune === deliveryAddress.city);
+    return selectedCommune ? selectedCommune.tarif_livraison : 0;
   };
   
   const deliveryFee = getDeliveryFee();
@@ -315,15 +343,19 @@ export function OrderSummary({ boutiqueConfig }: OrderSummaryProps) {
                 <label className="block text-sm font-medium text-gray-700">Commune *</label>
                 <select
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-opacity-50"
-
                   value={deliveryAddress.city}
                   onChange={(e) => handleAddressChange('city', e.target.value)}
                   required
+                  disabled={communesLoading}
                 >
-                  <option value="">Sélectionner une commune</option>
-                  <option value="Libreville">Libreville (2000 FCFA)</option>
-                  <option value="Akanda">Akanda (2500 FCFA)</option>
-                  <option value="Owendo">Owendo (2500 FCFA)</option>
+                  <option value="">
+                    {communesLoading ? 'Chargement des communes...' : 'Sélectionner une commune'}
+                  </option>
+                  {communes.map((commune) => (
+                    <option key={commune.id} value={commune.nom_commune}>
+                      {commune.nom_commune} ({formatPrice(commune.tarif_livraison)})
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="md:col-span-2 space-y-2">

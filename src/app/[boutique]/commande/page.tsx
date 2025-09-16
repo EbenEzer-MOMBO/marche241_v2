@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import CheckoutLayout from '@/components/CheckoutLayout';
 import { OrderSummary } from '@/components/OrderSummary';
-import { getBoutiqueConfig, type BoutiqueConfig } from '@/lib/boutiques';
+import { getBoutiqueConfig, getBoutiqueBySlug, type BoutiqueConfig } from '@/lib/boutiques';
 
 interface OrderPageProps {
   params: Promise<{ boutique: string }>;
@@ -29,8 +29,10 @@ export default async function OrderPage({ params }: OrderPageProps) {
   const { boutique } = await params;
   
   let boutiqueConfig: BoutiqueConfig;
+  let boutiqueData;
   try {
     boutiqueConfig = await getBoutiqueConfig(boutique);
+    boutiqueData = await getBoutiqueBySlug(boutique);
   } catch (error) {
     console.error('Erreur lors de la récupération de la boutique:', error);
     notFound();
@@ -49,7 +51,7 @@ export default async function OrderPage({ params }: OrderPageProps) {
                 Vérifiez vos articles et finalisez votre commande
               </p>
             </div>
-            <OrderSummary boutiqueConfig={boutiqueConfig} />
+            <OrderSummary boutiqueConfig={boutiqueConfig} boutiqueId={boutiqueData.id} />
           </div>
         </div>
       </div>
