@@ -10,6 +10,7 @@ interface ArticleCommande {
   prix_unitaire: number;
   nom_produit: string;
   description: string;
+  variants_selectionnes?: { [key: string]: any } | null;
 }
 
 interface CreerCommandeData {
@@ -26,13 +27,35 @@ interface CreerCommandeData {
   articles: ArticleCommande[];
 }
 
-interface CommandeResponse {
+interface Commande {
   id: number;
   numero_commande: string;
+  boutique_id: number;
+  client_nom: string;
+  client_telephone: string;
+  client_adresse: string;
+  client_ville: string;
+  client_commune: string;
+  client_instructions: string;
+  date_commande: string;
+  date_confirmation: string | null;
+  date_expedition: string | null;
+  date_livraison: string | null;
+  date_modification: string;
+  frais_livraison: number;
+  methode_paiement: string | null;
+  remise: number;
+  sous_total: number;
   statut: string;
+  statut_paiement: string;
+  taxes: number;
   total: number;
-  date_creation: string;
-  // Autres champs selon la réponse de l'API
+}
+
+interface CommandeResponse {
+  success: boolean;
+  message: string;
+  commande: Commande;
 }
 
 /**
@@ -50,4 +73,4 @@ export async function creerCommande(commandeData: CreerCommandeData): Promise<Co
   }
 }
 
-export type { CreerCommandeData, ArticleCommande, CommandeResponse };
+export type { CreerCommandeData, ArticleCommande, CommandeResponse, Commande };

@@ -9,6 +9,8 @@ import { useToast } from '@/hooks/useToast';
 import { creerCommande, CreerCommandeData } from '@/lib/services/commandes';
 import { useEffect } from 'react';
 import { getCommunesActives } from '@/lib/services/communes';
+import { initierPaiementMobile, PaiementMobileData } from '@/lib/services/paiements';
+import PhoneNumberInput from '@/components/ui/PhoneNumberInput';
 
 interface OrderSummaryProps {
   boutiqueConfig: BoutiqueConfig;
@@ -90,15 +92,15 @@ export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) 
   
   const deliveryFee = getDeliveryFee();
   
-  // Calcul des frais de transaction (2,5%)
+  // Calcul des frais de transaction (1%)
   const getTransactionFee = () => {
-    const transactionRate = 0.025; // 2,5%
+    const transactionRate = 0.01; // 1%
     
     if (payOnDelivery) {
-      // Pour paiement à la livraison : 2,5% seulement sur les frais de livraison
+      // Pour paiement à la livraison : 1% seulement sur les frais de livraison
       return Math.round(deliveryFee * transactionRate);
     } else {
-      // Pour paiement normal : 2,5% sur le total (sous-total + livraison)
+      // Pour paiement normal : 1% sur le total (sous-total + livraison)
       const baseAmount = subtotal + deliveryFee;
       return Math.round(baseAmount * transactionRate);
     }
@@ -223,17 +225,23 @@ export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) 
       return;
     }
 
+    // Vérifier qu'un mode de paiement est sélectionné (sauf paiement à la livraison)
+    if (!payOnDelivery && !selectedPayment) {
+      error('Veuillez sélectionner un mode de paiement');
+      return;
+    }
+
     setSubmittingOrder(true);
 
     try {
-      // Préparer les données de la commande selon le format de l'API
+      // Étape 1: Créer la commande
       const commandeData: CreerCommandeData = {
-        boutique_id: panier[0].boutique_id, // Prendre la boutique du premier article
+        boutique_id: panier[0].boutique_id,
         client_nom: deliveryAddress.fullName,
         client_telephone: deliveryAddress.phone,
         client_adresse: deliveryAddress.address,
         client_ville: deliveryAddress.city,
-        client_commune: deliveryAddress.city, // Utiliser city pour commune aussi
+        client_commune: deliveryAddress.city,
         client_instructions: deliveryAddress.additionalInfo,
         frais_livraison: deliveryFee,
         taxes: getTransactionFee(),
@@ -243,21 +251,57 @@ export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) 
           quantite: item.quantite,
           prix_unitaire: item.produit.prix,
           nom_produit: item.produit.nom,
-          description: item.produit.description_courte || item.produit.nom
+          description: item.produit.description_courte || item.produit.nom,
+          variants_selectionnes: item.variants_selectionnes
         }))
       };
 
-      // Créer la commande
-      const commande = await creerCommande(commandeData);
       
-      // Afficher le toast de succès
-      success('Commande créée avec succès !', 'Succès', 4000);
+
+      const commande = await creerCommande(commandeData);
+      success('Commande créée avec succès !', 'Succès', 3000);
+
+      console.log('Données de la commande:', commandeData);
+      
+      console.log('Réponse complète de la commande:', commande);
+      
+      // Étape 2: Initier le paiement mobile (sauf si paiement à la livraison)
+      if (!payOnDelivery && selectedPayment) {
+        // Séparer le nom complet en prénom et nom
+        const nameParts = deliveryAddress.fullName;
+        
+        // Mapper le mode de paiement
+        const paymentSystem = selectedPayment === 'moov' ? 'moovmoney' : 'airtelmoney';
+        
+        const paiementData: PaiementMobileData = {
+          email: 'ebenezermombo@gmail.com', // Email générique
+          msisdn: paymentPhone,
+          amount: totalToPay,
+          reference: commande.commande.numero_commande,
+          payment_system: paymentSystem,
+          description: `Paiement commande ${commande.commande.numero_commande}`,
+          lastname: nameParts,
+          firstname: nameParts
+        };
+
+        const paiement = await initierPaiementMobile(paiementData);
+        
+        if (paiement.success) {
+          success('Paiement initié avec succès !', 'Paiement', 4000);
+          console.log('Paiement initié:', paiement);
+        } else {
+          error(paiement.message || 'Erreur lors de l\'initiation du paiement');
+        }
+      } else {
+        // Paiement à la livraison
+        success('Commande confirmée ! Paiement à la livraison.', 'Succès', 4000);
+      }
       
       console.log('Commande créée:', commande);
       
     } catch (err) {
-      console.error('Erreur lors de la création de la commande:', err);
-      error('Erreur lors de la création de la commande. Veuillez réessayer.');
+      console.error('Erreur lors du processus de commande:', err);
+      error('Erreur lors du processus de commande. Veuillez réessayer.');
     } finally {
       setSubmittingOrder(false);
     }
@@ -350,14 +394,12 @@ export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) 
               </div>
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">Téléphone (WhatsApp si possible) *</label>
-                <input
-                  type="tel"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-opacity-50"
-
+                <PhoneNumberInput
                   value={deliveryAddress.phone}
-                  onChange={(e) => handleAddressChange('phone', e.target.value)}
-                  placeholder="+2416XXXXXXX"
+                  onChange={(value) => handleAddressChange('phone', value)}
+                  placeholder="6XXXXXXX"
                   required
+                  className="w-full"
                 />
               </div>
               <div className="md:col-span-2 space-y-2">
@@ -566,8 +608,8 @@ export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) 
                     Frais de transaction
                     <span className="text-xs text-gray-500 block">
                       {payOnDelivery 
-                        ? '(2,5% sur frais de livraison)' 
-                        : '(2,5% sur total commande)'
+                        ? '(1% sur frais de livraison)' 
+                        : '(1% sur total commande)'
                       }
                     </span>
                   </span>
@@ -633,7 +675,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) 
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Création en cours...
+                  {payOnDelivery ? 'Création en cours...' : 'Traitement en cours...'}
                 </div>
               ) : (
                 getButtonMessage()
