@@ -9,8 +9,12 @@ import { useToast } from '@/hooks/useToast';
 import { creerCommande, CreerCommandeData } from '@/lib/services/commandes';
 import { useEffect } from 'react';
 import { getCommunesActives } from '@/lib/services/communes';
-import { initierPaiementMobile, PaiementMobileData } from '@/lib/services/paiements';
+import { initierPaiementMobile, verifierPaiementEnBoucle, type PaiementMobileData } from '@/lib/services/paiements';
+import { creerTransaction, type CreerTransactionData } from '@/lib/services/transactions';
 import PhoneNumberInput from '@/components/ui/PhoneNumberInput';
+import PaymentProgressBar from '@/components/ui/PaymentProgressBar';
+import PaymentCountdown from '@/components/ui/PaymentCountdown';
+import { ToastContainer } from '@/components/ui/Toast';
 
 interface OrderSummaryProps {
   boutiqueConfig: BoutiqueConfig;
@@ -59,8 +63,11 @@ export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) 
 
   // Utilisation du hook panier pour récupérer les vraies données
   const { panier, totalItems, totalPrix, loading } = usePanier();
-  const { success, error } = useToast();
-  const [submittingOrder, setSubmittingOrder] = useState(false);
+  const { success, error, toasts, removeToast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showProgressBar, setShowProgressBar] = useState(false);
+  const [showCountdown, setShowCountdown] = useState(false);
+  const [currentBillId, setCurrentBillId] = useState<string>('');
 
   // Charger les communes au montage du composant
   useEffect(() => {
@@ -231,7 +238,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) 
       return;
     }
 
-    setSubmittingOrder(true);
+    setIsSubmitting(true);
 
     try {
       // Étape 1: Créer la commande
@@ -284,12 +291,73 @@ export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) 
           firstname: nameParts
         };
 
+        // Afficher la barre de progression pendant l'initialisation
+        setShowProgressBar(true);
+        
         const paiement = await initierPaiementMobile(paiementData);
         
         if (paiement.success) {
-          success('Paiement initié avec succès !', 'Paiement', 4000);
           console.log('Paiement initié:', paiement);
+          
+          // Masquer la barre de progression et afficher le décompte
+          setShowProgressBar(false);
+          if (paiement.bill_id) {
+            setCurrentBillId(paiement.bill_id);
+            setShowCountdown(true);
+            
+            // Démarrer immédiatement la vérification en parallèle
+            verifierPaiementEnBoucle(paiement.bill_id)
+              .then(verificationResult => {
+                if (verificationResult.status === 'paye') {
+                  success('Paiement confirmé avec succès !', 'Paiement réussi', 5000);
+                  console.log('Paiement confirmé:', verificationResult);
+                } else if (verificationResult.status === 'echec') {
+                  error('Le paiement a échoué. Veuillez réessayer.');
+                  console.log('Paiement échoué:', verificationResult);
+                } else if (verificationResult.status === 'rembourse') {
+                  error('Le paiement a été annulé.');
+                  console.log('Paiement annulé:', verificationResult);
+                } else {
+                  // Timeout - paiement toujours en attente
+                  error('Délai d\'attente dépassé. Vérifiez votre téléphone et réessayez si nécessaire.');
+                  console.log('Timeout de vérification:', verificationResult);
+                }
+                
+                // Fermer le décompte une fois la vérification terminée
+                setShowCountdown(false);
+                setIsSubmitting(false);
+              })
+              .catch(verificationError => {
+                console.error('Erreur lors de la vérification du paiement:', verificationError);
+                error('Erreur lors de la vérification du paiement. Contactez le support si le problème persiste.');
+                setShowCountdown(false);
+                setIsSubmitting(false);
+              });
+          }
+          
+          // Créer la transaction après l'initiation du paiement
+          const transactionData: CreerTransactionData = {
+            commande_id: commande.commande.id,
+            reference_transaction: commande.commande.numero_commande,
+            montant: totalToPay,
+            methode_paiement: 'mobile_money',
+            statut: 'en_attente',
+            numero_telephone: paymentPhone,
+            reference_operateur: paiement.bill_id || '',
+            notes: `Paiement ${paymentSystem} pour commande ${commande.commande.numero_commande}`
+          };
+          
+          try {
+            const transaction = await creerTransaction(transactionData);
+            console.log('Transaction créée:', transaction);
+            
+            // La vérification sera démarrée par le composant PaymentCountdown
+          } catch (error) {
+            console.error('Erreur lors de la création de la transaction:', error);
+            // Ne pas faire échouer le processus si la transaction échoue
+          }
         } else {
+          setShowProgressBar(false);
           error(paiement.message || 'Erreur lors de l\'initiation du paiement');
         }
       } else {
@@ -300,15 +368,60 @@ export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) 
       console.log('Commande créée:', commande);
       
     } catch (err) {
-      console.error('Erreur lors du processus de commande:', err);
+      console.error('Erreur lors de la création de la commande:', err);
       error('Erreur lors du processus de commande. Veuillez réessayer.');
-    } finally {
-      setSubmittingOrder(false);
+      // Ajouter un délai de 3 secondes avant de réinitialiser les états
+      setTimeout(() => {
+        setIsSubmitting(false);
+        setShowProgressBar(false);
+        setShowCountdown(false);
+      }, 3000);
     }
+  };
+
+  // Fonctions de gestion des composants visuels
+  const handleProgressComplete = () => {
+    // La barre de progression se termine, le paiement devrait être initié
+    console.log('Barre de progression terminée');
+  };
+
+  const handleCountdownComplete = () => {
+    // Le décompte est terminé mais la vérification continue en arrière-plan
+    console.log('Décompte terminé - la vérification continue...');
+    // Ne pas fermer le décompte ici car la vérification se fait en parallèle
+  };
+
+  const handleCancelPayment = () => {
+    setShowCountdown(false);
+    setIsSubmitting(false);
+    error('Paiement annulé par l\'utilisateur.');
   };
 
   return (
     <div className="w-full">
+      {/* Container des toasts */}
+      <ToastContainer toasts={toasts} onClose={removeToast} />
+      
+      {/* Barre de progression pour l'initialisation */}
+      {showProgressBar && (
+        <PaymentProgressBar
+          duration={20}
+          onComplete={handleProgressComplete}
+          title="Initialisation du paiement"
+          description="Connexion avec votre opérateur mobile en cours..."
+        />
+      )}
+
+      {/* Décompte pour la vérification */}
+      {showCountdown && (
+        <PaymentCountdown
+          duration={60}
+          onComplete={handleCountdownComplete}
+          onCancel={handleCancelPayment}
+          paymentMethod={selectedPayment || 'mobile'}
+          phoneNumber={paymentPhone}
+        />
+      )}
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Colonne gauche - Résumé du panier et adresse */}
@@ -659,17 +772,17 @@ export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) 
             
             <button
               onClick={handleSubmitOrder}
-              disabled={!isFormValid() || submittingOrder}
+              disabled={!isFormValid() || isSubmitting}
               className={`w-full py-4 px-6 font-semibold rounded-lg transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-opacity-50 ${
-                !isFormValid() || submittingOrder
+                !isFormValid() || isSubmitting
                   ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
                   : 'text-white hover:opacity-90'
               }`}
               style={{ 
-                backgroundColor: (!isFormValid() || submittingOrder) ? undefined : boutiqueConfig.theme.primary
+                backgroundColor: (!isFormValid() || isSubmitting) ? undefined : boutiqueConfig.theme.primary
               }}
             >
-              {submittingOrder ? (
+              {isSubmitting ? (
                 <div className="flex items-center justify-center">
                   <svg className="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
