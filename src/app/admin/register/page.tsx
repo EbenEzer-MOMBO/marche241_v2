@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import PhoneNumberInput from '@/components/ui/PhoneNumberInput';
+import { useAuth } from '@/hooks/useAuth';
+import { ToastContainer } from '@/components/ui/Toast';
 
 export default function AdminRegisterPage() {
     const [formData, setFormData] = useState({
@@ -16,6 +18,7 @@ export default function AdminRegisterPage() {
     const [error, setError] = useState('');
     const [isPhoneValid, setIsPhoneValid] = useState(false);
     const router = useRouter();
+    const { toasts, removeToast } = useAuth();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -33,10 +36,10 @@ export default function AdminRegisterPage() {
 
             // Simuler la création du compte
             console.log('Nouveau compte créé:', formData);
-            console.log(`Code simulé envoyé au +241${formData.telephone.replace(/\s/g, '')}: 1234`);
+            console.log(`Code simulé envoyé à ${formData.email}: 123456`);
 
             // Rediriger vers la page de vérification
-            router.push(`/admin/verify?telephone=${encodeURIComponent(formData.telephone)}`);
+            router.push(`/admin/verify?email=${encodeURIComponent(formData.email)}`);
             setIsLoading(false);
         }, 1500); // Simuler un délai réseau
     };
@@ -48,8 +51,10 @@ export default function AdminRegisterPage() {
     };
 
     const isFormValid = () => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return (
             formData.nom.trim().length >= 2 &&
+            emailRegex.test(formData.email) &&
             isPhoneValid &&
             formData.ville.trim().length >= 2
         );
@@ -120,10 +125,10 @@ export default function AdminRegisterPage() {
                             />
                         </div>
 
-                        {/* Email (optionnel) */}
+                        {/* Email */}
                         <div>
                             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                                Email (optionnel)
+                                Email *
                             </label>
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -136,6 +141,7 @@ export default function AdminRegisterPage() {
                                     name="email"
                                     type="email"
                                     value={formData.email}
+                                    required
                                     onChange={handleChange}
                                     placeholder="votre@email.com"
                                     className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
@@ -212,6 +218,9 @@ export default function AdminRegisterPage() {
                     </p>
                 </div>
             </div>
+            
+            {/* Toast Container */}
+            <ToastContainer toasts={toasts} onClose={removeToast} />
         </div>
     );
 }

@@ -4,18 +4,19 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { ArrowLeft, Shield, Loader2, RefreshCw } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { ToastContainer } from '@/components/ui/Toast';
 
 export default function AdminVerifyPage() {
-  const [code, setCode] = useState(['', '', '', '']);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [code, setCode] = useState(['', '', '', '', '', '']);
   const [canResend, setCanResend] = useState(false);
   const [countdown, setCountdown] = useState(60);
   const [tentativesRestantes, setTentativesRestantes] = useState(3);
   
   const router = useRouter();
   const searchParams = useSearchParams();
-  const telephone = searchParams.get('telephone') || '';
+  const email = searchParams.get('email') || '';
+  const { verifier, demanderCode, isLoading, error, toasts, removeToast } = useAuth();
   
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -29,12 +30,12 @@ export default function AdminVerifyPage() {
     }
   }, [countdown]);
 
-  // Rediriger si pas de numéro de téléphone
+  // Rediriger si pas d'email
   useEffect(() => {
-    if (!telephone) {
+    if (!email) {
       router.push('/admin/login');
     }
-  }, [telephone, router]);
+  }, [email, router]);
 
   const handleCodeChange = (index: number, value: string) => {
     if (value.length > 1) return; // Empêcher plus d'un caractère
@@ -42,10 +43,9 @@ export default function AdminVerifyPage() {
     const newCode = [...code];
     newCode[index] = value;
     setCode(newCode);
-    setError('');
 
     // Passer au champ suivant si un chiffre est saisi
-    if (value && index < 3) {
+    if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
 
@@ -65,73 +65,42 @@ export default function AdminVerifyPage() {
   const handleSubmit = async (codeToSubmit?: string) => {
     const finalCode = codeToSubmit || code.join('');
     
-    if (finalCode.length !== 4) {
-      setError('Veuillez saisir le code à 4 chiffres');
+    if (finalCode.length !== 6) {
       return;
     }
 
-    setIsLoading(true);
-    setError('');
-
-    // Simulation de la vérification du code (sans backend)
-    setTimeout(() => {
-      // Code correct simulé : 1234
-      if (finalCode === '1234') {
-        // Simuler le stockage du token
-        localStorage.setItem('admin_token', 'fake-jwt-token-' + Date.now());
-        localStorage.setItem('admin_user', JSON.stringify({
-          telephone: telephone.replace(/\s/g, ''),
-          nom: 'Vendeur Test',
-          email: 'test@example.com'
-        }));
-        
-        // Rediriger vers le dashboard admin
-        router.push('/admin/dashboard');
-      } else {
-        const nouvellesTontatives = tentativesRestantes - 1;
-        setTentativesRestantes(nouvellesTontatives);
-        
-        if (nouvellesTontatives > 0) {
-          setError(`Code incorrect. ${nouvellesTontatives} tentative(s) restante(s)`);
-        } else {
-          setError('Trop de tentatives. Redirection vers la page de connexion...');
-          setTimeout(() => {
-            router.push('/admin/login');
-          }, 3000);
-        }
-        
-        // Effacer le code en cas d'erreur
-        setCode(['', '', '', '']);
-        inputRefs.current[0]?.focus();
+    const success = await verifier({ email, code: finalCode });
+    
+    if (!success) {
+      const nouvellesTontatives = tentativesRestantes - 1;
+      setTentativesRestantes(nouvellesTontatives);
+      
+      if (nouvellesTontatives <= 0) {
+        setTimeout(() => {
+          router.push('/admin/login');
+        }, 3000);
       }
       
-      setIsLoading(false);
-    }, 1000); // Simuler un délai réseau
+      // Effacer le code en cas d'erreur
+      setCode(['', '', '', '', '', '']);
+      inputRefs.current[0]?.focus();
+    }
   };
 
   const handleResendCode = async () => {
     if (!canResend) return;
 
-    setIsLoading(true);
-    setError('');
-
-    // Simulation du renvoi du code (sans backend)
-    setTimeout(() => {
-      console.log(`Nouveau code simulé envoyé au +241${telephone.replace(/\s/g, '')}: 1234`);
-      
+    const success = await demanderCode({ email });
+    
+    if (success) {
       setCanResend(false);
       setCountdown(60);
       setTentativesRestantes(3);
-      setCode(['', '', '', '']);
+      setCode(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
-      setIsLoading(false);
-    }, 1000);
+    }
   };
 
-  const formatPhoneDisplay = (phone: string) => {
-    const cleaned = phone.replace(/\s/g, '');
-    return `+241 ${cleaned}`;
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -154,10 +123,10 @@ export default function AdminVerifyPage() {
             Vérification
           </h2>
           <p className="text-gray-600">
-            Code envoyé sur WhatsApp au
+            Code envoyé par email à
           </p>
           <p className="text-lg font-semibold text-gray-600">
-            {telephone}
+            {email}
           </p>
         </div>
 
@@ -166,7 +135,7 @@ export default function AdminVerifyPage() {
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-4 text-center">
-                Saisissez le code à 4 chiffres
+                Saisissez le code à 6 chiffres
               </label>
               
               <div className="flex justify-center space-x-3">
@@ -228,10 +197,13 @@ export default function AdminVerifyPage() {
         {/* Informations */}
         <div className="text-center">
           <p className="text-xs text-gray-500">
-            Vérifiez vos messages WhatsApp. Le code expire dans 5 minutes.
+            Vérifiez votre boîte email. Le code expire dans 10 minutes.
           </p>
         </div>
       </div>
+      
+      {/* Toast Container */}
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );
 }
