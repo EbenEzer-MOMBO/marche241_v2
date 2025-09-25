@@ -18,30 +18,29 @@ export default function AdminRegisterPage() {
     const [error, setError] = useState('');
     const [isPhoneValid, setIsPhoneValid] = useState(false);
     const router = useRouter();
-    const { toasts, removeToast } = useAuth();
+    const { inscrire, isLoading: authLoading, toasts, removeToast } = useAuth();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-        setIsLoading(true);
 
-        // Simulation de la création du compte (sans backend)
-        setTimeout(() => {
-            // Validation côté client
-            if (!isFormValid()) {
-                setError('Veuillez remplir tous les champs requis');
-                setIsLoading(false);
-                return;
-            }
+        // Validation côté client
+        if (!isFormValid()) {
+            setError('Veuillez remplir tous les champs requis');
+            return;
+        }
 
-            // Simuler la création du compte
-            console.log('Nouveau compte créé:', formData);
-            console.log(`Code simulé envoyé à ${formData.email}: 123456`);
+        const result = await inscrire({
+            email: formData.email,
+            nom: formData.nom,
+            telephone: formData.telephone,
+            ville: formData.ville
+        });
 
+        if (result.success && result.email) {
             // Rediriger vers la page de vérification
-            router.push(`/admin/verify?email=${encodeURIComponent(formData.email)}`);
-            setIsLoading(false);
-        }, 1500); // Simuler un délai réseau
+            router.push(`/admin/verify?email=${encodeURIComponent(result.email)}`);
+        }
     };
 
 
@@ -182,17 +181,17 @@ export default function AdminRegisterPage() {
 
                         <button
                             type="submit"
-                            disabled={isLoading || !isFormValid()}
+                            disabled={authLoading || !isFormValid()}
                             className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
-                            {isLoading ? (
+                            {authLoading ? (
                                 <>
                                     <div className="animate-spin -ml-1 mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
                                     Création en cours...
                                 </>
                             ) : (
                                 <>
-                                    Créer mon compte
+                                    Créer mon compte vendeur
                                     <svg className="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                     </svg>

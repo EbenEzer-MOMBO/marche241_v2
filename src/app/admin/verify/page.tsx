@@ -71,7 +71,10 @@ export default function AdminVerifyPage() {
 
     const success = await verifier({ email, code: finalCode });
     
-    if (!success) {
+    if (success) {
+      // Redirection vers le dashboard gérée automatiquement par le hook useAuth
+      return;
+    } else {
       const nouvellesTontatives = tentativesRestantes - 1;
       setTentativesRestantes(nouvellesTontatives);
       
@@ -103,7 +106,7 @@ export default function AdminVerifyPage() {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-white flex items-center justify-center p-4">
       <div className="max-w-md w-full space-y-8">
         {/* Bouton retour */}
         <button
@@ -112,7 +115,7 @@ export default function AdminVerifyPage() {
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Retour
-        </button>
+        </button> 
 
         {/* Logo et titre */}
         <div className="text-center">

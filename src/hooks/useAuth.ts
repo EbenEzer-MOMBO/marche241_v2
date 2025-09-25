@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { demanderCodeVerification, verifierCode, DemanderCodeData, VerifierCodeData } from '@/lib/services/auth';
+import { demanderCodeVerification, verifierCode, inscrireVendeur, DemanderCodeData, VerifierCodeData, InscriptionData } from '@/lib/services/auth';
 import { useToast } from './useToast';
 
 interface AuthUser {
@@ -17,6 +17,7 @@ interface UseAuthReturn {
   error: string | null;
   demanderCode: (data: DemanderCodeData) => Promise<boolean>;
   verifier: (data: VerifierCodeData) => Promise<boolean>;
+  inscrire: (data: InscriptionData) => Promise<{ success: boolean; email?: string }>;
   logout: () => void;
   toasts: any[];
   removeToast: (id: string) => void;
@@ -92,13 +93,18 @@ export function useAuth(): UseAuthReturn {
     try {
       const response = await verifierCode(data);
       
-      if (response.success && response.data) {
+      if (response.success && response.vendeur && response.token) {
         // Stocker le token et les données utilisateur
-        localStorage.setItem('admin_token', response.data.token);
-        localStorage.setItem('admin_user', JSON.stringify(response.data.vendeur));
+        localStorage.setItem('admin_token', response.token);
+        localStorage.setItem('admin_user', JSON.stringify(response.vendeur));
         
-        setUser(response.data.vendeur);
-        success('Connexion réussie', `Bienvenue ${response.data.vendeur.nom}`);
+        setUser({
+          id: response.vendeur.id.toString(),
+          email: response.vendeur.email,
+          nom: response.vendeur.nom,
+          telephone: undefined
+        });
+        success('Connexion réussie', `Bienvenue ${response.vendeur.nom}`);
         
         // Rediriger vers le dashboard
         router.push('/admin/dashboard');
@@ -111,8 +117,59 @@ export function useAuth(): UseAuthReturn {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur lors de la vérification';
       setError(errorMessage);
-      showError(errorMessage, 'Erreur de vérification');
+      
+      // Messages d'erreur spécifiques selon le type
+      if (errorMessage.includes('invalide ou expiré')) {
+        showError(errorMessage, 'Code invalide');
+      } else if (errorMessage.includes('Vendeur non trouvé')) {
+        showError(errorMessage, 'Vendeur introuvable');
+      } else if (errorMessage.includes('Erreur serveur')) {
+        showError(errorMessage, 'Erreur serveur');
+      } else {
+        showError(errorMessage, 'Erreur de vérification');
+      }
       return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const inscrire = async (data: InscriptionData): Promise<{ success: boolean; email?: string }> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await inscrireVendeur(data);
+      
+      if (response.success) {
+        success('Compte créé avec succès', 'Un code de vérification a été envoyé par email');
+        // En mode développement, afficher le code dans la console
+        if (response.code) {
+          console.log(`Code de vérification: ${response.code}`);
+        }
+        return { success: true, email: data.email };
+      } else {
+        setError(response.message);
+        showError(response.message, 'Erreur d\'inscription');
+        return { success: false };
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erreur lors de l\'inscription';
+      setError(errorMessage);
+      
+      // Messages d'erreur spécifiques selon le type
+      if (errorMessage.includes('Données invalides')) {
+        showError(errorMessage, 'Données invalides');
+      } else if (errorMessage.includes('email existe déjà')) {
+        showError(errorMessage, 'Email déjà utilisé');
+      } else if (errorMessage.includes('téléphone existe déjà')) {
+        showError(errorMessage, 'Téléphone déjà utilisé');
+      } else if (errorMessage.includes('Erreur serveur')) {
+        showError(errorMessage, 'Erreur serveur');
+      } else {
+        showError(errorMessage, 'Erreur d\'inscription');
+      }
+      return { success: false };
     } finally {
       setIsLoading(false);
     }
@@ -133,6 +190,7 @@ export function useAuth(): UseAuthReturn {
     error,
     demanderCode,
     verifier,
+    inscrire,
     logout,
     toasts,
     removeToast
