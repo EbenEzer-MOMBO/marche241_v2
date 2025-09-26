@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { demanderCodeVerification, verifierCode, inscrireVendeur, DemanderCodeData, VerifierCodeData, InscriptionData } from '@/lib/services/auth';
+import { demanderCodeVerification, verifierCode, inscrireVendeur, getBoutiquesVendeur, DemanderCodeData, VerifierCodeData, InscriptionData, BoutiqueData } from '@/lib/services/auth';
 import { useToast } from './useToast';
 
 interface AuthUser {
@@ -18,6 +18,7 @@ interface UseAuthReturn {
   demanderCode: (data: DemanderCodeData) => Promise<boolean>;
   verifier: (data: VerifierCodeData) => Promise<boolean>;
   inscrire: (data: InscriptionData) => Promise<{ success: boolean; email?: string }>;
+  verifierBoutique: () => Promise<BoutiqueData | null>;
   logout: () => void;
   toasts: any[];
   removeToast: (id: string) => void;
@@ -38,7 +39,12 @@ export function useAuth(): UseAuthReturn {
     if (token && userData) {
       try {
         const parsedUser = JSON.parse(userData);
-        setUser(parsedUser);
+        setUser({
+          id: parsedUser.id.toString(),
+          email: parsedUser.email,
+          nom: parsedUser.nom,
+          telephone: parsedUser.telephone
+        });
       } catch (error) {
         console.error('Erreur lors du parsing des données utilisateur:', error);
         localStorage.removeItem('admin_token');
@@ -106,8 +112,22 @@ export function useAuth(): UseAuthReturn {
         });
         success('Connexion réussie', `Bienvenue ${response.vendeur.nom}`);
         
-        // Rediriger vers le dashboard
-        router.push('/admin/dashboard');
+        // Vérifier si le vendeur a une boutique avant de rediriger
+        try {
+          const boutique = await verifierBoutique();
+          
+          if (boutique) {
+            // Le vendeur a une boutique, utiliser le slug de l'API
+            router.push(`/admin/${boutique.slug}`);
+          } else {
+            // Pas de boutique, rediriger vers la création
+            router.push('/admin/boutique/create');
+          }
+        } catch (error) {
+          // En cas d'erreur, rediriger vers la création de boutique
+          router.push('/admin/boutique/create');
+        }
+        
         return true;
       } else {
         setError(response.message);
@@ -175,6 +195,28 @@ export function useAuth(): UseAuthReturn {
     }
   };
 
+  const verifierBoutique = useCallback(async (): Promise<BoutiqueData | null> => {
+    if (!user?.id) {
+      throw new Error('Utilisateur non authentifié');
+    }
+
+    try {
+      const response = await getBoutiquesVendeur(parseInt(user.id));
+      
+      if (response.boutiques && response.boutiques.length > 0) {
+        // Retourner la première boutique (pour l'instant on assume qu'un vendeur n'a qu'une boutique)
+        return response.boutiques[0];
+      }
+      
+      // Pas de boutique trouvée - retourner null
+      return null;
+    } catch (error: any) {
+      console.error('Erreur lors de la vérification de la boutique:', error);
+      // Ne pas afficher d'erreur toast ici car cela peut causer des redirections
+      return null;
+    }
+  }, [user?.id]);
+
   const logout = () => {
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_user');
@@ -191,6 +233,7 @@ export function useAuth(): UseAuthReturn {
     demanderCode,
     verifier,
     inscrire,
+    verifierBoutique,
     logout,
     toasts,
     removeToast

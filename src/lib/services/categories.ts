@@ -125,6 +125,111 @@ export function filtrerCategoriesActives(categories: Categorie[]): Categorie[] {
 }
 
 /**
+ * Crée une nouvelle catégorie
+ * @param categorieData - Données de la catégorie à créer
+ * @returns Promise<Categorie> - La catégorie créée
+ */
+export async function creerCategorie(categorieData: {
+  nom: string;
+  slug: string;
+  description?: string;
+  parent_id?: number;
+  ordre_affichage: number;
+  boutique_id: number;
+}): Promise<Categorie> {
+  try {
+    const response = await api.post<{success: boolean; message: string; categorie: Categorie}>('/categories', categorieData);
+    
+    if (!response.success || !response.categorie) {
+      throw new Error(response.message || 'Erreur lors de la création de la catégorie');
+    }
+    
+    return response.categorie;
+  } catch (error: any) {
+    console.error('Erreur lors de la création de la catégorie:', error);
+    
+    if (error.status === 400) {
+      throw new Error('Données invalides');
+    } else if (error.status === 401) {
+      throw new Error('Non authentifié');
+    } else if (error.status === 409) {
+      throw new Error('Ce slug est déjà utilisé');
+    }
+    
+    throw error;
+  }
+}
+
+/**
+ * Met à jour une catégorie existante
+ * @param id - ID de la catégorie
+ * @param categorieData - Nouvelles données de la catégorie
+ * @returns Promise<Categorie> - La catégorie mise à jour
+ */
+export async function modifierCategorie(id: number, categorieData: {
+  nom: string;
+  slug: string;
+  description?: string;
+  parent_id?: number;
+  ordre_affichage: number;
+}): Promise<Categorie> {
+  try {
+    const response = await api.put<{success: boolean; message: string; categorie: Categorie}>(`/categories/${id}`, categorieData);
+    
+    if (!response.success || !response.categorie) {
+      throw new Error(response.message || 'Erreur lors de la modification de la catégorie');
+    }
+    
+    return response.categorie;
+  } catch (error: any) {
+    console.error('Erreur lors de la modification de la catégorie:', error);
+    
+    if (error.status === 400) {
+      throw new Error('Données invalides');
+    } else if (error.status === 401) {
+      throw new Error('Non authentifié');
+    } else if (error.status === 403) {
+      throw new Error('Non autorisé (pas le propriétaire)');
+    } else if (error.status === 404) {
+      throw new Error('Catégorie non trouvée');
+    } else if (error.status === 409) {
+      throw new Error('Ce slug est déjà utilisé');
+    }
+    
+    throw error;
+  }
+}
+
+/**
+ * Supprime une catégorie
+ * @param id - ID de la catégorie à supprimer
+ * @returns Promise<void>
+ */
+export async function supprimerCategorie(id: number): Promise<void> {
+  try {
+    const response = await api.delete<{success: boolean; message: string}>(`/categories/${id}`);
+    
+    if (!response.success) {
+      throw new Error(response.message || 'Erreur lors de la suppression de la catégorie');
+    }
+  } catch (error: any) {
+    console.error('Erreur lors de la suppression de la catégorie:', error);
+    
+    if (error.status === 400) {
+      throw new Error('Impossible de supprimer (sous-catégories ou produits associés)');
+    } else if (error.status === 401) {
+      throw new Error('Non authentifié');
+    } else if (error.status === 403) {
+      throw new Error('Non autorisé (pas le propriétaire)');
+    } else if (error.status === 404) {
+      throw new Error('Catégorie non trouvée');
+    }
+    
+    throw error;
+  }
+}
+
+/**
  * Utilitaire pour obtenir l'icône d'une catégorie basée sur son nom
  * @param nomCategorie - Nom de la catégorie
  * @returns string - Emoji ou icône
@@ -151,6 +256,9 @@ export default {
   getCategoriesParBoutique,
   getCategorieById,
   getCategorieBySlug,
+  creerCategorie,
+  modifierCategorie,
+  supprimerCategorie,
   organiserCategoriesHierarchie,
   filtrerCategoriesActives,
   getIconeCategorie

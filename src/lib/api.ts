@@ -25,6 +25,16 @@ const defaultRequestConfig: RequestInit = {
 };
 
 /**
+ * Récupère le token d'authentification depuis le localStorage
+ */
+function getAuthToken(): string | null {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('admin_token');
+  }
+  return null;
+}
+
+/**
  * Wrapper pour les requêtes API avec gestion d'erreurs
  */
 async function apiRequest<T>(
@@ -33,13 +43,18 @@ async function apiRequest<T>(
 ): Promise<T> {
   const url = `${config.apiBaseUrl}${endpoint}`;
   
+  // Ajouter le token d'authentification si disponible
+  const token = getAuthToken();
+  const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
+  
   const requestConfig: RequestInit = {
     ...defaultRequestConfig,
     ...options,
     headers: {
       ...defaultRequestConfig.headers,
+      ...authHeaders,
       ...options.headers,
-    },
+    } as HeadersInit,
   };
 
   try {
