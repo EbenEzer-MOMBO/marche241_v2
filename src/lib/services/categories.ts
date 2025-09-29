@@ -172,6 +172,7 @@ export async function modifierCategorie(id: number, categorieData: {
   description?: string;
   parent_id?: number;
   ordre_affichage: number;
+  statut?: 'active' | 'inactive';
 }): Promise<Categorie> {
   try {
     const response = await api.put<{success: boolean; message: string; categorie: Categorie}>(`/categories/${id}`, categorieData);

@@ -202,17 +202,29 @@ export async function verifierCode(data: VerifierCodeData): Promise<VerifierCode
  * @returns Promise<BoutiquesListResponse>
  */
 export async function getBoutiquesVendeur(vendeurId: number): Promise<BoutiquesListResponse> {
+  console.log('🔍 getBoutiquesVendeur appelé avec vendeurId:', vendeurId);
+  
   try {
     const response = await api.get<{ success: boolean; boutiques: BoutiqueData[] }>(`/boutiques/vendeur/${vendeurId}`);
+    console.log('📡 Réponse brute de l\'API getBoutiquesVendeur:', response);
     
     // L'API retourne déjà la structure avec success et boutiques
-    return {
+    const result = {
       success: response.success,
       message: response.success ? 'Boutiques récupérées avec succès' : 'Aucune boutique trouvée',
       boutiques: response.boutiques || []
     };
+    
+    console.log('📊 Résultat formaté getBoutiquesVendeur:', result);
+    return result;
   } catch (error: any) {
-    console.error('Erreur lors de la récupération des boutiques:', error);
+    console.error('🚨 Erreur lors de la récupération des boutiques:', error);
+    console.error('📊 Détails de l\'erreur API:', {
+      message: error.message,
+      status: error.status,
+      response: error.response,
+      url: `/boutiques/vendeur/${vendeurId}`
+    });
     
     // Vérifier si c'est une ApiError avec un status
     if (error.status) {

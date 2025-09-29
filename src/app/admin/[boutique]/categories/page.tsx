@@ -20,6 +20,7 @@ import {
   EyeOff
 } from 'lucide-react';
 import CategorieModal from '@/components/admin/CategorieModal';
+import ConfirmationModal from '@/components/ui/ConfirmationModal';
 
 // Interface locale pour l'affichage (adaptée depuis database-types)
 interface CategorieAffichage {
@@ -36,10 +37,10 @@ export default function CategoriesPage() {
   const router = useRouter();
   const params = useParams();
   const boutiqueName = params.boutique as string;
-  
+
   const { user, verifierBoutique } = useAuth();
   const { toasts, removeToast, success, error: showError } = useToast();
-  
+
   const [boutique, setBoutique] = useState<BoutiqueData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -47,12 +48,14 @@ export default function CategoriesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingCategorie, setEditingCategorie] = useState<CategorieAffichage | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [categorieToDelete, setCategorieToDelete] = useState<CategorieAffichage | null>(null);
 
   // Fonction pour charger les catégories depuis l'API
   const loadCategories = async (boutiqueId: number) => {
     try {
       const categoriesData = await getCategoriesParBoutique(boutiqueId);
-      
+
       // Adapter les données de l'API vers le format d'affichage
       const categoriesAffichage: CategorieAffichage[] = categoriesData.map(cat => ({
         id: cat.id,
@@ -60,10 +63,10 @@ export default function CategoriesPage() {
         slug: cat.slug,
         description: cat.description,
         actif: cat.statut === 'active',
-        nombre_produits: 0, // TODO: récupérer le nombre de produits
+        nombre_produits: cat.nombre_produits || 0,
         date_creation: cat.date_creation.toString().split('T')[0]
       }));
-      
+
       setCategories(categoriesAffichage);
     } catch (error) {
       console.error('Erreur lors du chargement des catégories:', error);
@@ -82,7 +85,7 @@ export default function CategoriesPage() {
 
       try {
         const boutiqueData = await verifierBoutique();
-        
+
         if (!boutiqueData) {
           router.push('/admin/boutique/create');
           return;
@@ -120,32 +123,47 @@ export default function CategoriesPage() {
     if (!categorie || !boutique) return;
 
     try {
+      // Optimistic update - mettre à jour l'UI immédiatement
+      setCategories(prev => prev.map(cat =>
+        cat.id === id ? { ...cat, actif: !cat.actif } : cat
+      ));
+
       const nouveauStatut = categorie.actif ? 'inactive' : 'active';
       await modifierCategorie(id, {
         nom: categorie.nom,
         slug: categorie.slug,
         description: categorie.description,
-        ordre_affichage: 1 // TODO: gérer l'ordre d'affichage
+        ordre_affichage: 1, // TODO: gérer l'ordre d'affichage
+        statut: nouveauStatut
       });
-      
-      setCategories(prev => prev.map(cat => 
+
+      success(`Catégorie ${nouveauStatut === 'active' ? 'activée' : 'désactivée'}`, 'Succès');
+    } catch (error: any) {
+      // Rollback en cas d'erreur
+      setCategories(prev => prev.map(cat =>
         cat.id === id ? { ...cat, actif: !cat.actif } : cat
       ));
-      success('Statut de la catégorie mis à jour', 'Succès');
-    } catch (error: any) {
       showError(error.message || 'Erreur lors de la mise à jour', 'Erreur');
     }
   };
 
-  const deleteCategorie = async (id: number) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cette catégorie ?')) {
-      try {
-        await supprimerCategorie(id);
-        setCategories(prev => prev.filter(cat => cat.id !== id));
-        success('Catégorie supprimée avec succès', 'Succès');
-      } catch (error: any) {
-        showError(error.message || 'Erreur lors de la suppression', 'Erreur');
-      }
+  const handleDeleteClick = (categorie: CategorieAffichage) => {
+    setCategorieToDelete(categorie);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!categorieToDelete) return;
+
+    try {
+      await supprimerCategorie(categorieToDelete.id);
+      setCategories(prev => prev.filter(cat => cat.id !== categorieToDelete.id));
+      success('Catégorie supprimée avec succès', 'Succès');
+    } catch (error: any) {
+      showError(error.message || 'Erreur lors de la suppression', 'Erreur');
+    } finally {
+      setCategorieToDelete(null);
+      setShowDeleteModal(false);
     }
   };
 
@@ -161,7 +179,7 @@ export default function CategoriesPage() {
           description: categorieData.description,
           ordre_affichage: 1 // TODO: gérer l'ordre d'affichage
         });
-        
+
         // Adapter la réponse API vers le format d'affichage
         const categorieAffichage: CategorieAffichage = {
           id: categorieModifiee.id,
@@ -172,8 +190,8 @@ export default function CategoriesPage() {
           nombre_produits: editingCategorie.nombre_produits, // Conserver le nombre existant
           date_creation: editingCategorie.date_creation // Conserver la date existante
         };
-        
-        setCategories(prev => prev.map(cat => 
+
+        setCategories(prev => prev.map(cat =>
           cat.id === editingCategorie.id ? categorieAffichage : cat
         ));
         success('Catégorie modifiée avec succès', 'Succès');
@@ -187,7 +205,7 @@ export default function CategoriesPage() {
           ordre_affichage: 1, // TODO: gérer l'ordre d'affichage
           boutique_id: boutique.id
         });
-        
+
         // Adapter la réponse API vers le format d'affichage
         const categorieAffichage: CategorieAffichage = {
           id: nouvelleCategorie.id,
@@ -198,7 +216,7 @@ export default function CategoriesPage() {
           nombre_produits: 0,
           date_creation: nouvelleCategorie.date_creation.toString().split('T')[0]
         };
-        
+
         setCategories(prev => [...prev, categorieAffichage]);
         success('Catégorie créée avec succès', 'Succès');
       }
@@ -243,10 +261,10 @@ export default function CategoriesPage() {
   return (
     <div className="h-screen bg-gray-50 flex overflow-hidden">
       <ToastContainer toasts={toasts} onClose={removeToast} />
-      
+
       {/* Sidebar */}
-      <Sidebar 
-        boutique={boutique} 
+      <Sidebar
+        boutique={boutique}
         isMobileMenuOpen={isMobileMenuOpen}
         onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
       />
@@ -264,7 +282,7 @@ export default function CategoriesPage() {
               >
                 <Menu className="h-5 w-5 text-gray-600" />
               </button>
-              
+
               <div className="min-w-0 flex-1">
                 <h1 className="text-lg lg:text-2xl font-bold text-gray-900 truncate">Catégories</h1>
                 <p className="text-xs lg:text-sm text-gray-500 mt-0.5 lg:mt-1 truncate">
@@ -272,14 +290,14 @@ export default function CategoriesPage() {
                 </p>
               </div>
             </div>
-            
+
             <button
               onClick={() => setShowCreateModal(true)}
               className="flex items-center px-3 lg:px-4 py-1.5 lg:py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm lg:text-base flex-shrink-0 ml-2"
             >
               <Plus className="h-3 w-3 lg:h-4 lg:w-4 mr-1 lg:mr-2" />
               <span className="hidden sm:inline">Nouvelle catégorie</span>
-              <span className="sm:hidden">Nouveau</span>
+              <span className="sm:hidden">Créer</span>
             </button>
           </div>
         </div>
@@ -344,11 +362,10 @@ export default function CategoriesPage() {
                         <div className="text-sm text-gray-900">{categorie.nombre_produits}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          categorie.actif 
-                            ? 'bg-green-100 text-green-800' 
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${categorie.actif
+                            ? 'bg-green-100 text-green-800'
                             : 'bg-gray-100 text-gray-800'
-                        }`}>
+                          }`}>
                           {categorie.actif ? 'Active' : 'Inactive'}
                         </span>
                       </td>
@@ -359,11 +376,10 @@ export default function CategoriesPage() {
                         <div className="flex items-center justify-end space-x-2">
                           <button
                             onClick={() => toggleCategorieStatus(categorie.id)}
-                            className={`p-1.5 rounded-lg transition-colors ${
-                              categorie.actif 
-                                ? 'text-green-600 hover:bg-green-50' 
+                            className={`p-1.5 rounded-lg transition-colors ${categorie.actif
+                                ? 'text-green-600 hover:bg-green-50'
                                 : 'text-gray-400 hover:bg-gray-50'
-                            }`}
+                              }`}
                             title={categorie.actif ? 'Désactiver' : 'Activer'}
                           >
                             {categorie.actif ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
@@ -376,7 +392,7 @@ export default function CategoriesPage() {
                             <Edit className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={() => deleteCategorie(categorie.id)}
+                            onClick={() => handleDeleteClick(categorie)}
                             className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
                             title="Supprimer"
                           >
@@ -409,11 +425,10 @@ export default function CategoriesPage() {
                   <div className="flex items-center space-x-1 flex-shrink-0">
                     <button
                       onClick={() => toggleCategorieStatus(categorie.id)}
-                      className={`p-1 rounded-lg transition-colors ${
-                        categorie.actif 
-                          ? 'text-green-600 hover:bg-green-50' 
+                      className={`p-1 rounded-lg transition-colors ${categorie.actif
+                          ? 'text-green-600 hover:bg-green-50'
                           : 'text-gray-400 hover:bg-gray-50'
-                      }`}
+                        }`}
                       title={categorie.actif ? 'Désactiver' : 'Activer'}
                     >
                       {categorie.actif ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
@@ -426,7 +441,7 @@ export default function CategoriesPage() {
                       <Edit className="h-3 w-3" />
                     </button>
                     <button
-                      onClick={() => deleteCategorie(categorie.id)}
+                      onClick={() => handleDeleteClick(categorie)}
                       className="p-1 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
                       title="Supprimer"
                     >
@@ -434,22 +449,21 @@ export default function CategoriesPage() {
                     </button>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center space-x-2 min-w-0">
                     <span className="text-gray-600 flex-shrink-0">{categorie.nombre_produits} produit(s)</span>
-                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
-                      categorie.actif 
-                        ? 'bg-green-100 text-green-800' 
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${categorie.actif
+                        ? 'bg-green-100 text-green-800'
                         : 'bg-gray-100 text-gray-800'
-                    }`}>
+                      }`}>
                       {categorie.actif ? 'Active' : 'Inactive'}
                     </span>
                   </div>
                   <span className="text-gray-400 flex-shrink-0 ml-2">
-                    {new Date(categorie.date_creation).toLocaleDateString('fr-FR', { 
-                      day: '2-digit', 
-                      month: '2-digit' 
+                    {new Date(categorie.date_creation).toLocaleDateString('fr-FR', {
+                      day: '2-digit',
+                      month: '2-digit'
                     })}
                   </span>
                 </div>
@@ -465,7 +479,7 @@ export default function CategoriesPage() {
                 {searchTerm ? 'Aucune catégorie trouvée' : 'Aucune catégorie'}
               </h3>
               <p className="text-gray-500 mb-6">
-                {searchTerm 
+                {searchTerm
                   ? 'Essayez avec d\'autres mots-clés'
                   : 'Commencez par créer votre première catégorie'
                 }
@@ -484,12 +498,26 @@ export default function CategoriesPage() {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Modals */}
       <CategorieModal
         isOpen={showCreateModal}
         onClose={handleCloseModal}
         onSave={handleSaveCategorie}
         categorie={editingCategorie}
+      />
+
+      <ConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setCategorieToDelete(null);
+        }}
+        onConfirm={confirmDelete}
+        title="Supprimer la catégorie"
+        message={`Êtes-vous sûr de vouloir supprimer la catégorie "${categorieToDelete?.nom}" ? Cette action est irréversible et tous les produits associés perdront leur catégorie.`}
+        confirmText="Supprimer"
+        cancelText="Annuler"
+        type="danger"
       />
     </div>
   );

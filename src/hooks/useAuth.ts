@@ -113,20 +113,29 @@ export function useAuth(): UseAuthReturn {
         success('Connexion réussie', `Bienvenue ${response.vendeur.nom}`);
         
         // Vérifier si le vendeur a une boutique avant de rediriger
-        try {
-          const boutique = await verifierBoutique();
-          
-          if (boutique) {
-            // Le vendeur a une boutique, utiliser le slug de l'API
-            router.push(`/admin/${boutique.slug}`);
-          } else {
-            // Pas de boutique, rediriger vers la création
+        console.log('🔍 Vérification de boutique pour le vendeur ID:', response.vendeur.id);
+        
+        // Attendre un court délai pour s'assurer que l'état utilisateur est bien mis à jour
+        setTimeout(async () => {
+          try {
+            const boutique = await verifierBoutique();
+            console.log('📊 Résultat de la vérification de boutique:', boutique);
+            
+            if (boutique) {
+              // Le vendeur a une boutique, utiliser le slug de l'API
+              console.log('✅ Boutique trouvée, redirection vers:', `/admin/${boutique.slug}`);
+              router.push(`/admin/${boutique.slug}`);
+            } else {
+              // Pas de boutique, rediriger vers la création
+              console.log('❌ Aucune boutique trouvée, redirection vers la création');
+              router.push('/admin/boutique/create');
+            }
+          } catch (error) {
+            // En cas d'erreur, rediriger vers la création de boutique
+            console.error('🚨 Erreur lors de la vérification de boutique:', error);
             router.push('/admin/boutique/create');
           }
-        } catch (error) {
-          // En cas d'erreur, rediriger vers la création de boutique
-          router.push('/admin/boutique/create');
-        }
+        }, 100);
         
         return true;
       } else {
@@ -197,21 +206,33 @@ export function useAuth(): UseAuthReturn {
 
   const verifierBoutique = useCallback(async (): Promise<BoutiqueData | null> => {
     if (!user?.id) {
+      console.log('❌ Utilisateur non authentifié pour vérification boutique');
       throw new Error('Utilisateur non authentifié');
     }
 
+    console.log('🔍 Vérification boutique pour utilisateur ID:', user.id);
+    
     try {
       const response = await getBoutiquesVendeur(parseInt(user.id));
+      console.log('📡 Réponse API getBoutiquesVendeur:', response);
       
       if (response.boutiques && response.boutiques.length > 0) {
+        console.log('✅ Boutiques trouvées:', response.boutiques.length);
+        console.log('📋 Première boutique:', response.boutiques[0]);
         // Retourner la première boutique (pour l'instant on assume qu'un vendeur n'a qu'une boutique)
         return response.boutiques[0];
       }
       
+      console.log('❌ Aucune boutique trouvée dans la réponse');
       // Pas de boutique trouvée - retourner null
       return null;
     } catch (error: any) {
-      console.error('Erreur lors de la vérification de la boutique:', error);
+      console.error('🚨 Erreur lors de la vérification de la boutique:', error);
+      console.error('📊 Détails de l\'erreur:', {
+        message: error.message,
+        status: error.status,
+        response: error.response
+      });
       // Ne pas afficher d'erreur toast ici car cela peut causer des redirections
       return null;
     }

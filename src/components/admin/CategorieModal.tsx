@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Save, Tag } from 'lucide-react';
+import { X, Save, Tag, Loader2 } from 'lucide-react';
 
 interface Categorie {
   id?: number;
@@ -14,7 +14,7 @@ interface Categorie {
 interface CategorieModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (categorie: Categorie) => void;
+  onSave: (categorie: Categorie) => Promise<void>;
   categorie?: Categorie | null;
 }
 
@@ -27,6 +27,7 @@ export default function CategorieModal({ isOpen, onClose, onSave, categorie }: C
     actif: true
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (categorie) {
@@ -76,15 +77,22 @@ export default function CategorieModal({ isOpen, onClose, onSave, categorie }: C
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
 
-    onSave(formData);
-    onClose();
+    setIsLoading(true);
+    try {
+      await onSave(formData);
+      onClose();
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -120,9 +128,8 @@ export default function CategorieModal({ isOpen, onClose, onSave, categorie }: C
               id="nom"
               value={formData.nom}
               onChange={(e) => handleNomChange(e.target.value)}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-black focus:border-transparent ${
-                errors.nom ? 'border-red-500' : 'border-gray-300'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-black focus:border-transparent ${errors.nom ? 'border-red-500' : 'border-gray-300'
+                }`}
               placeholder="Ex: Électronique"
             />
             {errors.nom && <p className="mt-1 text-sm text-red-600">{errors.nom}</p>}
@@ -138,9 +145,8 @@ export default function CategorieModal({ isOpen, onClose, onSave, categorie }: C
               id="slug"
               value={formData.slug}
               onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-black focus:border-transparent ${
-                errors.slug ? 'border-red-500' : 'border-gray-300'
-              }`}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-black focus:border-transparent ${errors.slug ? 'border-red-500' : 'border-gray-300'
+                }`}
               placeholder="electronique"
             />
             {errors.slug && <p className="mt-1 text-sm text-red-600">{errors.slug}</p>}
@@ -194,10 +200,20 @@ export default function CategorieModal({ isOpen, onClose, onSave, categorie }: C
             </button>
             <button
               type="submit"
-              className="flex items-center px-4 py-2 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800 transition-colors"
+              disabled={isLoading}
+              className="flex items-center px-4 py-2 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Save className="h-4 w-4 mr-2" />
-              {categorie ? 'Modifier' : 'Créer'}
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  {categorie ? 'Modification...' : 'Création...'}
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  {categorie ? 'Modifier' : 'Créer'}
+                </>
+              )}
             </button>
           </div>
         </form>

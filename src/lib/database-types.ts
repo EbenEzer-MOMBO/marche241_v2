@@ -89,6 +89,7 @@ export interface Categorie {
   date_creation: Date;
   date_modification: Date;
   boutique_id?: number;
+  nombre_produits?: number;
   
   // Relations
   parent?: Categorie;
@@ -104,17 +105,20 @@ export interface ProduitDB {
   description_courte?: string;
   prix: number; // En centimes
   prix_original?: number; // En centimes
+  prix_promo?: number; // En centimes - pour l'API
   sku?: string;
   boutique_id: number;
   categorie_id: number;
-  images?: any; // JSON dans la base de données
+  images?: string[]; // Array d'URLs d'images
   image_principale?: string;
   variants?: any; // JSON dans la base de données
   en_stock: boolean;
   quantite_stock: number;
+  stock?: number; // Alias pour quantite_stock (API)
   poids?: number; // En grammes
   dimensions?: any; // JSON dans la base de données
-  tags?: any; // JSON dans la base de données
+  tags?: string[]; // Array de tags
+  specifications?: Record<string, string>; // Spécifications du produit
   note_moyenne: number;
   nombre_avis: number;
   nombre_vues: number;
@@ -122,6 +126,7 @@ export interface ProduitDB {
   est_nouveau: boolean;
   est_en_promotion: boolean;
   est_featured: boolean;
+  actif?: boolean; // Alias pour statut === 'actif'
   statut: StatutProduit;
   date_creation: Date;
   date_modification: Date;
