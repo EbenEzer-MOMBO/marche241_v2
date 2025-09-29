@@ -30,7 +30,7 @@ export default function ProduitModal({
     prix: '',
     prix_promo: '',
     categorie_id: '',
-    stock: '',
+    en_stock: '',
     statut: 'actif' as 'actif' | 'inactif' | 'brouillon',
     tags: [] as string[],
     specifications: {} as Record<string, string>,
@@ -54,7 +54,7 @@ export default function ProduitModal({
         prix: produit.prix ? produit.prix.toString() : '', // Suppression de la division par 100
         prix_promo: produit.prix_original ? produit.prix_original.toString() : '', // Suppression de la division par 100
         categorie_id: produit.categorie_id?.toString() || '',
-        stock: produit.quantite_stock?.toString() || '',
+        en_stock: produit.quantite_stock?.toString() || '',
         statut: produit.actif ? 'actif' : 'inactif',
         tags: produit.tags || [],
         specifications: produit.specifications || {},
@@ -67,7 +67,7 @@ export default function ProduitModal({
         prix: '',
         prix_promo: '',
         categorie_id: '',
-        stock: '',
+        en_stock: '',
         statut: 'actif',
         tags: [],
         specifications: {},
@@ -115,13 +115,11 @@ export default function ProduitModal({
         description: formData.description,
         prix: parseFloat(formData.prix), // Suppression de la multiplication par 100
         prix_promo: formData.prix_promo ? parseFloat(formData.prix_promo) : undefined, // Suppression de la multiplication par 100
-        stock: parseInt(formData.stock),
+        en_stock: parseInt(formData.en_stock),
         boutique_id: boutiqueId,
         categorie_id: parseInt(formData.categorie_id),
         images: formData.images,
         statut: formData.statut,
-        tags: formData.tags,
-        specifications: formData.specifications
       };
 
       if (produit) {
@@ -344,8 +342,8 @@ export default function ProduitModal({
                 </label>
                 <input
                   type="number"
-                  value={formData.stock}
-                  onChange={(e) => setFormData(prev => ({ ...prev, stock: e.target.value }))}
+                  value={formData.en_stock}
+                  onChange={(e) => setFormData(prev => ({ ...prev, en_stock: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
                   required
                 />
@@ -367,45 +365,6 @@ export default function ProduitModal({
                   <option value="brouillon">Brouillon</option>
                 </select>
               </div>
-            </div>
-          </div>
-
-          {/* Tags */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Tags</h3>
-            <div className="flex flex-wrap gap-2 mb-3">
-              {formData.tags.map((tag, index) => (
-                <span
-                  key={index}
-                  className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
-                >
-                  {tag}
-                  <button
-                    type="button"
-                    onClick={() => removeTag(tag)}
-                    className="ml-1.5 h-4 w-4 rounded-full inline-flex items-center justify-center text-gray-400 hover:bg-gray-200 hover:text-gray-500"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={currentTag}
-                onChange={(e) => setCurrentTag(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
-                placeholder="Ajouter un tag"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-              />
-              <button
-                type="button"
-                onClick={addTag}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                <Plus className="h-4 w-4" />
-              </button>
             </div>
           </div>
 

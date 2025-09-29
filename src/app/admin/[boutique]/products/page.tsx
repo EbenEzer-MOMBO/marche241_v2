@@ -372,7 +372,7 @@ export default function ProductsPage() {
                     description: produitData.description,
                     prix: produitData.prix,
                     prix_promo: produitData.prix_original,
-                    stock: produitData.quantite_stock,
+                    en_stock: produitData.en_stock,
                     categorie_id: produitData.categorie_id,
                     images: produitData.images,
                     statut: produitData.actif ? 'actif' : 'inactif'
@@ -411,7 +411,7 @@ export default function ProductsPage() {
                     description: produitData.description,
                     prix: produitData.prix,
                     prix_promo: produitData.prix_original,
-                    stock: produitData.quantite_stock,
+                    en_stock: produitData.quantite_stock,
                     boutique_id: boutique!.id,
                     categorie_id: produitData.categorie_id,
                     images: produitData.images,

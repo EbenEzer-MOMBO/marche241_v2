@@ -105,21 +105,23 @@ export async function creerProduit(produitData: {
   description?: string;
   prix: number;
   prix_promo?: number;
-  stock: number;
+  en_stock: number;
   boutique_id: number;
   categorie_id: number;
   images?: string[];
   statut: 'actif' | 'inactif' | 'brouillon';
 }): Promise<ProduitDB> {
   try {
-    const response = await api.post<{success: boolean; message: string; produit: string}>('/produits', produitData);
+    const response = await api.post<{success: boolean; message: string; produit: ProduitDB | string}>('/produits', produitData);
     
     if (!response.success) {
       throw new Error(response.message || 'Erreur lors de la création du produit');
     }
     
     // Retourner les données du produit créé
-    return JSON.parse(response.produit);
+    return typeof response.produit === 'string'
+      ? JSON.parse(response.produit)
+      : response.produit;
   } catch (error: any) {
     console.error('Erreur lors de la création du produit:', error);
     
@@ -151,20 +153,22 @@ export async function modifierProduit(id: number, produitData: {
   description?: string;
   prix?: number;
   prix_promo?: number;
-  stock?: number;
+  en_stock?: number;
   categorie_id?: number;
   images?: string[];
   statut?: 'actif' | 'inactif' | 'brouillon';
 }): Promise<ProduitDB> {
   try {
-    const response = await api.put<{success: boolean; message: string; produit: string}>(`/produits/${id}`, produitData);
+    const response = await api.put<{success: boolean; message: string; produit: ProduitDB | string}>(`/produits/${id}`, produitData);
     
     if (!response.success) {
       throw new Error(response.message || 'Erreur lors de la modification du produit');
     }
     
     // Retourner les données du produit mis à jour
-    return JSON.parse(response.produit);
+    return typeof response.produit === 'string'
+      ? JSON.parse(response.produit)
+      : response.produit;
   } catch (error: any) {
     console.error('Erreur lors de la modification du produit:', error);
     
