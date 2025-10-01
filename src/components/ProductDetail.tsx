@@ -5,24 +5,26 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { formatPrice } from '@/lib/utils';
 import FloatingAddToCartButton from './FloatingAddToCartButton';
-import { ProduitDetail } from '@/lib/database-types';
+import { ProduitDetail, ProduitAffichage, Boutique } from '@/lib/database-types';
 import { formatApiProduitPourDetail, formatVariantsPourInterface, getProduitImageUrl } from '@/lib/services/produits';
 import { useAjoutPanier } from '@/hooks/usePanier';
 import { useToast } from '@/hooks/useToast';
 import { ToastContainer } from '@/components/ui/Toast';
 
 interface ProductDetailProps {
-  productId?: string;
-  productSlug?: string;
-  productData?: ProduitDetail; // Données pré-chargées
-  boutiqueSlug?: string;
+  productId: string;
+  productData: ProduitDetail;
+  productDisplay: ProduitAffichage;
+  boutiqueSlug: string;
+  boutiqueData: Boutique;
 }
 
 export default function ProductDetail({ 
   productId, 
-  productSlug, 
   productData, 
-  boutiqueSlug 
+  productDisplay,
+  boutiqueSlug,
+  boutiqueData
 }: ProductDetailProps) {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [selectedVariants, setSelectedVariants] = useState<{ [key: string]: string }>({});
@@ -46,42 +48,19 @@ export default function ProductDetail({
       return;
     }
 
-    // Si pas de données pré-chargées et pas d'ID/slug, afficher une erreur
-    if (!productId && !productSlug) {
+    // Si pas de données pré-chargées et pas d'ID, afficher une erreur
+    if (!productId) {
       setError('Aucun identifiant de produit fourni');
       setLoading(false);
       return;
     }
 
-    // TODO: Implémenter l'appel API réel ici
-    // Exemple d'implémentation :
-    // const fetchProduct = async () => {
-    //   try {
-    //     setLoading(true);
-    //     setError(null);
-    //     
-    //     const response = await fetch(`/api/v1/produits/${productId || productSlug}`);
-    //     const apiResponse = await response.json();
-    //     
-    //     const formattedProduct = formatApiProduitPourDetail(apiResponse);
-    //     if (formattedProduct) {
-    //       setProduct(formattedProduct);
-    //     } else {
-    //       setError('Produit introuvable');
-    //     }
-    //   } catch (err) {
-    //     console.error('Erreur lors du chargement du produit:', err);
-    //     setError('Erreur lors du chargement du produit');
-    //   } finally {
-    //     setLoading(false);
-    //   }
-    // };
-    // fetchProduct();
+    // Note: L'implémentation de l'appel API a été déplacée vers la page serveur
 
     // Pour l'instant, afficher une erreur car pas d'API connectée
     setError('Veuillez fournir les données du produit via la prop productData');
     setLoading(false);
-  }, [productId, productSlug, productData]);
+  }, [productId, productData]);
 
   // Sélection automatique du premier élément de chaque variant
   useEffect(() => {
