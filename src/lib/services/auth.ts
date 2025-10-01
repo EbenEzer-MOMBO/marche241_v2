@@ -176,6 +176,22 @@ export async function demanderCodeVerification(data: DemanderCodeData): Promise<
 export async function verifierCode(data: VerifierCodeData): Promise<VerifierCodeResponse> {
   try {
     const response = await api.post<VerifierCodeResponse>('/vendeurs/verification', data);
+    
+    // Attendre que le token soit bien enregistré
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Vérifier que l'authentification est bien établie
+    if (response.token && response.vendeur?.id) {
+      // Vérifier que le token est bien enregistré en essayant de récupérer les boutiques
+      try {
+        await getBoutiquesVendeur(response.vendeur.id);
+      } catch (authError) {
+        console.log('🔄 Première tentative de vérification échouée, nouvelle tentative...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        await getBoutiquesVendeur(response.vendeur.id);
+      }
+    }
+    
     return response;
   } catch (error: any) {
     console.error('Erreur lors de la vérification du code:', error);
