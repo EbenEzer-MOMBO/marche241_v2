@@ -57,6 +57,9 @@ export interface VerifierCodeResponse {
   };
   token?: string;
   tentatives_restantes?: number;
+  // Propriétés ajoutées pour la gestion de la boutique
+  hasBoutique?: boolean;
+  boutique?: BoutiqueData;
 }
 
 export interface BoutiqueData {
@@ -184,11 +187,33 @@ export async function verifierCode(data: VerifierCodeData): Promise<VerifierCode
     if (response.token && response.vendeur?.id) {
       // Vérifier que le token est bien enregistré en essayant de récupérer les boutiques
       try {
-        await getBoutiquesVendeur(response.vendeur.id);
+        console.log('🔍 Tentative de vérification des boutiques...');
+        const boutiquesResponse = await getBoutiquesVendeur(response.vendeur.id);
+        console.log('✅ Réponse des boutiques:', boutiquesResponse);
+        
+        // Ajouter l'information de la boutique à la réponse
+        if (boutiquesResponse.success && boutiquesResponse.boutiques && boutiquesResponse.boutiques.length > 0) {
+          response.hasBoutique = true;
+          response.boutique = boutiquesResponse.boutiques[0];
+        } else {
+          response.hasBoutique = false;
+        }
       } catch (authError) {
         console.log('🔄 Première tentative de vérification échouée, nouvelle tentative...');
         await new Promise(resolve => setTimeout(resolve, 1000));
-        await getBoutiquesVendeur(response.vendeur.id);
+        
+        try {
+          const boutiquesRetry = await getBoutiquesVendeur(response.vendeur.id);
+          if (boutiquesRetry.success && boutiquesRetry.boutiques && boutiquesRetry.boutiques.length > 0) {
+            response.hasBoutique = true;
+            response.boutique = boutiquesRetry.boutiques[0];
+          } else {
+            response.hasBoutique = false;
+          }
+        } catch (retryError) {
+          console.error('❌ Échec de la deuxième tentative:', retryError);
+          response.hasBoutique = false;
+        }
       }
     }
     

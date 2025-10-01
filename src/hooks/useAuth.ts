@@ -112,30 +112,18 @@ export function useAuth(): UseAuthReturn {
         });
         success('Connexion réussie', `Bienvenue ${response.vendeur.nom}`);
         
-        // Vérifier si le vendeur a une boutique avant de rediriger
-        console.log('🔍 Vérification de boutique pour le vendeur ID:', response.vendeur.id);
+        // La vérification de la boutique a déjà été faite dans verifierCode
+        console.log('📊 État de la boutique:', response.hasBoutique);
         
-        // Attendre un court délai pour s'assurer que l'état utilisateur est bien mis à jour
-        setTimeout(async () => {
-          try {
-            const boutique = await verifierBoutique();
-            console.log('📊 Résultat de la vérification de boutique:', boutique);
-            
-            if (boutique) {
-              // Le vendeur a une boutique, utiliser le slug de l'API
-              console.log('✅ Boutique trouvée, redirection vers:', `/admin/${boutique.slug}`);
-              router.push(`/admin/${boutique.slug}`);
-            } else {
-              // Pas de boutique, rediriger vers la création
-              console.log('❌ Aucune boutique trouvée, redirection vers la création');
-              router.push('/admin/boutique/create');
-            }
-          } catch (error) {
-            // En cas d'erreur, rediriger vers la création de boutique
-            console.error('🚨 Erreur lors de la vérification de boutique:', error);
-            router.push('/admin/boutique/create');
-          }
-        }, 100);
+        if (response.hasBoutique && response.boutique) {
+          // Le vendeur a une boutique, utiliser le slug
+          console.log('✅ Boutique trouvée, redirection vers:', `/admin/${response.boutique.slug}`);
+          router.push(`/admin/${response.boutique.slug}`);
+        } else {
+          // Pas de boutique, rediriger vers la création
+          console.log('❌ Aucune boutique trouvée, redirection vers la création');
+          router.push('/admin/boutique/create');
+        }
         
         return true;
       } else {
