@@ -124,7 +124,7 @@ export default function BoutiqueDashboard() {
             </div>
             
             <button
-              onClick={() => window.open(`/boutique/${boutique.slug}`, '_blank')}
+              onClick={() => window.open(`/${boutique.slug}`, '_blank')}
               className="flex items-center px-2 lg:px-4 py-1.5 lg:py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm lg:text-base flex-shrink-0 ml-2"
             >
               <Eye className="h-3 w-3 lg:h-4 lg:w-4 mr-1 lg:mr-2" />
