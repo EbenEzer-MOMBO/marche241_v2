@@ -91,6 +91,60 @@ export async function uploadImage(file: File, boutiqueSlug: string, folder: stri
  * @param folder - Dossier de destination (par défaut 'produits')
  * @returns Promise<ImageUploadResponse[]> - Informations sur les images uploadées
  */
+/**
+ * Compresse une image avant l'upload
+ * @param file - Fichier image à compresser
+ * @returns Promise<Blob> - Image compressée
+ */
+async function compressImage(file: File): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    
+    img.onload = () => {
+      URL.revokeObjectURL(img.src);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      // Calculer les nouvelles dimensions en gardant le ratio
+      let width = img.width;
+      let height = img.height;
+      const maxDim = 1920; // Maximum dimension
+      
+      if (width > height && width > maxDim) {
+        height = (height * maxDim) / width;
+        width = maxDim;
+      } else if (height > maxDim) {
+        width = (width * maxDim) / height;
+        height = maxDim;
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      
+      ctx?.drawImage(img, 0, 0, width, height);
+      
+      // Compression avec qualité adaptative
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error('Échec de la compression de l\'image'));
+          }
+        },
+        'image/jpeg',
+        0.8 // Qualité de compression
+      );
+    };
+    
+    img.onerror = () => {
+      URL.revokeObjectURL(img.src);
+      reject(new Error('Erreur lors du chargement de l\'image'));
+    };
+  });
+}
+
 export async function uploadMultipleImages(files: File[], boutiqueSlug: string, folder: string = 'produits'): Promise<ImageUploadResponse[]> {
   try {
     // Vérifier si FormData est supporté
@@ -102,7 +156,28 @@ export async function uploadMultipleImages(files: File[], boutiqueSlug: string, 
     }
     
     const formData = new FormData();
-    files.forEach(file => {
+    
+    // Compresser chaque image avant l'upload
+    const compressedFiles = await Promise.all(
+      files.map(async (file) => {
+        try {
+          // Ne compresser que les images JPEG/PNG de plus de 1MB
+          if (
+            (file.type === 'image/jpeg' || file.type === 'image/png') &&
+            file.size > 1024 * 1024
+          ) {
+            const compressedBlob = await compressImage(file);
+            return new File([compressedBlob], file.name, { type: 'image/jpeg' });
+          }
+          return file;
+        } catch (error) {
+          console.warn(`Échec de la compression pour ${file.name}, utilisation de l'original:`, error);
+          return file;
+        }
+      })
+    );
+    
+    compressedFiles.forEach(file => {
       formData.append('images', file);
     });
     
