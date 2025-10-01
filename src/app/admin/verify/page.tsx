@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { ArrowLeft, Shield, Loader2, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { ToastContainer } from '@/components/ui/Toast';
 
-export default function AdminVerifyPage() {
+function VerifyContent() {
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [canResend, setCanResend] = useState(false);
   const [countdown, setCountdown] = useState(60);
@@ -208,5 +208,17 @@ export default function AdminVerifyPage() {
       {/* Toast Container */}
       <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
+  );
+}
+
+export default function AdminVerifyPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <Loader2 className="animate-spin h-8 w-8 text-gray-600" />
+      </div>
+    }>
+      <VerifyContent />
+    </Suspense>
   );
 }

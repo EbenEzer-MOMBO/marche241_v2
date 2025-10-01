@@ -36,6 +36,8 @@ interface ProduitAffichage {
     prix: number;
     prix_original?: number;
     image_principale?: string;
+    images?: string[];
+    variants?: any;
     en_stock: boolean;
     quantite_stock: number;
     actif: boolean;
@@ -116,6 +118,8 @@ export default function ProductsPage() {
                 prix: produit.prix,
                 prix_original: produit.prix_original,
                 image_principale: produit.image_principale,
+                images: produit.images || [],
+                variants: produit.variants || [],
                 en_stock: produit.en_stock,
                 quantite_stock: produit.quantite_stock || produit.stock || 0,
                 actif: produit.actif || produit.statut === 'actif',
@@ -341,6 +345,8 @@ export default function ProductsPage() {
             prix: product.prix,
             prix_original: product.prix_original,
             image_principale: product.image_principale,
+            images: product.images || [],
+            variants: product.variants || [],
             en_stock: product.en_stock,
             quantite_stock: product.quantite_stock || 0,
             actif: product.actif,
@@ -375,7 +381,9 @@ export default function ProductsPage() {
                     en_stock: produitData.en_stock,
                     categorie_id: produitData.categorie_id,
                     images: produitData.images,
-                    statut: produitData.actif ? 'actif' : 'inactif'
+                    image_principale: produitData.image_principale,
+                    variants: produitData.variants,
+                    statut: produitData.statut
                 });
                 
                 // Mettre à jour l'interface utilisateur
@@ -387,6 +395,8 @@ export default function ProductsPage() {
                     prix: produitModifie.prix,
                     prix_original: produitModifie.prix_promo,
                     image_principale: produitModifie.image_principale,
+                    images: produitModifie.images || [],
+                    variants: produitModifie.variants || [],
                     en_stock: produitModifie.en_stock,
                     quantite_stock: produitModifie.quantite_stock || produitModifie.stock || 0,
                     actif: produitModifie.actif || produitModifie.statut === 'actif',
@@ -400,6 +410,8 @@ export default function ProductsPage() {
                         slug: categories.find(c => c.id === produitModifie.categorie_id)?.slug || 'sans-categorie'
                     }
                 };
+                
+                console.log('Produit modifié:', produitAffichage);
                 
                 setProducts(prev => prev.map(p => p.id === productToEdit.id ? produitAffichage : p));
                 success('Produit modifié avec succès', 'Succès');
@@ -415,7 +427,9 @@ export default function ProductsPage() {
                     boutique_id: boutique!.id,
                     categorie_id: produitData.categorie_id,
                     images: produitData.images,
-                    statut: produitData.actif ? 'actif' : 'inactif'
+                    image_principale: produitData.image_principale,
+                    variants: produitData.variants,
+                    statut: produitData.statut
                 });
                 
                 // Convertir en ProduitAffichage pour l'interface
@@ -427,6 +441,8 @@ export default function ProductsPage() {
                     prix: nouveauProduitDB.prix,
                     prix_original: nouveauProduitDB.prix_promo,
                     image_principale: nouveauProduitDB.image_principale,
+                    images: nouveauProduitDB.images || [],
+                    variants: nouveauProduitDB.variants || [],
                     en_stock: nouveauProduitDB.en_stock,
                     quantite_stock: nouveauProduitDB.quantite_stock || nouveauProduitDB.stock || 0,
                     actif: nouveauProduitDB.actif || nouveauProduitDB.statut === 'actif',
@@ -450,6 +466,8 @@ export default function ProductsPage() {
                         slug: categories.find(c => c.id === nouveauProduitDB.categorie_id)?.slug || 'sans-categorie'
                     }
                 };
+
+                console.log(nouveauProduit);
                 
                 setProducts(prev => [...prev, nouveauProduit]);
                 success('Produit créé avec succès', 'Succès');

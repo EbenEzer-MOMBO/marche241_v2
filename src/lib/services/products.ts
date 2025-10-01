@@ -109,6 +109,8 @@ export async function creerProduit(produitData: {
   boutique_id: number;
   categorie_id: number;
   images?: string[];
+  image_principale?: string;
+  variants?: any;
   statut: 'actif' | 'inactif' | 'brouillon';
 }): Promise<ProduitDB> {
   try {
@@ -156,6 +158,8 @@ export async function modifierProduit(id: number, produitData: {
   en_stock?: number;
   categorie_id?: number;
   images?: string[];
+  image_principale?: string;
+  variants?: any;
   statut?: 'actif' | 'inactif' | 'brouillon';
 }): Promise<ProduitDB> {
   try {

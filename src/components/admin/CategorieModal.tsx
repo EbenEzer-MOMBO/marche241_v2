@@ -143,6 +143,7 @@ export default function CategorieModal({ isOpen, onClose, onSave, categorie }: C
             <input
               type="text"
               id="slug"
+              readOnly
               value={formData.slug}
               onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
               className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-black focus:border-transparent ${errors.slug ? 'border-red-500' : 'border-gray-300'

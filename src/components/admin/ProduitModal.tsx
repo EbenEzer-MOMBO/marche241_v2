@@ -15,10 +15,10 @@ interface ProduitModalProps {
   boutiqueSlug: string;
 }
 
-export default function ProduitModal({ 
-  isOpen, 
-  onClose, 
-  onSave, 
+export default function ProduitModal({
+  isOpen,
+  onClose,
+  onSave,
   produit,
   categories,
   boutiqueId,
@@ -34,12 +34,15 @@ export default function ProduitModal({
     statut: 'actif' as 'actif' | 'inactif' | 'brouillon',
     tags: [] as string[],
     specifications: {} as Record<string, string>,
-    images: [] as string[]
+    images: [] as string[],
+    variants: [] as Array<{nom: string; options: string[]}>
   });
-  
+
   const [currentTag, setCurrentTag] = useState('');
   const [currentSpecKey, setCurrentSpecKey] = useState('');
   const [currentSpecValue, setCurrentSpecValue] = useState('');
+  const [currentVariantName, setCurrentVariantName] = useState('');
+  const [currentVariantOptions, setCurrentVariantOptions] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [uploadedImages, setUploadedImages] = useState<ImageUploadResponse[]>([]);
@@ -48,6 +51,19 @@ export default function ProduitModal({
 
   useEffect(() => {
     if (produit) {
+      console.log('[ProduitModal] Chargement du produit:', produit);
+      console.log('[ProduitModal] Images du produit:', produit.images);
+      console.log('[ProduitModal] Image principale:', produit.image_principale);
+      
+      // Si images est vide mais image_principale existe, créer un tableau avec image_principale
+      const productImages = produit.images && produit.images.length > 0 
+        ? produit.images 
+        : produit.image_principale 
+          ? [produit.image_principale] 
+          : [];
+      
+      console.log('[ProduitModal] Images finales chargées:', productImages);
+      
       setFormData({
         nom: produit.nom || '',
         description: produit.description || '',
@@ -58,7 +74,8 @@ export default function ProduitModal({
         statut: produit.actif ? 'actif' : 'inactif',
         tags: produit.tags || [],
         specifications: produit.specifications || {},
-        images: produit.images || []
+        images: productImages,
+        variants: produit.variants || []
       });
     } else {
       setFormData({
@@ -71,7 +88,8 @@ export default function ProduitModal({
         statut: 'actif',
         tags: [],
         specifications: {},
-        images: []
+        images: [],
+        variants: []
       });
     }
     setImageFiles([]);
@@ -83,19 +101,30 @@ export default function ProduitModal({
     setUploadError('');
 
     try {
+      // Variable pour stocker les images finales
+      let finalImages = [...formData.images];
+
       // Vérifier s'il y a des images à uploader avant de soumettre le formulaire
       if (imageFiles.length > 0) {
         try {
           setIsUploading(true);
           // Utiliser le slug de la boutique pour organiser les images par dossier
           const uploadedImgs = await uploadMultipleImages(imageFiles, boutiqueSlug, 'produits');
-          
+
+          console.log('[ProduitModal] Images uploadées:', uploadedImgs);
+
+          // Ajouter les nouvelles images aux images existantes
+          const newImageUrls = uploadedImgs.map(img => img.url);
+          finalImages = [...finalImages, ...newImageUrls];
+
+          console.log('[ProduitModal] Images finales:', finalImages);
+
           setUploadedImages(prev => [...prev, ...uploadedImgs]);
           setFormData(prev => ({
             ...prev,
-            images: [...prev.images, ...uploadedImgs.map(img => img.url)]
+            images: finalImages
           }));
-          
+
           // Vider la liste des fichiers après l'upload
           setImageFiles([]);
         } catch (error: any) {
@@ -116,11 +145,16 @@ export default function ProduitModal({
         prix: parseFloat(formData.prix), // Suppression de la multiplication par 100
         prix_promo: formData.prix_promo ? parseFloat(formData.prix_promo) : undefined, // Suppression de la multiplication par 100
         en_stock: parseInt(formData.en_stock),
+        quantite_stock: parseInt(formData.en_stock),
         boutique_id: boutiqueId,
         categorie_id: parseInt(formData.categorie_id),
-        images: formData.images,
+        images: finalImages,
+        image_principale: finalImages.length > 0 ? finalImages[0] : null,
+        variants: formData.variants,
         statut: formData.statut,
       };
+
+      console.log('[ProduitModal] Données du produit préparées:', produitData);
 
       if (produit) {
         produitData.id = produit.id;
@@ -176,13 +210,34 @@ export default function ProduitModal({
     }));
   };
 
+  const addVariant = () => {
+    if (currentVariantName.trim() && currentVariantOptions.trim()) {
+      const options = currentVariantOptions.split(',').map(opt => opt.trim()).filter(opt => opt);
+      if (options.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          variants: [...prev.variants, { nom: currentVariantName.trim(), options }]
+        }));
+        setCurrentVariantName('');
+        setCurrentVariantOptions('');
+      }
+    }
+  };
+
+  const removeVariant = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      variants: prev.variants.filter((_, i) => i !== index)
+    }));
+  };
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length > 5) {
       setUploadError('Vous ne pouvez pas uploader plus de 5 images à la fois');
       return;
     }
-    
+
     setImageFiles(prev => [...prev, ...files]);
     setUploadError('');
   };
@@ -190,12 +245,12 @@ export default function ProduitModal({
   const removeImage = (index: number) => {
     setImageFiles(prev => prev.filter((_, i) => i !== index));
   };
-  
+
   const removeUploadedImage = async (index: number) => {
     try {
       const imageToDelete = uploadedImages[index];
       await deleteImage(imageToDelete.path);
-      
+
       setUploadedImages(prev => prev.filter((_, i) => i !== index));
       setFormData(prev => ({
         ...prev,
@@ -206,23 +261,44 @@ export default function ProduitModal({
       setUploadError('Erreur lors de la suppression de l\'image');
     }
   };
-  
+
+  const removeExistingImage = async (imageUrl: string) => {
+    try {
+      // Extraire le path depuis l'URL
+      const urlParts = imageUrl.split('/');
+      const bucketIndex = urlParts.indexOf('public') + 1;
+      const path = urlParts.slice(bucketIndex).join('/');
+      
+      // Supprimer l'image de Supabase Storage
+      await deleteImage(path);
+      
+      // Retirer l'image du formulaire
+      setFormData(prev => ({
+        ...prev,
+        images: prev.images.filter(img => img !== imageUrl)
+      }));
+    } catch (error) {
+      console.error('Erreur lors de la suppression de l\'image:', error);
+      setUploadError('Erreur lors de la suppression de l\'image');
+    }
+  };
+
   const uploadImages = async () => {
     if (imageFiles.length === 0) return;
-    
+
     setIsUploading(true);
     setUploadError('');
-    
+
     try {
       // Utiliser le slug de la boutique pour organiser les images par dossier
       const uploadedImgs = await uploadMultipleImages(imageFiles, boutiqueSlug, 'produits');
-      
+
       setUploadedImages(prev => [...prev, ...uploadedImgs]);
       setFormData(prev => ({
         ...prev,
         images: [...prev.images, ...uploadedImgs.map(img => img.url)]
       }));
-      
+
       // Vider la liste des fichiers après l'upload
       setImageFiles([]);
     } catch (error: any) {
@@ -257,7 +333,7 @@ export default function ProduitModal({
             {/* Informations de base */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900">Informations de base</h3>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Nom du produit *
@@ -303,10 +379,71 @@ export default function ProduitModal({
               </div>
             </div>
 
+            {/* Variants */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Variants (Couleur, Taille, etc.)</h3>
+            
+            {/* Ajouter un variant */}
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <input
+                  type="text"
+                  placeholder="Nom du variant (ex: Couleur, Taille)"
+                  value={currentVariantName}
+                  onChange={(e) => setCurrentVariantName(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                />
+                <input
+                  type="text"
+                  placeholder="Options séparées par des virgules (ex: Rouge, Bleu, Vert)"
+                  value={currentVariantOptions}
+                  onChange={(e) => setCurrentVariantOptions(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={addVariant}
+                className="inline-flex items-center px-3 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Ajouter un variant
+              </button>
+            </div>
+
+            {/* Liste des variants */}
+            {formData.variants.length > 0 && (
+              <div className="mt-4 space-y-2">
+                {formData.variants.map((variant, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <span className="font-medium text-gray-900">{variant.nom}:</span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {variant.options.map((option, optIndex) => (
+                          <span key={optIndex} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+                            {option}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeVariant(index)}
+                      className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                      title="Supprimer ce variant"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
             {/* Prix et stock */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900">Prix et stock</h3>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -356,13 +493,12 @@ export default function ProduitModal({
                 </label>
                 <select
                   value={formData.statut}
-                  onChange={(e) => setFormData(prev => ({ ...prev, statut: e.target.value as 'actif' | 'inactif' | 'brouillon' }))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, statut: e.target.value as 'actif' | 'inactif' }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
                   required
                 >
                   <option value="actif">Actif</option>
                   <option value="inactif">Inactif</option>
-                  <option value="brouillon">Brouillon</option>
                 </select>
               </div>
             </div>
@@ -371,7 +507,7 @@ export default function ProduitModal({
           {/* Images */}
           <div>
             <h3 className="text-lg font-medium text-gray-900 mb-4">Images</h3>
-            
+
             {/* Message d'erreur */}
             {uploadError && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start">
@@ -379,7 +515,7 @@ export default function ProduitModal({
                 <p className="text-sm text-red-600">{uploadError}</p>
               </div>
             )}
-            
+
             {/* Zone de drop */}
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
               <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -420,7 +556,7 @@ export default function ProduitModal({
                 )}
               </div>
             </div>
-            
+
             {/* Images sélectionnées mais pas encore uploadées */}
             {imageFiles.length > 0 && (
               <div className="mt-4">
@@ -445,23 +581,31 @@ export default function ProduitModal({
                 </div>
               </div>
             )}
-            
-            {/* Images déjà uploadées */}
+
+            {/* Images existantes du produit */}
             {formData.images.length > 0 && (
               <div className="mt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Images du produit</h4>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">
+                  Images du produit ({formData.images.length})
+                </h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {formData.images.map((imageUrl, index) => (
-                    <div key={index} className="relative">
+                    <div key={index} className="relative group">
                       <img
                         src={imageUrl}
                         alt={`Product ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-lg"
+                        className="w-full h-24 object-cover rounded-lg border-2 border-gray-200"
                       />
+                      {index === 0 && (
+                        <div className="absolute top-1 left-1 bg-blue-500 text-white text-xs px-2 py-0.5 rounded">
+                          Principale
+                        </div>
+                      )}
                       <button
                         type="button"
-                        onClick={() => removeUploadedImage(index)}
-                        className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                        onClick={() => removeExistingImage(imageUrl)}
+                        className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Supprimer cette image"
                       >
                         <X className="h-3 w-3" />
                       </button>
