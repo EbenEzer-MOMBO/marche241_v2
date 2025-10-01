@@ -91,7 +91,7 @@ export default function BoutiqueDashboard() {
   }
 
   return (
-    <div className="h-screen bg-gray-50 flex overflow-hidden">
+    <div className="h-screen bg-gray-50 flex overflow-hidden max-w-[100vw]">
       <ToastContainer toasts={toasts} onClose={removeToast} />
       
       {/* Sidebar */}
@@ -102,15 +102,15 @@ export default function BoutiqueDashboard() {
       />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex-1 flex flex-col min-h-0 w-full">
         {/* Header */}
-        <div className="bg-white shadow-sm border-b px-4 lg:px-6 py-3 lg:py-4">
+        <div className="bg-white shadow-sm border-b px-3 sm:px-4 lg:px-6 py-3 lg:py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center min-w-0 flex-1">
               {/* Mobile Menu Button */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="lg:hidden p-1.5 rounded-lg hover:bg-gray-100 transition-colors mr-3 flex-shrink-0"
+                className="lg:hidden p-1.5 rounded-lg hover:bg-gray-100 transition-colors mr-2 flex-shrink-0"
               >
                 <Menu className="h-5 w-5 text-gray-600" />
               </button>
@@ -135,102 +135,102 @@ export default function BoutiqueDashboard() {
         </div>
 
         {/* Dashboard Content */}
-        <div className="flex-1 overflow-y-auto p-4 lg:p-6">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 lg:p-6">
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+            <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
               <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Package className="h-6 w-6 text-blue-600" />
+                <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                  <Package className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Produits</p>
-                  <p className="text-2xl font-bold text-gray-900">{boutique.nombre_produits || 0}</p>
+                <div className="ml-3 sm:ml-4 min-w-0">
+                  <p className="text-sm font-medium text-gray-600 truncate">Produits</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{boutique.nombre_produits || 0}</p>
                 </div>
               </div>
             </div>
             
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+            <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
               <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <ShoppingCart className="h-6 w-6 text-green-600" />
+                <div className="p-2 bg-green-100 rounded-lg flex-shrink-0">
+                  <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Commandes</p>
-                  <p className="text-2xl font-bold text-gray-900">0</p>
+                <div className="ml-3 sm:ml-4 min-w-0">
+                  <p className="text-sm font-medium text-gray-600 truncate">Commandes</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">0</p>
                 </div>
               </div>
             </div>
             
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+            <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
               <div className="flex items-center">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Users className="h-6 w-6 text-purple-600" />
+                <div className="p-2 bg-purple-100 rounded-lg flex-shrink-0">
+                  <Users className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Clients</p>
-                  <p className="text-2xl font-bold text-gray-900">0</p>
+                <div className="ml-3 sm:ml-4 min-w-0">
+                  <p className="text-sm font-medium text-gray-600 truncate">Clients</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">0</p>
                 </div>
               </div>
             </div>
             
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+            <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
               <div className="flex items-center">
-                <div className="p-2 bg-orange-100 rounded-lg">
-                  <TrendingUp className="h-6 w-6 text-orange-600" />
+                <div className="p-2 bg-orange-100 rounded-lg flex-shrink-0">
+                  <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600" />
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Revenus</p>
-                  <p className="text-2xl font-bold text-gray-900">0 FCFA</p>
+                <div className="ml-3 sm:ml-4 min-w-0">
+                  <p className="text-sm font-medium text-gray-600 truncate">Revenus</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">0 FCFA</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Quick Actions */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-            <h2 className="text-lg font-semibold text-gray-900 mb-6">Actions rapides</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 sm:mb-6">Actions rapides</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               <button
                 onClick={() => router.push(`/admin/${boutique.slug}/products/new`)}
-                className="flex items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all group"
+                className="flex items-center justify-center p-4 sm:p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all group"
               >
-                <Plus className="h-6 w-6 text-gray-400 group-hover:text-blue-500 mr-3" />
-                <span className="text-gray-600 group-hover:text-blue-600 font-medium">Ajouter un produit</span>
+                <Plus className="h-5 w-5 sm:h-6 sm:w-6 text-gray-400 group-hover:text-blue-500 mr-2 sm:mr-3" />
+                <span className="text-sm sm:text-base text-gray-600 group-hover:text-blue-600 font-medium">Ajouter un produit</span>
               </button>
               
               <button
                 onClick={() => router.push(`/admin/${boutique.slug}/orders`)}
-                className="flex items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all group"
+                className="flex items-center justify-center p-4 sm:p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all group"
               >
-                <ShoppingCart className="h-6 w-6 text-gray-400 group-hover:text-green-500 mr-3" />
-                <span className="text-gray-600 group-hover:text-green-600 font-medium">Voir les commandes</span>
+                <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 text-gray-400 group-hover:text-green-500 mr-2 sm:mr-3" />
+                <span className="text-sm sm:text-base text-gray-600 group-hover:text-green-600 font-medium">Voir les commandes</span>
               </button>
               
               <button
                 onClick={() => router.push(`/admin/${boutique.slug}/categories`)}
-                className="flex items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all group"
+                className="flex items-center justify-center p-4 sm:p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all group"
               >
-                <Package className="h-6 w-6 text-gray-400 group-hover:text-purple-500 mr-3" />
-                <span className="text-gray-600 group-hover:text-purple-600 font-medium">Gérer les catégories</span>
+                <Package className="h-5 w-5 sm:h-6 sm:w-6 text-gray-400 group-hover:text-purple-500 mr-2 sm:mr-3" />
+                <span className="text-sm sm:text-base text-gray-600 group-hover:text-purple-600 font-medium">Gérer les catégories</span>
               </button>
             </div>
           </div>
 
           {/* Recent Activity */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-6">Activité récente</h2>
-            <div className="text-center py-12">
-              <div className="mx-auto h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <Package className="h-8 w-8 text-gray-400" />
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 sm:mb-6">Activité récente</h2>
+            <div className="text-center py-8 sm:py-12">
+              <div className="mx-auto h-12 w-12 sm:h-16 sm:w-16 bg-gray-100 rounded-full flex items-center justify-center mb-3 sm:mb-4">
+                <Package className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune activité récente</h3>
-              <p className="text-gray-500 mb-6">
+              <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">Aucune activité récente</h3>
+              <p className="text-sm sm:text-base text-gray-500 mb-4 sm:mb-6">
                 Commencez par ajouter vos premiers produits à votre boutique
               </p>
               <button
                 onClick={() => router.push(`/admin/${boutique.slug}/products/new`)}
-                className="inline-flex items-center px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+                className="inline-flex items-center px-3 sm:px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm sm:text-base"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Ajouter mon premier produit
