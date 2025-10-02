@@ -1,0 +1,38 @@
+[build]
+  command = "npm run build"
+  publish = "out"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+# Configuration pour Next.js
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Redirections pour les routes dynamiques
+[[redirects]]
+  from = "/"
+  to = "/marche_241"
+  status = 302
+
+# Gestion des routes dynamiques de boutique
+[[redirects]]
+  from = "/:boutique/produit/:id"
+  to = "/:boutique/produit/:id/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/:boutique/produits"
+  to = "/:boutique/produits/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/:boutique/commande"
+  to = "/:boutique/commande/index.html"
+  status = 200
+
+# Fallback pour toutes les autres routes
+[[redirects]]
+  from = "/*"
+  to = "/404.html"
+  status = 404
