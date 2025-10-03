@@ -38,6 +38,25 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+
+  // Configuration webpack pour supprimer les console.log en production
+  webpack: (config, { isServer, dev }) => {
+    if (!dev && !isServer) {
+      const TerserPlugin = require('terser-webpack-plugin');
+      config.optimization.minimizer.push(
+        new TerserPlugin({
+          terserOptions: {
+            compress: {
+              drop_console: true,
+              drop_debugger: true,
+              pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn']
+            },
+          },
+        })
+      );
+    }
+    return config;
+  },
 };
 
 export default nextConfig;
