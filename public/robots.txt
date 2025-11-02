@@ -1,0 +1,10 @@
+# Marché241 - Robots.txt
+
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+
+# Sitemap
+Sitemap: https://marche241.ga/sitemap.xml
+

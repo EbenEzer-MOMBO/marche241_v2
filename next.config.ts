@@ -28,16 +28,16 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['@/components', '@/lib'],
   },
   
-  // Redirection de la racine vers marche_241 par défaut
-  async redirects() {
-    return [
-      {
-        source: '/',
-        destination: '/marche_241',
-        permanent: false,
-      },
-    ];
-  },
+  // Redirection désactivée - landing page à la racine
+  // async redirects() {
+  //   return [
+  //     {
+  //       source: '/',
+  //       destination: '/marche_241',
+  //       permanent: false,
+  //     },
+  //   ];
+  // },
 
   // Configuration webpack pour supprimer les console.log en production
   webpack: (config, { isServer, dev }) => {
