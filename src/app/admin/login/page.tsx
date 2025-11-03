@@ -30,7 +30,7 @@ export default function AdminLoginPage() {
         <div className="text-center">
           <div className="mx-auto h-16 w-16 bg-white rounded-full flex items-center justify-center mb-4 overflow-hidden p-0">
             <Image
-              src="/site-logo.png"
+              src="/marche241_Web_without_text-01-01.svg"
               alt="Marché 241"
               width={48}
               height={48}
