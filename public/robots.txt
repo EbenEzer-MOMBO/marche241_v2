@@ -2,7 +2,12 @@
 
 User-agent: *
 Allow: /
+# Autoriser les pages publiques d'admin
+Allow: /admin/register
+Allow: /admin/login
+# Bloquer le reste d'admin
 Disallow: /admin/
+# Bloquer l'API
 Disallow: /api/
 
 # Sitemap

@@ -19,13 +19,13 @@
     <loc>https://marche241.ga/admin/register</loc>
     <lastmod>2025-11-04</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://marche241.ga/admin/login</loc>
     <lastmod>2025-11-04</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.5</priority>
   </url>
 </urlset>
 
