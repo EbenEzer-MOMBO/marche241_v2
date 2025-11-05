@@ -1,0 +1,40 @@
+========================================
+        MARCHÉ241 - CODE DE VÉRIFICATION
+========================================
+
+Bonjour,
+
+Vous avez demandé à vous connecter à votre compte vendeur Marché241.
+
+Voici votre code de vérification à usage unique :
+
+        ┌─────────────────────┐
+        │   CODE: {{CODE}}    │
+        └─────────────────────┘
+
+⏱️  Ce code expire dans 10 minutes.
+
+Entrez ce code sur la page de vérification pour accéder à votre espace vendeur.
+
+----------------------------------------
+
+⚠️  IMPORTANT :
+
+Si vous n'avez pas demandé ce code, ignorez cet email.
+Ne partagez JAMAIS votre code de vérification avec qui que ce soit.
+
+----------------------------------------
+
+Besoin d'aide ?
+Si vous rencontrez des difficultés pour vous connecter, n'hésitez pas à nous contacter.
+
+----------------------------------------
+
+MARCHÉ241
+Votre plateforme de commerce en ligne au Gabon
+Site web : https://marche241.ga
+
+Cet email a été envoyé automatiquement, merci de ne pas y répondre.
+
+© 2025 Marché241. Tous droits réservés.
+

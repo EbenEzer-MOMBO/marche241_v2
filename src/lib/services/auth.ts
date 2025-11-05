@@ -32,7 +32,8 @@ export interface InscriptionResponse {
 }
 
 export interface DemanderCodeData {
-  email: string;
+  email?: string;
+  phone?: string;
 }
 
 export interface DemanderCodeResponse {
@@ -42,7 +43,8 @@ export interface DemanderCodeResponse {
 }
 
 export interface VerifierCodeData {
-  email: string;
+  email?: string;
+  phone?: string;
   code: string;
 }
 
@@ -144,8 +146,8 @@ export async function inscrireVendeur(data: InscriptionData): Promise<Inscriptio
 }
 
 /**
- * Demander un code de vérification par email
- * @param data - Email du vendeur
+ * Demander un code de vérification par email ou WhatsApp
+ * @param data - Email ou numéro de téléphone du vendeur
  * @returns Promise<DemanderCodeResponse>
  */
 export async function demanderCodeVerification(data: DemanderCodeData): Promise<DemanderCodeResponse> {
@@ -155,12 +157,20 @@ export async function demanderCodeVerification(data: DemanderCodeData): Promise<
   } catch (error: any) {
     console.error('Erreur lors de la demande de code:', error);
     
-    // Vérifier si c'est une ApiError avec un status
+    // Utiliser le message de l'API s'il est disponible
+    if (error.message) {
+      throw new Error(error.message);
+    }
+    
+    // Vérifier si c'est une ApiError avec un status (fallback)
     if (error.status) {
       if (error.status === 400) {
-        throw new Error('L\'adresse email n\'est pas valide');
+        // Déterminer le type de données envoyées
+        const method = data.email ? 'email' : 'numéro de téléphone';
+        throw new Error(`Le ${method} n'est pas valide`);
       } else if (error.status === 404) {
-        throw new Error('Aucun compte vendeur trouvé avec cette adresse email. Veuillez vous inscrire d\'abord.');
+        const method = data.email ? 'cette adresse email' : 'ce numéro de téléphone';
+        throw new Error(`Aucun compte vendeur trouvé avec ${method}. Veuillez vous inscrire d'abord.`);
       } else if (error.status === 500) {
         throw new Error('Erreur serveur. Veuillez réessayer plus tard.');
       }

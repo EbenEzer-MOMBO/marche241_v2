@@ -8,14 +8,18 @@ import { useAuth } from '@/hooks/useAuth';
 import { ToastContainer } from '@/components/ui/Toast';
 
 function VerifyContent() {
-  const [code, setCode] = useState(['', '', '', '', '', '']);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const email = searchParams.get('email') || '';
+  const phone = searchParams.get('phone') || '';
+  
+  // 4 chiffres pour WhatsApp, 6 pour email
+  const codeLength = phone ? 4 : 6;
+  const [code, setCode] = useState<string[]>(Array(codeLength).fill(''));
   const [canResend, setCanResend] = useState(false);
   const [countdown, setCountdown] = useState(60);
   const [tentativesRestantes, setTentativesRestantes] = useState(3);
   
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const email = searchParams.get('email') || '';
   const { verifier, demanderCode, isLoading, error, toasts, removeToast } = useAuth();
   
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -32,26 +36,45 @@ function VerifyContent() {
 
   // Rediriger si pas d'email
   useEffect(() => {
-    if (!email) {
+    if (!email && !phone) {
       router.push('/admin/login');
     }
   }, [email, router]);
 
   const handleCodeChange = (index: number, value: string) => {
-    if (value.length > 1) return; // Empêcher plus d'un caractère
+    // Ne garder que les chiffres
+    const numericValue = value.replace(/[^0-9]/g, '');
+    
+    if (numericValue.length > 1) return; // Empêcher plus d'un caractère
     
     const newCode = [...code];
-    newCode[index] = value;
+    newCode[index] = numericValue;
     setCode(newCode);
 
     // Passer au champ suivant si un chiffre est saisi
-    if (value && index < 5) {
+    if (numericValue && index < codeLength - 1) {
       inputRefs.current[index + 1]?.focus();
     }
 
     // Soumettre automatiquement si tous les champs sont remplis
-    if (newCode.every(digit => digit !== '') && value) {
+    if (newCode.every(digit => digit !== '') && numericValue) {
       handleSubmit(newCode.join(''));
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text/plain').replace(/[^0-9]/g, '');
+    
+    if (pastedData.length === codeLength) {
+      const newCode = pastedData.split('');
+      setCode(newCode);
+      
+      // Focus le dernier champ
+      inputRefs.current[codeLength - 1]?.focus();
+      
+      // Soumettre automatiquement
+      handleSubmit(pastedData);
     }
   };
 
@@ -65,11 +88,16 @@ function VerifyContent() {
   const handleSubmit = async (codeToSubmit?: string) => {
     const finalCode = codeToSubmit || code.join('');
     
-    if (finalCode.length !== 6) {
+    if (finalCode.length !== codeLength) {
       return;
     }
 
-    const success = await verifier({ email, code: finalCode });
+    // Utiliser email ou phone selon ce qui est disponible
+    const verificationData = email 
+      ? { email, code: finalCode }
+      : { phone, code: finalCode };
+
+    const success = await verifier(verificationData);
     
     if (success) {
       // Redirection vers le dashboard gérée automatiquement par le hook useAuth
@@ -85,7 +113,7 @@ function VerifyContent() {
       }
       
       // Effacer le code en cas d'erreur
-      setCode(['', '', '', '', '', '']);
+      setCode(Array(codeLength).fill(''));
       inputRefs.current[0]?.focus();
     }
   };
@@ -93,13 +121,15 @@ function VerifyContent() {
   const handleResendCode = async () => {
     if (!canResend) return;
 
-    const success = await demanderCode({ email });
+    // Utiliser email ou phone selon ce qui est disponible
+    const resendData = email ? { email } : { phone };
+    const success = await demanderCode(resendData);
     
     if (success) {
       setCanResend(false);
       setCountdown(60);
       setTentativesRestantes(3);
-      setCode(['', '', '', '', '', '']);
+      setCode(Array(codeLength).fill(''));
       inputRefs.current[0]?.focus();
     }
   };
@@ -126,10 +156,10 @@ function VerifyContent() {
             Vérification
           </h2>
           <p className="text-gray-600">
-            Code envoyé par email à
+            {email ? 'Code envoyé par email à' : 'Code envoyé par WhatsApp au'}
           </p>
           <p className="text-lg font-semibold text-gray-600">
-            {email}
+            {email || phone}
           </p>
         </div>
 
@@ -138,7 +168,7 @@ function VerifyContent() {
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-4 text-center">
-                Saisissez le code à 6 chiffres
+                Saisissez le code à {codeLength} chiffres
               </label>
               
               <div className="flex justify-center space-x-3">
@@ -153,6 +183,7 @@ function VerifyContent() {
                     value={digit}
                     onChange={(e) => handleCodeChange(index, e.target.value)}
                     onKeyDown={(e) => handleKeyDown(index, e)}
+                    onPaste={index === 0 ? handlePaste : undefined}
                     className="w-12 h-12 text-center text-xl font-bold border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     disabled={isLoading}
                   />
@@ -200,7 +231,9 @@ function VerifyContent() {
         {/* Informations */}
         <div className="text-center">
           <p className="text-xs text-gray-500">
-            Vérifiez votre boîte email. Le code expire dans 10 minutes.
+            {email 
+              ? 'Vérifiez votre boîte email. Le code expire dans 10 minutes.'
+              : 'Vérifiez vos messages WhatsApp. Le code expire dans 10 minutes.'}
           </p>
         </div>
       </div>

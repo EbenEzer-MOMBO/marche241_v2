@@ -64,12 +64,12 @@ export default function AdminRegisterPage() {
             <div className="max-w-md w-full space-y-8">
                 {/* Logo et titre */}
                 <div className="text-center">
-                    <div className="mx-auto h-16 w-16 bg-white rounded-full flex items-center justify-center mb-4 overflow-hidden p-0">
+                    <div className="mx-auto h-16 w-16 bg-white rounded-0 flex items-center justify-center mb-4 overflow-hidden p-0">
                         <Image
-                            src="/marche241_Web_without_text-01-01.svg"
+                            src="/marche241_Web_with_text-01.svg"
                             alt="Marché 241"
-                            width={48}
-                            height={48}
+                            width={52}
+                            height={52}
                             className="object-contain w-full h-full"
                             title="Marché 241"
                         />
