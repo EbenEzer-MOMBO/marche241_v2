@@ -5,16 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Code de vérification - Marché241</title>
     <style>
+        /* Empêcher Gmail d'inverser les couleurs en mode sombre */
+        u + .body .container {
+            background-color: #ffffff !important;
+        }
         body {
             margin: 0;
             padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background-color: #f3f4f6;
+            background-color: #f3f4f6 !important;
+            color: #111827 !important;
         }
         .container {
             max-width: 600px;
             margin: 0 auto;
-            background-color: #ffffff;
+            background-color: #ffffff !important;
         }
         .header {
             padding: 10px 20px;
@@ -38,21 +43,22 @@
         }
         .content {
             padding: 10px 30px;
+            background-color: #ffffff !important;
         }
         .greeting {
             font-size: 18px;
-            color: #111827;
+            color: #111827 !important;
             margin-bottom: 20px;
         }
         .message {
             font-size: 16px;
-            color: #4b5563;
+            color: #4b5563 !important;
             line-height: 1.6;
             margin-bottom: 30px;
         }
         .code-container {
-            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-            border: 2px solid #10b981;
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%) !important;
+            border: 2px solid #10b981 !important;
             border-radius: 12px;
             padding: 30px;
             text-align: center;
@@ -60,7 +66,7 @@
         }
         .code-label {
             font-size: 14px;
-            color: #059669;
+            color: #059669 !important;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -69,19 +75,19 @@
         .code {
             font-size: 48px;
             font-weight: bold;
-            color: #047857;
+            color: #047857 !important;
             letter-spacing: 8px;
             font-family: 'Courier New', monospace;
             margin: 0;
         }
         .expiry {
             font-size: 14px;
-            color: #6b7280;
+            color: #6b7280 !important;
             margin-top: 20px;
         }
         .warning {
-            background-color: #fef3c7;
-            border-left: 4px solid #f59e0b;
+            background-color: #fef3c7 !important;
+            border-left: 4px solid #f59e0b !important;
             padding: 15px;
             margin: 30px 0;
             border-radius: 4px;
@@ -93,23 +99,23 @@
         }
         .warning-text {
             font-size: 14px;
-            color: #92400e;
+            color: #92400e !important;
             margin: 0;
             display: inline;
         }
         .footer {
-            background-color: #f9fafb;
+            background-color: #f9fafb !important;
             padding: 30px;
             text-align: center;
-            border-top: 1px solid #e5e7eb;
+            border-top: 1px solid #e5e7eb !important;
         }
         .footer-text {
             font-size: 14px;
-            color: #6b7280;
+            color: #6b7280 !important;
             margin: 5px 0;
         }
         .footer-link {
-            color: #10b981;
+            color: #10b981 !important;
             text-decoration: none;
         }
         .social-links {
@@ -118,13 +124,13 @@
         .social-links a {
             display: inline-block;
             margin: 0 10px;
-            color: #6b7280;
+            color: #6b7280 !important;
             text-decoration: none;
             font-size: 14px;
         }
         .divider {
             height: 1px;
-            background-color: #e5e7eb;
+            background-color: #e5e7eb !important;
             margin: 30px 0;
         }
         @media only screen and (max-width: 600px) {
@@ -138,69 +144,70 @@
         }
     </style>
 </head>
-<body>
-    <div class="container">
+<body style="background-color: #f3f4f6 !important; color: #111827 !important;">
+    <div class="container" style="background-color: #ffffff !important;" data-ogsc="#ffffff">
         <!-- Header -->
         <div class="header">
-            <div class="logo">
-                <img src="https://marche241.ga/marche241_Web_without_text-01-01.svg" alt="Marché241 Logo" />
+            <div class="">
+                <img src="https://i.ibb.co/HTsY5jdM/marche241-without-text-1180x1180-t.png" alt="Marché241 Logo" 
+                width="110px" height="110px"/>
             </div>
         </div>
 
         <!-- Content -->
-        <div class="content">
-            <p class="greeting">Bonjour,</p>
+        <div class="content" style="background-color: #ffffff !important;" data-ogsc="#ffffff">
+            <p class="greeting" style="color: #111827 !important;" data-ogsc="#111827">Bonjour,</p>
             
-            <p class="message">
+            <p class="message" style="color: #4b5563 !important;" data-ogsc="#4b5563">
                 Vous avez demandé à vous connecter à votre compte vendeur Marché241. 
                 Voici votre code de vérification à usage unique :
             </p>
 
             <!-- Code Container -->
-            <div class="code-container">
-                <div class="code-label">Votre code de vérification</div>
-                <p class="code">{{CODE}}</p>
-                <div class="expiry">⏱️ Ce code expire dans <strong>10 minutes</strong></div>
+            <div class="code-container" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%) !important; border: 2px solid #10b981 !important;" data-ogsc="#f0fdf4">
+                <div class="code-label" style="color: #059669 !important;" data-ogsc="#059669">Votre code de vérification</div>
+                <p class="code" style="color: #047857 !important;" data-ogsc="#047857">{{CODE}}</p>
+                <div class="expiry" style="color: #6b7280 !important;" data-ogsc="#6b7280">⏱️ Ce code expire dans <strong style="color: #6b7280 !important;" data-ogsc="#6b7280">10 minutes</strong></div>
             </div>
 
-            <p class="message">
+            <p class="message" style="color: #4b5563 !important;" data-ogsc="#4b5563">
                 Entrez ce code sur la page de vérification pour accéder à votre espace vendeur.
             </p>
 
             <!-- Warning -->
-            <div class="warning">
+            <div class="warning" style="background-color: #fef3c7 !important; border-left: 4px solid #f59e0b !important;" data-ogsc="#fef3c7">
                 <span class="warning-icon">⚠️</span>
-                <p class="warning-text">
-                    <strong>Important :</strong> Si vous n'avez pas demandé ce code, ignorez cet email. 
+                <p class="warning-text" style="color: #92400e !important;" data-ogsc="#92400e">
+                    <strong style="color: #92400e !important;" data-ogsc="#92400e">Important :</strong> Si vous n'avez pas demandé ce code, ignorez cet email. 
                     Ne partagez jamais votre code de vérification avec qui que ce soit.
                 </p>
             </div>
 
-            <div class="divider"></div>
+            <div class="divider" style="background-color: #e5e7eb !important;" data-ogsc="#e5e7eb"></div>
 
-            <p class="message" style="margin-bottom: 10px;">
-                <strong>Besoin d'aide ?</strong>
+            <p class="message" style="margin-bottom: 10px; color: #4b5563 !important;" data-ogsc="#4b5563">
+                <strong style="color: #4b5563 !important;" data-ogsc="#4b5563">Besoin d'aide ?</strong>
             </p>
-            <p class="message" style="margin-top: 0; font-size: 14px;">
+            <p class="message" style="margin-top: 0; font-size: 14px; color: #4b5563 !important;" data-ogsc="#4b5563">
                 Si vous rencontrez des difficultés pour vous connecter, n'hésitez pas à nous contacter.
             </p>
         </div>
 
         <!-- Footer -->
-        <div class="footer">
-            <p class="footer-text">
-                <strong>Marché241</strong> - Votre plateforme de commerce en ligne au Gabon
+        <div class="footer" style="background-color: #f9fafb !important; border-top: 1px solid #e5e7eb !important;" data-ogsc="#f9fafb">
+            <p class="footer-text" style="color: #6b7280 !important;" data-ogsc="#6b7280">
+                <strong style="color: #6b7280 !important;" data-ogsc="#6b7280">Marché241</strong> - Votre plateforme de commerce en ligne au Gabon
             </p>
-            <p class="footer-text">
-                <a href="https://marche241.ga" class="footer-link">marche241.ga</a>
+            <p class="footer-text" style="color: #6b7280 !important;" data-ogsc="#6b7280">
+                <a href="https://marche241.ga" class="footer-link" style="color: #10b981 !important;" data-ogsc="#10b981">marche241.ga</a>
             </p>
             
-            <div class="divider" style="margin: 20px auto; max-width: 200px;"></div>
+            <div class="divider" style="margin: 20px auto; max-width: 200px; background-color: #e5e7eb !important;" data-ogsc="#e5e7eb"></div>
             
-            <p class="footer-text" style="font-size: 12px;">
+            <p class="footer-text" style="font-size: 12px; color: #6b7280 !important;" data-ogsc="#6b7280">
                 Cet email a été envoyé automatiquement, merci de ne pas y répondre.
             </p>
-            <p class="footer-text" style="font-size: 12px; color: #9ca3af;">
+            <p class="footer-text" style="font-size: 12px; color: #9ca3af !important;" data-ogsc="#9ca3af">
                 © 2025 Marché241. Tous droits réservés.
             </p>
         </div>

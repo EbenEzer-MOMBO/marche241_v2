@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import PhoneNumberInput from '@/components/ui/PhoneNumberInput';
 import { useAuth } from '@/hooks/useAuth';
 import { ToastContainer } from '@/components/ui/Toast';
+import { checkWhatsAppNumber } from '@/lib/services/whatsapp';
 
 export default function AdminRegisterPage() {
     const [formData, setFormData] = useState({
@@ -17,8 +18,46 @@ export default function AdminRegisterPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [isPhoneValid, setIsPhoneValid] = useState(false);
+    const [isCheckingWhatsApp, setIsCheckingWhatsApp] = useState(false);
+    const [whatsAppExists, setWhatsAppExists] = useState<boolean | null>(null);
+    const [whatsAppError, setWhatsAppError] = useState<string | null>(null);
     const router = useRouter();
     const { inscrire, isLoading: authLoading, toasts, removeToast } = useAuth();
+
+    // Vérifier le numéro WhatsApp quand il est valide
+    useEffect(() => {
+        const verifyWhatsApp = async () => {
+            if (isPhoneValid && formData.telephone) {
+                setIsCheckingWhatsApp(true);
+                setWhatsAppError(null);
+                setWhatsAppExists(null);
+
+                try {
+                    const result = await checkWhatsAppNumber(formData.telephone);
+                    setWhatsAppExists(result.existsWhatsapp);
+                    
+                    if (!result.existsWhatsapp) {
+                        setWhatsAppError('Ce numéro n\'est pas enregistré sur WhatsApp');
+                    }
+                } catch (error) {
+                    setWhatsAppError('Impossible de vérifier le numéro');
+                    setWhatsAppExists(false);
+                } finally {
+                    setIsCheckingWhatsApp(false);
+                }
+            } else {
+                setWhatsAppExists(null);
+                setWhatsAppError(null);
+            }
+        };
+
+        // Debounce pour éviter trop de requêtes
+        const timer = setTimeout(() => {
+            verifyWhatsApp();
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [formData.telephone, isPhoneValid]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -27,6 +66,12 @@ export default function AdminRegisterPage() {
         // Validation côté client
         if (!isFormValid()) {
             setError('Veuillez remplir tous les champs requis');
+            return;
+        }
+
+        // Vérifier que le numéro WhatsApp existe avant de soumettre
+        if (!whatsAppExists) {
+            setError('Le numéro doit être enregistré sur WhatsApp pour créer un compte');
             return;
         }
 
@@ -112,7 +157,7 @@ export default function AdminRegisterPage() {
                         {/* Numéro de téléphone */}
                         <div>
                             <label htmlFor="telephone" className="block text-sm font-medium text-gray-700 mb-2">
-                                Numéro de téléphone *
+                                Numéro de téléphone (WhatsApp) *
                             </label>
                             <PhoneNumberInput
                                 value={formData.telephone}
@@ -122,6 +167,36 @@ export default function AdminRegisterPage() {
                                 className="w-full"
                                 onValidationChange={setIsPhoneValid}
                             />
+                            
+                            {/* Statut de vérification WhatsApp */}
+                            {isPhoneValid && (
+                                <div className="mt-2">
+                                    {isCheckingWhatsApp && (
+                                        <div className="flex items-center text-sm text-gray-600">
+                                            <div className="animate-spin mr-2 h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                                            Vérification du numéro WhatsApp...
+                                        </div>
+                                    )}
+                                    
+                                    {!isCheckingWhatsApp && whatsAppExists === true && (
+                                        <div className="flex items-center text-sm text-green-600">
+                                            <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            Numéro WhatsApp vérifié ✓
+                                        </div>
+                                    )}
+                                    
+                                    {!isCheckingWhatsApp && whatsAppExists === false && (
+                                        <div className="flex items-center text-sm text-red-600">
+                                            <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            {whatsAppError || 'Numéro non enregistré sur WhatsApp'}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         {/* Email */}
@@ -181,7 +256,7 @@ export default function AdminRegisterPage() {
 
                         <button
                             type="submit"
-                            disabled={authLoading || !isFormValid()}
+                            disabled={authLoading || !isFormValid() || !whatsAppExists || isCheckingWhatsApp}
                             className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                             {authLoading ? (
