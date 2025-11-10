@@ -120,10 +120,14 @@ export function getWhatsAppTemplate(
 /**
  * Helper spécifique pour le code de vérification par email
  * @param code - Code de vérification
+ * @param prenom - Prénom de l'utilisateur (optionnel)
  * @returns HTML et texte pour l'email
  */
-export function getVerificationEmailTemplate(code: string) {
-  return getEmailTemplate('verification-code', { CODE: code });
+export function getVerificationEmailTemplate(code: string, prenom?: string) {
+  return getEmailTemplate('verification-code', { 
+    CODE: code,
+    prenom: prenom || ''
+  });
 }
 
 /**
@@ -137,6 +141,63 @@ export function getVerificationWhatsAppTemplate(
   short: boolean = false
 ) {
   return getWhatsAppTemplate('verification-code', { CODE: code }, short);
+}
+
+/**
+ * Helper spécifique pour le code d'inscription par email
+ * @param code - Code de vérification
+ * @param prenom - Prénom de l'utilisateur
+ * @returns HTML et texte pour l'email
+ */
+export function getInscriptionEmailTemplate(code: string, prenom: string) {
+  return getEmailTemplate('inscription-code', { 
+    CODE: code,
+    prenom: prenom
+  });
+}
+
+/**
+ * Helper spécifique pour le code d'inscription par WhatsApp
+ * @param code - Code de vérification
+ * @param prenom - Prénom de l'utilisateur
+ * @param short - Utiliser la version courte
+ * @returns Message WhatsApp formaté
+ */
+export function getInscriptionWhatsAppTemplate(
+  code: string,
+  prenom: string,
+  short: boolean = false
+) {
+  return getWhatsAppTemplate('inscription-code', { 
+    CODE: code,
+    prenom: prenom
+  }, short);
+}
+
+/**
+ * Helper spécifique pour l'email de compte validé
+ * @param prenom - Prénom de l'utilisateur
+ * @returns HTML et texte pour l'email
+ */
+export function getCompteValideEmailTemplate(prenom: string) {
+  return getEmailTemplate('compte-valide', { 
+    prenom: prenom
+  });
+}
+
+/**
+ * Helper spécifique pour le message WhatsApp de compte validé
+ * @param prenom - Prénom de l'utilisateur
+ * @param short - Utiliser la version courte
+ * @returns Message WhatsApp formaté
+ */
+export function getCompteValideWhatsAppTemplate(
+  prenom: string,
+  short: boolean = false
+) {
+  return getWhatsAppTemplate('compte-valide', { 
+    prenom: prenom
+  }, short);
 }
 
 /**

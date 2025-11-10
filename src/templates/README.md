@@ -19,16 +19,18 @@ templates/
 
 ### verification-code.html
 
-Template HTML responsive avec :
+Template HTML responsive pour la connexion avec :
 - Design moderne et professionnel
-- Gradient vert (couleurs de la marque)
+- Logo Marché241
 - Code mis en évidence dans un bloc coloré
 - Avertissement de sécurité
 - Footer avec informations de contact
 - Compatible avec tous les clients email
+- Protection mode sombre Gmail
 
 **Variables à remplacer :**
 - `{{CODE}}` : Le code de vérification à 6 chiffres
+- `{{prenom}}` : Prénom de l'utilisateur (optionnel)
 
 ### verification-code.txt
 
@@ -37,11 +39,33 @@ Version texte brut pour les clients email ne supportant pas HTML.
 **Variables à remplacer :**
 - `{{CODE}}` : Le code de vérification à 6 chiffres
 
+### inscription-code.html
+
+Template HTML responsive pour l'inscription avec :
+- Message de bienvenue chaleureux
+- Logo Marché241
+- Code de vérification
+- Liste des fonctionnalités disponibles après activation
+- Design moderne et encourageant
+- Protection mode sombre Gmail
+
+**Variables à remplacer :**
+- `{{CODE}}` : Le code de vérification à 6 chiffres
+- `{{prenom}}` : Prénom de l'utilisateur
+
+### inscription-code.txt
+
+Version texte brut du template d'inscription.
+
+**Variables à remplacer :**
+- `{{CODE}}` : Le code de vérification à 6 chiffres
+- `{{prenom}}` : Prénom de l'utilisateur
+
 ## Templates WhatsApp
 
 ### verification-code.txt
 
-Template complet pour WhatsApp avec :
+Template complet pour WhatsApp (connexion) avec :
 - Formatage Markdown (gras, italique)
 - Emojis pour améliorer la lisibilité
 - Bloc de code encadré
@@ -53,10 +77,31 @@ Template complet pour WhatsApp avec :
 
 ### verification-code-short.txt
 
-Version courte et concise pour WhatsApp (si limitation de caractères).
+Version courte et concise pour WhatsApp (connexion).
 
 **Variables à remplacer :**
 - `{{CODE}}` : Le code de vérification à 4 chiffres
+
+### inscription-code.txt
+
+Template complet pour WhatsApp (inscription) avec :
+- Message de bienvenue
+- Code de vérification
+- Liste des fonctionnalités
+- Emojis et formatage Markdown
+- Ton encourageant
+
+**Variables à remplacer :**
+- `{{CODE}}` : Le code de vérification à 4 chiffres
+- `{{prenom}}` : Prénom de l'utilisateur
+
+### inscription-code-short.txt
+
+Version courte du template d'inscription WhatsApp.
+
+**Variables à remplacer :**
+- `{{CODE}}` : Le code de vérification à 4 chiffres
+- `{{prenom}}` : Prénom de l'utilisateur
 
 ## Utilisation
 

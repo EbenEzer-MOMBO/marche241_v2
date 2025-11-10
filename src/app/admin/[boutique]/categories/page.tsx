@@ -363,8 +363,8 @@ export default function CategoriesPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${categorie.actif
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-gray-100 text-gray-800'
                           }`}>
                           {categorie.actif ? 'Active' : 'Inactive'}
                         </span>
@@ -377,8 +377,8 @@ export default function CategoriesPage() {
                           <button
                             onClick={() => toggleCategorieStatus(categorie.id)}
                             className={`p-1.5 rounded-lg transition-colors ${categorie.actif
-                                ? 'text-green-600 hover:bg-green-50'
-                                : 'text-gray-400 hover:bg-gray-50'
+                              ? 'text-green-600 hover:bg-green-50'
+                              : 'text-gray-400 hover:bg-gray-50'
                               }`}
                             title={categorie.actif ? 'Désactiver' : 'Activer'}
                           >
@@ -426,8 +426,8 @@ export default function CategoriesPage() {
                     <button
                       onClick={() => toggleCategorieStatus(categorie.id)}
                       className={`p-1 rounded-lg transition-colors ${categorie.actif
-                          ? 'text-green-600 hover:bg-green-50'
-                          : 'text-gray-400 hover:bg-gray-50'
+                        ? 'text-green-600 hover:bg-green-50'
+                        : 'text-gray-400 hover:bg-gray-50'
                         }`}
                       title={categorie.actif ? 'Désactiver' : 'Activer'}
                     >
@@ -454,8 +454,8 @@ export default function CategoriesPage() {
                   <div className="flex items-center space-x-2 min-w-0">
                     <span className="text-gray-600 flex-shrink-0">{categorie.nombre_produits} produit(s)</span>
                     <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${categorie.actif
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-gray-100 text-gray-800'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-gray-100 text-gray-800'
                       }`}>
                       {categorie.actif ? 'Active' : 'Inactive'}
                     </span>

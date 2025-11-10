@@ -1,0 +1,13 @@
+🎉 *BIENVENUE SUR MARCHÉ241 !*
+
+Bonjour *{{prenom}}* ! 👋
+
+Votre code de vérification : *{{CODE}}*
+
+⏱️ Expire dans 10 minutes.
+🔒 Ne partagez jamais ce code.
+
+Activez votre compte pour créer votre boutique en ligne ! 🏪
+
+https://marche241.ga
+

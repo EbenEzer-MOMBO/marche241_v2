@@ -19,9 +19,9 @@ interface ProductDetailProps {
   boutiqueData: Boutique;
 }
 
-export default function ProductDetail({ 
-  productId, 
-  productData, 
+export default function ProductDetail({
+  productId,
+  productData,
   productDisplay,
   boutiqueSlug,
   boutiqueData
@@ -33,10 +33,12 @@ export default function ProductDetail({
   const [loading, setLoading] = useState(!productData);
   const [error, setError] = useState<string | null>(null);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
-  
+  const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
+  const [fullscreenImageIndex, setFullscreenImageIndex] = useState(0);
+
   // Hook pour l'ajout au panier
   const { ajouterProduit, loading: panierLoading, error: panierError } = useAjoutPanier();
-  
+
   // Hook pour les toasts
   const { toasts, removeToast, success, error: showError } = useToast();
 
@@ -65,18 +67,33 @@ export default function ProductDetail({
   // Sélection automatique du premier élément de chaque variant
   useEffect(() => {
     if (product) {
-      const formattedVariants = formatVariantsPourInterface(product.variants || {});
       const initialVariants: { [key: string]: string } = {};
       
-      formattedVariants.forEach((variant) => {
-        if (variant.options.length > 0) {
-          initialVariants[variant.label] = variant.options[0];
-        }
-      });
+      // Vérifier si c'est la nouvelle structure avec quantités
+      if (product.variants && product.variants.length > 0 && product.variants[0].quantites) {
+        // Nouvelle structure : variants avec quantités
+        initialVariants[product.variants[0].nom] = product.variants[0].options[0];
+      } else {
+        // Ancienne structure : utiliser formatVariantsPourInterface
+        const formattedVariants = formatVariantsPourInterface(product.variants || {});
+        formattedVariants.forEach((variant) => {
+          if (variant.options.length > 0) {
+            initialVariants[variant.label] = variant.options[0];
+          }
+        });
+      }
       
       setSelectedVariants(initialVariants);
     }
   }, [product]);
+
+  // Réinitialiser la quantité quand le variant change
+  useEffect(() => {
+    const maxQty = getMaxQuantity();
+    if (quantity > maxQty) {
+      setQuantity(Math.max(1, maxQty));
+    }
+  }, [selectedVariants]);
 
   // État de chargement avec skeleton loader élégant [[memory:8540418]]
   if (loading) {
@@ -123,7 +140,7 @@ export default function ProductDetail({
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Erreur</h2>
           <p className="text-gray-600 mb-6">{error || 'Produit introuvable'}</p>
-          <Link 
+          <Link
             href={boutiqueSlug ? `/${boutiqueSlug}` : '/'}
             className="bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors"
           >
@@ -134,11 +151,13 @@ export default function ProductDetail({
     );
   }
 
-  // Formater les variantes pour l'interface
-  const formattedVariants = formatVariantsPourInterface(product.variants || {});
+  // Formater les variantes pour l'interface (seulement pour ancienne structure)
+  const formattedVariants = product.variants && product.variants.length > 0 && product.variants[0].quantites
+    ? [] // Nouvelle structure : ne pas utiliser formatVariantsPourInterface
+    : formatVariantsPourInterface(product.variants || {}); // Ancienne structure
   
   // Préparer les images
-  const productImages = product.images && product.images.length > 0 
+  const productImages = product.images && product.images.length > 0
     ? product.images.map(img => getProduitImageUrl(img))
     : [getProduitImageUrl(product.image_principale)];
 
@@ -151,6 +170,45 @@ export default function ProductDetail({
     }));
   };
 
+  const openFullscreen = (index: number) => {
+    setFullscreenImageIndex(index);
+    setIsFullscreenOpen(true);
+    document.body.style.overflow = 'hidden';
+  };
+
+  const closeFullscreen = () => {
+    setIsFullscreenOpen(false);
+    document.body.style.overflow = 'auto';
+  };
+
+  const navigateFullscreen = (direction: 'prev' | 'next') => {
+    if (!productImages) return;
+
+    if (direction === 'prev') {
+      setFullscreenImageIndex((prev) =>
+        prev === 0 ? productImages.length - 1 : prev - 1
+      );
+    } else {
+      setFullscreenImageIndex((prev) =>
+        prev === productImages.length - 1 ? 0 : prev + 1
+      );
+    }
+  };
+
+  // Gérer les touches du clavier pour le fullscreen
+  useEffect(() => {
+    if (!isFullscreenOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeFullscreen();
+      if (e.key === 'ArrowLeft') navigateFullscreen('prev');
+      if (e.key === 'ArrowRight') navigateFullscreen('next');
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreenOpen]);
+
   const handleQuantityChange = (newQuantity: number) => {
     if (newQuantity >= 1) {
       // Limiter la quantité au stock disponible
@@ -162,6 +220,23 @@ export default function ProductDetail({
 
   // Fonction pour obtenir la quantité maximale disponible
   const getMaxQuantity = () => {
+    // Si des variants avec quantités sont présents, utiliser la quantité du variant sélectionné
+    if (product?.variants && product.variants.length > 0 && product.variants[0].quantites) {
+      const variantNom = product.variants[0].nom;
+      const selectedOption = selectedVariants[variantNom];
+
+      if (selectedOption) {
+        const optionIndex = product.variants[0].options.indexOf(selectedOption);
+        if (optionIndex !== -1) {
+          return product.variants[0].quantites[optionIndex] || 0;
+        }
+      }
+
+      // Par défaut, prendre la quantité du premier variant
+      return product.variants[0].quantites[0] || 0;
+    }
+
+    // Sinon, utiliser le stock global
     return product?.quantite_stock || 1;
   };
 
@@ -176,6 +251,15 @@ export default function ProductDetail({
     try {
       setIsAddingToCart(true);
       
+      // Construire le message avec les variants sélectionnés
+      let message = `${product.nom} ajouté au panier`;
+      if (Object.keys(selectedVariants).length > 0) {
+        const variantText = Object.entries(selectedVariants)
+          .map(([key, value]) => `${key}: ${value}`)
+          .join(', ');
+        message = `${product.nom} (${variantText}) ajouté au panier`;
+      }
+      
       const isSuccess = await ajouterProduit(
         product.boutique.id,
         product.id,
@@ -184,11 +268,7 @@ export default function ProductDetail({
       );
       
       if (isSuccess) {
-        success(
-          `${product.nom} ajouté au panier`,
-          'Succès',
-          4000
-        );
+        success(message, 'Succès', 4000);
         // Optionnel: réinitialiser la quantité
         // setQuantity(1);
       }
@@ -198,7 +278,7 @@ export default function ProductDetail({
       setIsAddingToCart(false);
     }
   };
-  
+
   // Afficher les erreurs du panier via toast
   useEffect(() => {
     if (panierError) {
@@ -210,7 +290,7 @@ export default function ProductDetail({
     <>
       {/* Container des toasts */}
       <ToastContainer toasts={toasts} onClose={removeToast} />
-      
+
       <FloatingAddToCartButton
         productName={product.nom}
         price={product.prix}
@@ -219,129 +299,139 @@ export default function ProductDetail({
         disabled={!product.en_stock}
         loading={isAddingToCart || panierLoading}
       />
-      
-    <div className="min-h-screen bg-white">
-      {/* Navigation breadcrumb */}
-      <div className="bg-gray-50 py-4">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex items-center space-x-2 text-sm text-gray-600">
-            <Link href={boutiqueSlug ? `/${boutiqueSlug}` : '/'} className="hover:text-primary">
-              Accueil
-            </Link>
-            <span>/</span>
-            <Link href={boutiqueSlug ? `/${boutiqueSlug}/produits` : '/produits'} className="hover:text-primary">
-              Produits
-            </Link>
-            <span>/</span>
-            <Link href={boutiqueSlug ? `/${boutiqueSlug}/categories/${product.categorie.slug}` : `/categories/${product.categorie.slug}`} className="hover:text-primary">
-              {product.categorie.nom}
-            </Link>
-            <span>/</span>
-            <span className="text-primary font-medium">{product.nom}</span>
-          </nav>
-        </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Galerie d'images */}
-          <div className="space-y-4">
-            {/* Image principale */}
-            <div className="aspect-square bg-gray-100 rounded-2xl overflow-hidden">
-              <Image
-                src={productImages[selectedImageIndex]}
-                alt={product.nom}
-                width={600}
-                height={600}
-                className="w-full h-full object-cover"
-                priority
-              />
-            </div>
-
-            {/* Miniatures */}
-            <div className="grid grid-cols-4 gap-2">
-              {productImages.map((image, index) => (
-                <button
-                  key={index}
-                  onClick={() => setSelectedImageIndex(index)}
-                  className={`aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
-                    selectedImageIndex === index 
-                      ? 'border-primary scale-105' 
-                      : 'border-transparent hover:border-gray-300'
-                  }`}
-                >
-                  <Image
-                    src={image}
-                    alt={`${product.nom} ${index + 1}`}
-                    width={150}
-                    height={150}
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              ))}
-            </div>
+      <div className="min-h-screen bg-white">
+        {/* Navigation breadcrumb */}
+        <div className="bg-gray-50 py-4">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <nav className="flex items-center space-x-2 text-sm text-gray-600">
+              <Link href={boutiqueSlug ? `/${boutiqueSlug}` : '/'} className="hover:text-primary">
+                Accueil
+              </Link>
+              <span>/</span>
+              <Link href={boutiqueSlug ? `/${boutiqueSlug}/produits` : '/produits'} className="hover:text-primary">
+                Produits
+              </Link>
+              <span>/</span>
+              <Link href={boutiqueSlug ? `/${boutiqueSlug}/categories/${product.categorie.slug}` : `/categories/${product.categorie.slug}`} className="hover:text-primary">
+                {product.categorie.nom}
+              </Link>
+              <span>/</span>
+              <span className="text-primary font-medium">{product.nom}</span>
+            </nav>
           </div>
+        </div>
 
-          {/* Informations du produit */}
-          <div className="space-y-6">
-            {/* En-tête */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-gray-600">{product.categorie.nom}</p>
-                {product.est_nouveau && (
-                  <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                    Nouveau
-                  </span>
-                )}
-              </div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-4">{product.nom}</h1>
-              
-              {/* Prix */}
-              <div className="flex items-center space-x-3 mb-4">
-                <span className="text-3xl font-bold text-primary">
-                  {formatPrice(product.prix)}
-                </span>
-                {product.prix_original && (
-                  <span className="text-lg text-gray-500 line-through">
-                    {formatPrice(product.prix_original)}
-                  </span>
-                )}
-                {product.est_en_promotion && (
-                  <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                    Promotion
-                  </span>
-                )}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Galerie d'images */}
+            <div className="space-y-4">
+              {/* Image principale */}
+              <div
+                className="aspect-square bg-gray-100 rounded-2xl overflow-hidden relative group cursor-zoom-in"
+                onClick={() => openFullscreen(selectedImageIndex)}
+              >
+                <Image
+                  src={productImages[selectedImageIndex]}
+                  alt={product.nom}
+                  width={600}
+                  height={600}
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  priority
+                />
+                {/* Icône de zoom */}
+                <div className="absolute inset-0 bg-black/10 bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-300 flex items-center justify-center">
+                  <div className="bg-white rounded-full p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-lg">
+                    <svg className="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+                    </svg>
+                  </div>
+                </div>
               </div>
 
-              {/* Information boutique */}
-              <div className="flex items-center space-x-3 mb-4 p-3 bg-gray-50 rounded-lg">
-                {product.boutique.logo && (
-                  <Image
-                    src={product.boutique.logo}
-                    alt={product.boutique.nom}
-                    width={32}
-                    height={32}
-                    className="w-8 h-8 rounded-full"
-                  />
-                )}
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{product.boutique.nom}</p>
-                  {product.boutique.adresse && (
-                    <p className="text-xs text-gray-600">{product.boutique.adresse}</p>
+              {/* Miniatures */}
+              <div className="grid grid-cols-4 gap-2">
+                {productImages.map((image, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedImageIndex(index)}
+                    className={`aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 transition-all duration-200 ${selectedImageIndex === index
+                        ? 'border-primary scale-105'
+                        : 'border-transparent hover:border-gray-300'
+                      }`}
+                  >
+                    <Image
+                      src={image}
+                      alt={`${product.nom} ${index + 1}`}
+                      width={150}
+                      height={150}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Informations du produit */}
+            <div className="space-y-6">
+              {/* En-tête */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm text-gray-600">{product.categorie.nom}</p>
+                  {product.est_nouveau && (
+                    <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                      Nouveau
+                    </span>
                   )}
                 </div>
-                {product.boutique.note_moyenne > 0 && (
-                  <div className="flex items-center space-x-1 ml-auto">
-                    <svg className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                    <span className="text-sm text-gray-600">{product.boutique.note_moyenne}</span>
-                  </div>
-                )}
-              </div>
+                <h1 className="text-3xl font-bold text-gray-900 mb-4">{product.nom}</h1>
 
-              {/* Rating */}
-              {/*{product.rating && (
+                {/* Prix */}
+                <div className="flex items-center space-x-3 mb-4">
+                  <span className="text-3xl font-bold text-primary">
+                    {formatPrice(product.prix)}
+                  </span>
+                  {product.prix_original && (
+                    <span className="text-lg text-gray-500 line-through">
+                      {formatPrice(product.prix_original)}
+                    </span>
+                  )}
+                  {product.est_en_promotion && (
+                    <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                      Promotion
+                    </span>
+                  )}
+                </div>
+
+                {/* Information boutique */}
+                <div className="flex items-center space-x-3 mb-4 p-3 bg-gray-50 rounded-lg">
+                  {product.boutique.logo && (
+                    <Image
+                      src={product.boutique.logo}
+                      alt={product.boutique.nom}
+                      width={32}
+                      height={32}
+                      className="w-8 h-8 rounded-full"
+                    />
+                  )}
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{product.boutique.nom}</p>
+                    {product.boutique.adresse && (
+                      <p className="text-xs text-gray-600">{product.boutique.adresse}</p>
+                    )}
+                  </div>
+                  {product.boutique.note_moyenne > 0 && (
+                    <div className="flex items-center space-x-1 ml-auto">
+                      <svg className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                      <span className="text-sm text-gray-600">{product.boutique.note_moyenne}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Rating */}
+                {/*{product.rating && (
                 <div className="flex items-center space-x-2 mb-4">
                   <div className="flex items-center">
                     {[1, 2, 3, 4, 5].map((star) => (
@@ -364,158 +454,195 @@ export default function ProductDetail({
                   </span>
                 </div>
               )}*/}
-            </div>
-
-            {/* Description */}
-            {(product.description || product.description_courte) && (
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Description</h3>
-                <p className="text-gray-700 leading-relaxed">
-                  {product.description || product.description_courte}
-                </p>
               </div>
-            )}
 
-            {/* Variants */}
-            {formattedVariants.length > 0 && formattedVariants.map((variant) => (
-              <div key={variant.label}>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">{variant.label}</h3>
-                <div className="flex flex-wrap gap-2">
-                  {variant.options.map((option) => (
-                    <button
-                      key={option}
-                      onClick={() => handleVariantChange(variant.label, option)}
-                      className={`px-4 py-2 border rounded-lg transition-all duration-200 ${
-                        selectedVariants[variant.label] === option
-                          ? 'border-primary bg-primary text-white'
-                          : 'border-gray-300 bg-white text-gray-700 hover:border-primary'
-                      }`}
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-
-            {/* Informations supplémentaires */}
-            <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-              <h3 className="text-lg font-semibold text-gray-900">Informations du produit</h3>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                {product.sku && (
-                  <div>
-                    <span className="text-gray-600">SKU:</span>
-                    <span className="ml-2 font-medium">{product.sku}</span>
-                  </div>
-                )}
+              {/* Description */}
+              {(product.description || product.description_courte) && (
                 <div>
-                  <span className="text-gray-600">Stock:</span>
-                  <span className="ml-2 font-medium">{product.quantite_stock} unité(s)</span>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Description</h3>
+                  <p className="text-gray-700 leading-relaxed">
+                    {product.description || product.description_courte}
+                  </p>
                 </div>
-                {product.poids && (
-                  <div>
-                    <span className="text-gray-600">Poids:</span>
-                    <span className="ml-2 font-medium">{product.poids}g</span>
-                  </div>
-                )}
-                {product.nombre_ventes > 0 && (
-                  <div>
-                    <span className="text-gray-600">Vendus:</span>
-                    <span className="ml-2 font-medium">{product.nombre_ventes}</span>
-                  </div>
-                )}
-              </div>
-              
-              {/* Tags */}
-              {product.tags && product.tags.length > 0 && (
+              )}
+
+              {/* Variants avec quantités */}
+              {product.variants && product.variants.length > 0 && product.variants[0].quantites && (
                 <div>
-                  <span className="text-gray-600 text-sm">Tags:</span>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {product.tags.map((tag, index) => (
-                      <span key={index} className="inline-block bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded">
-                        {tag}
-                      </span>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">{product.variants[0].nom}</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {product.variants[0].options.map((option: string, idx: number) => {
+                      const variant = product.variants?.[0];
+                      if (!variant) return null;
+
+                      const quantite = variant.quantites[idx];
+                      const isSelected = selectedVariants[variant.nom] === option;
+                      const isAvailable = quantite > 0;
+
+                      return (
+                        <button
+                          key={option}
+                          onClick={() => isAvailable && handleVariantChange(variant.nom, option)}
+                          disabled={!isAvailable}
+                          className={`p-3 border-2 rounded-lg transition-all duration-200 ${isSelected
+                              ? 'border-primary bg-primary text-white'
+                              : isAvailable
+                                ? 'border-gray-300 bg-white text-gray-700 hover:border-primary'
+                                : 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
+                            }`}
+                        >
+                          <div className="text-center">
+                            <div className="font-medium">{option}</div>
+                            <div className={`text-xs mt-1 ${isSelected ? 'text-white/80' : isAvailable ? 'text-gray-500' : 'text-gray-400'}`}>
+                              {isAvailable ? `${quantite} disp.` : 'Épuisé'}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Fallback pour ancienne structure de variants */}
+              {formattedVariants.length > 0 && (!product.variants || product.variants.length === 0 || !product.variants[0]?.quantites) && formattedVariants.map((variant) => (
+                <div key={variant.label}>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">{variant.label}</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {variant.options.map((option) => (
+                      <button
+                        key={option}
+                        onClick={() => handleVariantChange(variant.label, option)}
+                        className={`px-4 py-2 border rounded-lg transition-all duration-200 ${selectedVariants[variant.label] === option
+                            ? 'border-primary bg-primary text-white'
+                            : 'border-gray-300 bg-white text-gray-700 hover:border-primary'
+                          }`}
+                      >
+                        {option}
+                      </button>
                     ))}
                   </div>
                 </div>
-              )}
-            </div>
+              ))}
 
-            {/* Quantité */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Quantité</h3>
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={() => handleQuantityChange(quantity - 1)}
-                  className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors duration-200"
-                  disabled={quantity <= 1}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path d="M20 12H4"></path>
-                  </svg>
-                </button>
-                <span className="text-xl font-medium text-gray-900 min-w-[3rem] text-center">
-                  {quantity}
-                </span>
-                <button
-                  onClick={() => handleQuantityChange(quantity + 1)}
-                  disabled={!canIncreaseQuantity()}
-                  className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:text-gray-400"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path d="M12 4v16m8-8H4"></path>
-                  </svg>
-                </button>
-              </div>
-            </div>
+              {/* Informations supplémentaires */}
+              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                <h3 className="text-lg font-semibold text-gray-900">Informations du produit</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  {product.sku && (
+                    <div>
+                      <span className="text-gray-600">SKU:</span>
+                      <span className="ml-2 font-medium">{product.sku}</span>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-gray-600">Stock:</span>
+                    <span className="ml-2 font-medium">{product.quantite_stock} unité(s)</span>
+                  </div>
+                  {product.poids && (
+                    <div>
+                      <span className="text-gray-600">Poids:</span>
+                      <span className="ml-2 font-medium">{product.poids}g</span>
+                    </div>
+                  )}
+                  {product.nombre_ventes > 0 && (
+                    <div>
+                      <span className="text-gray-600">Vendus:</span>
+                      <span className="ml-2 font-medium">{product.nombre_ventes}</span>
+                    </div>
+                  )}
+                </div>
 
-            {/* Statut de stock */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                {product.en_stock ? (
-                  <>
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span className="text-green-600 font-medium">En stock</span>
-                  </>
-                ) : (
-                  <>
-                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <span className="text-red-600 font-medium">Rupture de stock</span>
-                  </>
+                {/* Tags */}
+                {product.tags && product.tags.length > 0 && (
+                  <div>
+                    <span className="text-gray-600 text-sm">Tags:</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {product.tags.map((tag, index) => (
+                        <span key={index} className="inline-block bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
-              {product.en_stock && (
-                <span className="text-sm text-gray-600">
-                  {product.quantite_stock} unité{product.quantite_stock > 1 ? 's' : ''} disponible{product.quantite_stock > 1 ? 's' : ''}
-                </span>
-              )}
-            </div>
 
-
-            {/* Boutons d'action */}
-            <div className="space-y-3 pt-6">
-              <button
-                onClick={handleAddToCart}
-                disabled={!product.en_stock || isAddingToCart || panierLoading}
-                className="w-full bg-primary text-white py-4 rounded-xl font-semibold text-lg lg:block hidden hover:bg-primary/90 transition-colors duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-              >
-                {(isAddingToCart || panierLoading) ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              {/* Quantité */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Quantité</h3>
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => handleQuantityChange(quantity - 1)}
+                    className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors duration-200"
+                    disabled={quantity <= 1}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path d="M20 12H4"></path>
                     </svg>
-                    <span>Ajout en cours...</span>
-                  </>
-                ) : (
-                  <span>{product.en_stock ? 'Ajouter au panier' : 'Produit indisponible'}</span>
-                )}
-              </button>
-              
-            </div>
+                  </button>
+                  <span className="text-xl font-medium text-gray-900 min-w-[3rem] text-center">
+                    {quantity}
+                  </span>
+                  <button
+                    onClick={() => handleQuantityChange(quantity + 1)}
+                    disabled={!canIncreaseQuantity()}
+                    className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:text-gray-400"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path d="M12 4v16m8-8H4"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
 
-            {/* Informations supplémentaires */}
-            {/*<div className="bg-gray-50 rounded-lg p-4 space-y-2">
+              {/* Statut de stock */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  {product.en_stock ? (
+                    <>
+                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      <span className="text-green-600 font-medium">En stock</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                      <span className="text-red-600 font-medium">Rupture de stock</span>
+                    </>
+                  )}
+                </div>
+                {product.en_stock && (
+                  <span className="text-sm text-gray-600">
+                    {product.quantite_stock} unité{product.quantite_stock > 1 ? 's' : ''} disponible{product.quantite_stock > 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+
+
+              {/* Boutons d'action */}
+              <div className="space-y-3 pt-6">
+                <button
+                  onClick={handleAddToCart}
+                  disabled={!product.en_stock || isAddingToCart || panierLoading}
+                  className="w-full bg-primary text-white py-4 rounded-xl font-semibold text-lg lg:block hidden hover:bg-primary/90 transition-colors duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                >
+                  {(isAddingToCart || panierLoading) ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>Ajout en cours...</span>
+                    </>
+                  ) : (
+                    <span>{product.en_stock ? 'Ajouter au panier' : 'Produit indisponible'}</span>
+                  )}
+                </button>
+
+              </div>
+
+              {/* Informations supplémentaires */}
+              {/*<div className="bg-gray-50 rounded-lg p-4 space-y-2">
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
@@ -535,10 +662,108 @@ export default function ProductDetail({
                 <span>Retour possible sous 30 jours</span>
               </div>
             </div>*/}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Modal Fullscreen pour les images */}
+      {isFullscreenOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black bg-opacity-95 flex items-center justify-center"
+          onClick={closeFullscreen}
+        >
+          {/* Bouton de fermeture */}
+          <button
+            onClick={closeFullscreen}
+            className="absolute top-4 right-4 z-50 text-white hover:text-gray-300 transition-colors p-2 bg-black bg-opacity-50 rounded-full"
+            aria-label="Fermer"
+          >
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          {/* Compteur d'images */}
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 text-white bg-black bg-opacity-50 px-4 py-2 rounded-full text-sm">
+            {fullscreenImageIndex + 1} / {productImages.length}
+          </div>
+
+          {/* Bouton précédent */}
+          {productImages.length > 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                navigateFullscreen('prev');
+              }}
+              className="absolute left-4 z-50 text-white hover:text-gray-300 transition-colors p-3 bg-black bg-opacity-50 rounded-full"
+              aria-label="Image précédente"
+            >
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+          )}
+
+          {/* Image fullscreen */}
+          <div
+            className="relative max-w-7xl max-h-[90vh] w-full h-full flex items-center justify-center p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Image
+              src={productImages[fullscreenImageIndex]}
+              alt={`${product.nom} - Image ${fullscreenImageIndex + 1}`}
+              width={1200}
+              height={1200}
+              className="max-w-full max-h-full object-contain"
+              priority
+            />
+          </div>
+
+          {/* Bouton suivant */}
+          {productImages.length > 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                navigateFullscreen('next');
+              }}
+              className="absolute right-4 z-50 text-white hover:text-gray-300 transition-colors p-3 bg-black bg-opacity-50 rounded-full"
+              aria-label="Image suivante"
+            >
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          )}
+
+          {/* Miniatures en bas */}
+          {productImages.length > 1 && (
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-50 flex space-x-2 overflow-x-auto max-w-[90vw] px-4">
+              {productImages.map((image, index) => (
+                <button
+                  key={index}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setFullscreenImageIndex(index);
+                  }}
+                  className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all duration-200 ${fullscreenImageIndex === index
+                      ? 'border-white scale-110'
+                      : 'border-transparent hover:border-gray-400 opacity-60 hover:opacity-100'
+                    }`}
+                >
+                  <Image
+                    src={image}
+                    alt={`Miniature ${index + 1}`}
+                    width={64}
+                    height={64}
+                    className="w-full h-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </>
   );
 }

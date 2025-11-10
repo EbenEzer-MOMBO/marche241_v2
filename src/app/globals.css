@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* Curseur personnalisé pour le zoom */
+.cursor-zoom-in {
+  cursor: zoom-in;
+}
+
+.cursor-zoom-out {
+  cursor: zoom-out;
+}
+
 /* Variables CSS pour les thèmes des boutiques */
 .boutique-container {
   --primary-color: #10b981;

@@ -201,10 +201,17 @@ export default function CartSidebar({ isOpen, onClose, boutiqueName = 'marche_24
                             <h4 className="text-sm font-medium text-gray-900 truncate">
                               {item.produit.nom}
                             </h4>
-                            {item.variants_selectionnes && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                {formatVariants(item.variants_selectionnes)}
-                              </p>
+                            {item.variants_selectionnes && Object.keys(item.variants_selectionnes).length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {Object.entries(item.variants_selectionnes).map(([key, value], idx) => (
+                                  <span 
+                                    key={idx}
+                                    className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200"
+                                  >
+                                    {key}: <span className="ml-0.5 font-semibold">{value}</span>
+                                  </span>
+                                ))}
+                              </div>
                             )}
                             <p className="text-sm font-semibold text-gray-900 mt-1">
                               {formatPrice(item.produit.prix)}

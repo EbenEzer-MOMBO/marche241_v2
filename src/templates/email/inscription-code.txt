@@ -1,0 +1,55 @@
+========================================
+   BIENVENUE SUR MARCHÉ241 ! 🎉
+========================================
+
+Bonjour {{prenom}},
+
+Merci de rejoindre la communauté Marché241 !
+
+Vous venez de créer votre compte vendeur sur Marché241.
+Pour finaliser votre inscription, veuillez vérifier votre compte avec le code ci-dessous :
+
+        ┌─────────────────────┐
+        │   CODE: {{CODE}}    │
+        └─────────────────────┘
+
+⏱️  Ce code expire dans 10 minutes.
+
+Entrez ce code sur la page de vérification pour activer votre compte et accéder à votre espace vendeur.
+
+----------------------------------------
+
+UNE FOIS VOTRE COMPTE ACTIVÉ, VOUS POURREZ :
+
+🏪 Créer votre boutique en quelques clics
+
+📦 Ajouter vos produits avec photos et descriptions
+
+💰 Recevoir vos paiements via Airtel Money et Moov Money
+
+📊 Suivre vos ventes en temps réel depuis votre tableau de bord
+
+----------------------------------------
+
+⚠️  IMPORTANT :
+
+Si vous n'avez pas créé de compte sur Marché241, ignorez cet email.
+Ne partagez JAMAIS votre code de vérification avec qui que ce soit.
+
+----------------------------------------
+
+Besoin d'aide ?
+
+Notre équipe est là pour vous accompagner. 
+N'hésitez pas à nous contacter si vous avez des questions.
+
+----------------------------------------
+
+MARCHÉ241
+Votre plateforme de commerce en ligne au Gabon
+Site web : https://marche241.ga
+
+Cet email a été envoyé automatiquement, merci de ne pas y répondre.
+
+© 2025 Marché241. Tous droits réservés.
+

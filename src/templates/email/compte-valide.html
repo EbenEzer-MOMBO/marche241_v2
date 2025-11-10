@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compte validé - Marché241</title>
+    <style>
+        /* Empêcher Gmail d'inverser les couleurs en mode sombre */
+        u + .body .container {
+            background-color: #ffffff !important;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f3f4f6 !important;
+            color: #111827 !important;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff !important;
+        }
+        .header {
+            padding: 10px 20px;
+            text-align: center;
+        }
+        .content {
+            padding: 10px 30px;
+            background-color: #ffffff !important;
+        }
+        .success-badge {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+        }
+        .success-title {
+            font-size: 28px;
+            color: #10b981 !important;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .success-subtitle {
+            font-size: 16px;
+            color: #6b7280 !important;
+        }
+        .greeting {
+            font-size: 20px;
+            color: #111827 !important;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        .message {
+            font-size: 16px;
+            color: #4b5563 !important;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        .cta-container {
+            text-align: center;
+            margin: 40px 0;
+        }
+        .cta-button {
+            display: inline-block;
+            padding: 16px 40px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            transition: transform 0.2s;
+        }
+        .cta-button:hover {
+            transform: scale(1.05);
+        }
+        .next-steps-box {
+            background-color: #f0fdf4 !important;
+            border-left: 4px solid #10b981 !important;
+            border-radius: 8px;
+            padding: 25px;
+            margin: 30px 0;
+        }
+        .next-steps-title {
+            font-size: 18px;
+            color: #047857 !important;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        .step-number {
+            width: 28px;
+            height: 28px;
+            background-color: #10b981 !important;
+            color: #ffffff !important;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+        .step-text {
+            font-size: 15px;
+            color: #065f46 !important;
+            line-height: 1.5;
+        }
+        .features-grid {
+            display: table;
+            width: 100%;
+            margin: 30px 0;
+        }
+        .feature-row {
+            display: table-row;
+        }
+        .feature-cell {
+            display: table-cell;
+            padding: 15px;
+            vertical-align: top;
+            width: 50%;
+        }
+        .feature-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        .feature-title {
+            font-size: 15px;
+            color: #111827 !important;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        .feature-desc {
+            font-size: 13px;
+            color: #6b7280 !important;
+            line-height: 1.4;
+        }
+        .tips-box {
+            background-color: #fffbeb !important;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 30px 0;
+        }
+        .tips-title {
+            font-size: 16px;
+            color: #92400e !important;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .tips-text {
+            font-size: 14px;
+            color: #78350f !important;
+            line-height: 1.5;
+        }
+        .footer {
+            background-color: #f9fafb !important;
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #e5e7eb !important;
+        }
+        .footer-text {
+            font-size: 14px;
+            color: #6b7280 !important;
+            margin: 5px 0;
+        }
+        .footer-link {
+            color: #10b981 !important;
+            text-decoration: none;
+        }
+        .divider {
+            height: 1px;
+            background-color: #e5e7eb !important;
+            margin: 30px 0;
+        }
+        @media only screen and (max-width: 600px) {
+            .content {
+                padding: 10px 20px;
+            }
+            .success-title {
+                font-size: 24px;
+            }
+            .feature-cell {
+                display: block;
+                width: 100%;
+            }
+            .cta-button {
+                padding: 14px 30px;
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+<body style="background-color: #f3f4f6 !important; color: #111827 !important;">
+    <div class="container" style="background-color: #ffffff !important;" data-ogsc="#ffffff">
+        <!-- Header -->
+        <div class="header">
+            <div class="">
+                <img src="https://i.ibb.co/HTsY5jdM/marche241-without-text-1180x1180-t.png" alt="Marché241 Logo" 
+                width="110px" height="110px"/>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="content" style="background-color: #ffffff !important;" data-ogsc="#ffffff">
+            <!-- Success Badge -->
+            <div class="success-badge">
+                <h1 class="success-title" style="color: #10b981 !important;" data-ogsc="#10b981">Compte Validé !</h1>
+                <p class="success-subtitle" style="color: #6b7280 !important;" data-ogsc="#6b7280">Votre espace vendeur est maintenant actif</p>
+            </div>
+
+            <p class="greeting" style="color: #111827 !important;" data-ogsc="#111827">Félicitations {{prenom}} ! 🎉</p>
+            
+            <p class="message" style="color: #4b5563 !important;" data-ogsc="#4b5563">
+                Votre compte vendeur Marché241 a été validé avec succès. Vous pouvez maintenant créer votre boutique 
+                et commencer à vendre vos produits en ligne !
+            </p>
+
+            <!-- CTA Button -->
+            <div class="cta-container">
+                <a href="https://marche241.ga/admin/boutique/create" class="cta-button" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important; color: #ffffff !important;" data-ogsc="#10b981">
+                    🏪 Créer ma boutique maintenant
+                </a>
+            </div>
+
+            <!-- Next Steps -->
+            <div class="next-steps-box" style="background-color: #f0fdf4 !important; border-left: 4px solid #10b981 !important;" data-ogsc="#f0fdf4">
+                <p class="next-steps-title" style="color: #047857 !important;" data-ogsc="#047857">
+                    🚀 Vos prochaines étapes :
+                </p>
+                <div class="step-item">
+                    <div class="step-number" style="background-color: #10b981 !important; color: #ffffff !important;" data-ogsc="#10b981">1</div>
+                    <div class="step-text" style="color: #065f46 !important;" data-ogsc="#065f46">
+                        <strong style="color: #065f46 !important;" data-ogsc="#065f46">Créez votre boutique :</strong> Choisissez un nom, ajoutez une description et personnalisez votre espace
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-number" style="background-color: #10b981 !important; color: #ffffff !important;" data-ogsc="#10b981">2</div>
+                    <div class="step-text" style="color: #065f46 !important;" data-ogsc="#065f46">
+                        <strong style="color: #065f46 !important;" data-ogsc="#065f46">Ajoutez vos produits :</strong> Photos de qualité, descriptions détaillées et prix attractifs
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-number" style="background-color: #10b981 !important; color: #ffffff !important;" data-ogsc="#10b981">3</div>
+                    <div class="step-text" style="color: #065f46 !important;" data-ogsc="#065f46">
+                        <strong style="color: #065f46 !important;" data-ogsc="#065f46">Configurez vos paiements :</strong> Renseignez vos informations Airtel Money ou Moov Money
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-number" style="background-color: #10b981 !important; color: #ffffff !important;" data-ogsc="#10b981">4</div>
+                    <div class="step-text" style="color: #065f46 !important;" data-ogsc="#065f46">
+                        <strong style="color: #065f46 !important;" data-ogsc="#065f46">Partagez votre boutique :</strong> Commencez à promouvoir et à vendre !
+                    </div>
+                </div>
+            </div>
+
+            <!-- Features Grid -->
+            <div class="features-grid">
+                <div class="feature-row">
+                    <div class="feature-cell">
+                        <div class="feature-icon">📊</div>
+                        <div class="feature-title" style="color: #111827 !important;" data-ogsc="#111827">Tableau de bord</div>
+                        <div class="feature-desc" style="color: #6b7280 !important;" data-ogsc="#6b7280">Suivez vos ventes en temps réel</div>
+                    </div>
+                    <div class="feature-cell">
+                        <div class="feature-icon">📦</div>
+                        <div class="feature-title" style="color: #111827 !important;" data-ogsc="#111827">Gestion stock</div>
+                        <div class="feature-desc" style="color: #6b7280 !important;" data-ogsc="#6b7280">Gérez facilement votre inventaire</div>
+                    </div>
+                </div>
+                <div class="feature-row">
+                    <div class="feature-cell">
+                        <div class="feature-icon">💰</div>
+                        <div class="feature-title" style="color: #111827 !important;" data-ogsc="#111827">Paiements sécurisés</div>
+                        <div class="feature-desc" style="color: #6b7280 !important;" data-ogsc="#6b7280">Mobile Money intégré</div>
+                    </div>
+                    <div class="feature-cell">
+                        <div class="feature-icon">📱</div>
+                        <div class="feature-title" style="color: #111827 !important;" data-ogsc="#111827">100% Mobile</div>
+                        <div class="feature-desc" style="color: #6b7280 !important;" data-ogsc="#6b7280">Accessible partout, tout le temps</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tips Box -->
+            <div class="tips-box" style="background-color: #fffbeb !important;" data-ogsc="#fffbeb">
+                <p class="tips-title" style="color: #92400e !important;" data-ogsc="#92400e">💡 Conseil pour bien démarrer</p>
+                <p class="tips-text" style="color: #78350f !important;" data-ogsc="#78350f">
+                    Prenez le temps de créer une belle vitrine : utilisez des photos de qualité, 
+                    rédigez des descriptions claires et fixez des prix compétitifs. 
+                    Une boutique bien présentée attire plus de clients !
+                </p>
+            </div>
+
+            <div class="divider" style="background-color: #e5e7eb !important;" data-ogsc="#e5e7eb"></div>
+
+            <p class="message" style="margin-bottom: 10px; color: #4b5563 !important;" data-ogsc="#4b5563">
+                <strong style="color: #4b5563 !important;" data-ogsc="#4b5563">Besoin d'aide ?</strong>
+            </p>
+            <p class="message" style="margin-top: 0; font-size: 14px; color: #4b5563 !important;" data-ogsc="#4b5563">
+                Notre équipe est là pour vous accompagner dans votre réussite. N'hésitez pas à nous contacter 
+                si vous avez des questions.
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer" style="background-color: #f9fafb !important; border-top: 1px solid #e5e7eb !important;" data-ogsc="#f9fafb">
+            <p class="footer-text" style="color: #6b7280 !important;" data-ogsc="#6b7280">
+                <strong style="color: #6b7280 !important;" data-ogsc="#6b7280">Marché241</strong> - Votre plateforme de commerce en ligne au Gabon
+            </p>
+            <p class="footer-text" style="color: #6b7280 !important;" data-ogsc="#6b7280">
+                <a href="https://marche241.ga" class="footer-link" style="color: #10b981 !important;" data-ogsc="#10b981">marche241.ga</a>
+            </p>
+            
+            <div class="divider" style="margin: 20px auto; max-width: 200px; background-color: #e5e7eb !important;" data-ogsc="#e5e7eb"></div>
+            
+            <p class="footer-text" style="font-size: 12px; color: #6b7280 !important;" data-ogsc="#6b7280">
+                Cet email a été envoyé automatiquement, merci de ne pas y répondre.
+            </p>
+            <p class="footer-text" style="font-size: 12px; color: #9ca3af !important;" data-ogsc="#9ca3af">
+                © 2025 Marché241. Tous droits réservés.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+

@@ -1,13 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { BoutiqueData } from '@/lib/services/auth';
+import { getProduitsParBoutique } from '@/lib/services/products';
+import { getCategoriesParBoutique } from '@/lib/services/categories';
+import { getCommunesParBoutique } from '@/lib/services/communes';
 import {
   LayoutDashboard,
   Package,
   ShoppingCart,
+  ShoppingBag,
   Tags,
   Truck,
   Settings,
@@ -29,6 +33,7 @@ interface NavItem {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   current?: boolean;
+  showAlert?: boolean;
 }
 
 export default function Sidebar({ boutique, isMobileMenuOpen = false, onToggleMobileMenu }: SidebarProps) {
@@ -36,37 +41,72 @@ export default function Sidebar({ boutique, isMobileMenuOpen = false, onToggleMo
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [alerts, setAlerts] = useState({
+    categories: false,
+    produits: false,
+    livraison: false
+  });
+
+  // Charger les alertes au montage
+  useEffect(() => {
+    const checkAlerts = async () => {
+      try {
+        // Vérifier les catégories
+        const categoriesData = await getCategoriesParBoutique(boutique.id);
+        
+        // Vérifier les produits
+        const produitsData = await getProduitsParBoutique(boutique.id, { limite: 1 });
+        
+        // Vérifier les zones de livraison
+        const communesData = await getCommunesParBoutique(boutique.id);
+        
+        setAlerts({
+          categories: categoriesData.length === 0,
+          produits: produitsData.total === 0,
+          livraison: communesData.length === 0
+        });
+      } catch (error) {
+        console.error('Erreur lors de la vérification des alertes:', error);
+      }
+    };
+
+    checkAlerts();
+  }, [boutique.id]);
 
   const navigation: NavItem[] = [
     {
       name: 'Tableau de bord',
       href: `/admin/${boutique.slug}`,
       icon: LayoutDashboard,
-      current: pathname === `/admin/${boutique.slug}`
+      current: pathname === `/admin/${boutique.slug}`,
+      showAlert: false
     },
     {
       name: 'Catégories',
       href: `/admin/${boutique.slug}/categories`,
       icon: Tags,
-      current: pathname.includes('/categories')
+      current: pathname.includes('/categories'),
+      showAlert: alerts.categories
     },
     {
       name: 'Produits',
       href: `/admin/${boutique.slug}/products`,
       icon: Package,
-      current: pathname.includes('/products')
+      current: pathname.includes('/products'),
+      showAlert: alerts.produits
     },
     {
       name: 'Commandes',
       href: `/admin/${boutique.slug}/orders`,
-      icon: ShoppingCart,
+      icon: ShoppingBag,
       current: pathname.includes('/orders')
     },
     {
       name: 'Frais livraison',
       href: `/admin/${boutique.slug}/shipping`,
       icon: Truck,
-      current: pathname.includes('/shipping')
+      current: pathname.includes('/shipping'),
+      showAlert: alerts.livraison
     }
   ];
 
@@ -123,7 +163,7 @@ export default function Sidebar({ boutique, isMobileMenuOpen = false, onToggleMo
             <button
               key={item.name}
               onClick={() => router.push(item.href)}
-              className={`w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+              className={`w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors relative ${
                 item.current
                   ? 'bg-black text-white'
                   : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
@@ -131,7 +171,15 @@ export default function Sidebar({ boutique, isMobileMenuOpen = false, onToggleMo
             >
               <Icon className={`h-5 w-5 ${isCollapsed ? '' : 'mr-3'} flex-shrink-0`} />
               {!isCollapsed && (
-                <span className="truncate">{item.name}</span>
+                <span className="truncate flex-1 text-left">{item.name}</span>
+              )}
+              {item.showAlert && (
+                <span className={`flex-shrink-0 ${isCollapsed ? 'absolute -top-1 -right-1' : 'ml-auto'}`}>
+                  <span className="flex h-2 w-2 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                  </span>
+                </span>
               )}
             </button>
           );

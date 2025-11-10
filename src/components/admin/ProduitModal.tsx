@@ -30,12 +30,12 @@ export default function ProduitModal({
     prix: '',
     prix_promo: '',
     categorie_id: '',
-    en_stock: '',
+    en_stock: 0,
     statut: 'actif' as 'actif' | 'inactif' | 'brouillon',
     tags: [] as string[],
     specifications: {} as Record<string, string>,
     images: [] as string[],
-    variants: [] as Array<{nom: string; options: string[]}>
+    variants: [] as Array<{nom: string; options: string[]; quantites: number[]}>
   });
 
   const [currentTag, setCurrentTag] = useState('');
@@ -48,6 +48,17 @@ export default function ProduitModal({
   const [uploadedImages, setUploadedImages] = useState<ImageUploadResponse[]>([]);
   const [uploadError, setUploadError] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
+
+  // Calculer le stock total à partir des variants
+  useEffect(() => {
+    const totalStock = formData.variants.reduce((total, variant) => {
+      return total + variant.quantites.reduce((sum, qty) => sum + qty, 0);
+    }, 0);
+    
+    if (totalStock !== formData.en_stock) {
+      setFormData(prev => ({ ...prev, en_stock: totalStock }));
+    }
+  }, [formData.variants]);
 
   useEffect(() => {
     if (produit) {
@@ -64,18 +75,25 @@ export default function ProduitModal({
       
       console.log('[ProduitModal] Images finales chargées:', productImages);
       
+      // Récupérer les variants existants et s'assurer qu'ils ont des quantites
+      const existingVariants = produit.variants || [];
+      const variantsWithQuantites = existingVariants.map((variant: any) => ({
+        ...variant,
+        quantites: variant.quantites || variant.options.map(() => 0)
+      }));
+      
       setFormData({
         nom: produit.nom || '',
         description: produit.description || '',
-        prix: produit.prix ? produit.prix.toString() : '', // Suppression de la division par 100
-        prix_promo: produit.prix_original ? produit.prix_original.toString() : '', // Suppression de la division par 100
+        prix: produit.prix ? produit.prix.toString() : '',
+        prix_promo: produit.prix_original ? produit.prix_original.toString() : '',
         categorie_id: produit.categorie_id?.toString() || '',
-        en_stock: produit.quantite_stock?.toString() || '',
+        en_stock: produit.quantite_stock || 0,
         statut: produit.actif ? 'actif' : 'inactif',
         tags: produit.tags || [],
         specifications: produit.specifications || {},
         images: productImages,
-        variants: produit.variants || []
+        variants: variantsWithQuantites
       });
     } else {
       setFormData({
@@ -84,7 +102,7 @@ export default function ProduitModal({
         prix: '',
         prix_promo: '',
         categorie_id: '',
-        en_stock: '',
+        en_stock: 0,
         statut: 'actif',
         tags: [],
         specifications: {},
@@ -142,10 +160,10 @@ export default function ProduitModal({
         nom: formData.nom,
         slug: formData.nom.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
         description: formData.description,
-        prix: parseFloat(formData.prix), // Suppression de la multiplication par 100
-        prix_promo: formData.prix_promo ? parseFloat(formData.prix_promo) : undefined, // Suppression de la multiplication par 100
-        en_stock: parseInt(formData.en_stock),
-        quantite_stock: parseInt(formData.en_stock),
+        prix: parseFloat(formData.prix),
+        prix_promo: formData.prix_promo ? parseFloat(formData.prix_promo) : undefined,
+        en_stock: formData.en_stock,
+        quantite_stock: formData.en_stock,
         boutique_id: boutiqueId,
         categorie_id: parseInt(formData.categorie_id),
         images: finalImages,
@@ -216,12 +234,30 @@ export default function ProduitModal({
       if (options.length > 0) {
         setFormData(prev => ({
           ...prev,
-          variants: [...prev.variants, { nom: currentVariantName.trim(), options }]
+          variants: [...prev.variants, { 
+            nom: currentVariantName.trim(), 
+            options,
+            quantites: options.map(() => 0) // Initialiser toutes les quantités à 0
+          }]
         }));
         setCurrentVariantName('');
         setCurrentVariantOptions('');
       }
     }
+  };
+
+  const updateVariantQuantity = (variantIndex: number, optionIndex: number, quantity: number) => {
+    setFormData(prev => ({
+      ...prev,
+      variants: prev.variants.map((variant, vIdx) => {
+        if (vIdx === variantIndex) {
+          const newQuantites = [...variant.quantites];
+          newQuantites[optionIndex] = Math.max(0, quantity); // Empêcher les quantités négatives
+          return { ...variant, quantites: newQuantites };
+        }
+        return variant;
+      })
+    }));
   };
 
   const removeVariant = (index: number) => {
@@ -381,68 +417,92 @@ export default function ProduitModal({
 
             {/* Variants */}
           <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Variants (Couleur, Taille, etc.)</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Variant (Type, Couleur, Taille, etc.)</h3>
             
-            {/* Ajouter un variant */}
-            <div className="space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <input
-                  type="text"
-                  placeholder="Nom du variant (ex: Couleur, Taille)"
-                  value={currentVariantName}
-                  onChange={(e) => setCurrentVariantName(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                />
-                <input
-                  type="text"
-                  placeholder="Options séparées par des virgules (ex: Rouge, Bleu, Vert)"
-                  value={currentVariantOptions}
-                  onChange={(e) => setCurrentVariantOptions(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                />
+            {/* Ajouter un variant (un seul autorisé) */}
+            {formData.variants.length === 0 && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <input
+                    type="text"
+                    placeholder="Nom du variant (ex: Type, Couleur, Taille)"
+                    value={currentVariantName}
+                    onChange={(e) => setCurrentVariantName(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Options séparées par des virgules (ex: A, B, C, D)"
+                    value={currentVariantOptions}
+                    onChange={(e) => setCurrentVariantOptions(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={addVariant}
+                  className="inline-flex items-center px-3 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Ajouter le variant
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={addVariant}
-                className="inline-flex items-center px-3 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm"
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Ajouter un variant
-              </button>
-            </div>
+            )}
 
-            {/* Liste des variants */}
+            {/* Affichage du variant avec quantités */}
             {formData.variants.length > 0 && (
-              <div className="mt-4 space-y-2">
-                {formData.variants.map((variant, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <span className="font-medium text-gray-900">{variant.nom}:</span>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {variant.options.map((option, optIndex) => (
-                          <span key={optIndex} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
-                            {option}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
+              <div className="space-y-4">
+                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="font-medium text-gray-900">{formData.variants[0].nom}</span>
                     <button
                       type="button"
-                      onClick={() => removeVariant(index)}
+                      onClick={() => removeVariant(0)}
                       className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
-                      title="Supprimer ce variant"
+                      title="Supprimer le variant"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
-                ))}
+                  
+                  {/* Options avec quantités */}
+                  <div className="space-y-2">
+                    {formData.variants[0].options.map((option, optionIndex) => (
+                      <div key={optionIndex} className="flex items-center justify-between p-2 bg-white rounded border border-gray-200">
+                        <span className="text-sm font-medium text-gray-700">{option}</span>
+                        <div className="flex items-center space-x-2">
+                          <label className="text-xs text-gray-500">Quantité:</label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={formData.variants[0].quantites[optionIndex] || 0}
+                            onChange={(e) => updateVariantQuantity(0, optionIndex, parseInt(e.target.value) || 0)}
+                            className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-black focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Stock total */}
+                  <div className="mt-3 pt-3 border-t border-gray-300">
+                    <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-semibold text-emerald-900">Stock total:</span>
+                        <span className="text-lg font-bold text-emerald-600">
+                          {formData.en_stock} unités
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
 
-            {/* Prix et stock */}
+            {/* Prix et statut */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900">Prix et stock</h3>
+              <h3 className="text-lg font-medium text-gray-900">Prix et statut</h3>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -473,19 +533,6 @@ export default function ProduitModal({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Quantité en stock *
-                </label>
-                <input
-                  type="number"
-                  value={formData.en_stock}
-                  onChange={(e) => setFormData(prev => ({ ...prev, en_stock: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                  required
-                />
-              </div>
-
               {/* Statut */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -501,6 +548,7 @@ export default function ProduitModal({
                   <option value="inactif">Inactif</option>
                 </select>
               </div>
+
             </div>
           </div>
 

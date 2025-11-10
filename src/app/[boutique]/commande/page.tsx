@@ -58,10 +58,3 @@ export default async function OrderPage({ params }: OrderPageProps) {
     </CheckoutLayout>
   );
 }
-
-export async function generateStaticParams() {
-  return [
-    { boutique: 'marche_241' },
-    { boutique: 'boutique_de_joline' },
-  ];
-}

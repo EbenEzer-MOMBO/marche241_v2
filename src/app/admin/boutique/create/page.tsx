@@ -1,17 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { creerBoutique, CreerBoutiqueData } from '@/lib/services/auth';
 import { ToastContainer } from '@/components/ui/Toast';
 import { useToast } from '@/hooks/useToast';
-import { Building2, ArrowLeft, Store, FileText, MapPin } from 'lucide-react';
+import { Building2, ArrowLeft, Store, FileText, MapPin, Loader2, Phone } from 'lucide-react';
+import PhoneNumberInput from '@/components/ui/PhoneNumberInput';
 
 export default function CreateBoutiquePage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { toasts, removeToast, success, error: showError } = useToast();
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   
   const [formData, setFormData] = useState({
     nom: '',
@@ -24,6 +26,37 @@ export default function CreateBoutiquePage() {
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPhoneValid, setIsPhoneValid] = useState(false);
+
+  // Vérifier l'authentification au chargement
+  useEffect(() => {
+    const checkAuth = () => {
+      const token = localStorage.getItem('admin_token');
+      const userData = localStorage.getItem('admin_user');
+      
+      if (!token || !userData) {
+        // Pas de token, rediriger vers login
+        showError('Vous devez être connecté pour créer une boutique', 'Non authentifié');
+        router.push('/admin/login');
+        return;
+      }
+      
+      setIsCheckingAuth(false);
+    };
+
+    // Petit délai pour laisser le hook useAuth charger
+    const timer = setTimeout(checkAuth, 100);
+    
+    return () => clearTimeout(timer);
+  }, [router, showError]);
+
+  // Rediriger si l'utilisateur se déconnecte pendant qu'il est sur la page
+  useEffect(() => {
+    if (!isCheckingAuth && !isAuthenticated) {
+      showError('Session expirée. Veuillez vous reconnecter', 'Session expirée');
+      router.push('/admin/login');
+    }
+  }, [isAuthenticated, isCheckingAuth, router, showError]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -31,6 +64,17 @@ export default function CreateBoutiquePage() {
       ...prev,
       [name]: value
     }));
+  };
+
+  const handlePhoneChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      telephone: value
+    }));
+  };
+
+  const handlePhoneValidationChange = (isValid: boolean) => {
+    setIsPhoneValid(isValid);
   };
 
   const isFormValid = () => {
@@ -98,6 +142,23 @@ export default function CreateBoutiquePage() {
       setIsLoading(false);
     }
   };
+
+  // Afficher un loader pendant la vérification de l'authentification
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-black mx-auto mb-4" />
+          <p className="text-gray-600 font-medium">Vérification de l'authentification...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Ne pas afficher le formulaire si l'utilisateur n'est pas authentifié
+  if (!isAuthenticated || !user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -217,15 +278,25 @@ export default function CreateBoutiquePage() {
               <label htmlFor="telephone" className="block text-sm font-medium text-gray-700 mb-2">
                 Téléphone de contact
               </label>
-              <input
-                type="tel"
-                id="telephone"
-                name="telephone"
-                value={formData.telephone}
-                onChange={handleInputChange}
-                placeholder="+241 XX XX XX XX"
-                className="block w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-              />
+              <div className="relative">
+                <PhoneNumberInput
+                  value={formData.telephone}
+                  onChange={handlePhoneChange}
+                  onValidationChange={handlePhoneValidationChange}
+                  placeholder="6XXXXXXX"
+                  required={false}
+                />
+              </div>
+              {formData.telephone && !isPhoneValid && (
+                <p className="mt-1 text-sm text-red-600">
+                  Numéro de téléphone invalide
+                </p>
+              )}
+              {formData.telephone && isPhoneValid && (
+                <p className="mt-1 text-sm text-green-600">
+                  ✓ Numéro valide
+                </p>
+              )}
             </div>
 
             {/* Email */}

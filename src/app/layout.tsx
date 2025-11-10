@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL('https://marche241.ga'),
   title: {
-    default: "Marché241 - Créez votre boutique en ligne au Gabon",
+    default: "Marché241 - Votre boutique en ligne au Gabon",
     template: "%s | Marché241"
   },
   icons: {

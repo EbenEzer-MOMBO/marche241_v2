@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Code de vérification - Marché241</title>
+    <title>Bienvenue sur Marché241 - Code de vérification</title>
     <style>
         /* Empêcher Gmail d'inverser les couleurs en mode sombre */
         u + .body .container {
@@ -35,20 +35,21 @@
             height: 100%;
             object-fit: contain;
         }
-        .header h1 {
-            color: #ffffff;
-            margin: 0;
-            font-size: 24px;
-            font-weight: 600;
-        }
         .content {
             padding: 10px 30px;
             background-color: #ffffff !important;
         }
         .greeting {
-            font-size: 18px;
+            font-size: 20px;
             color: #111827 !important;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        .welcome-text {
+            font-size: 16px;
+            color: #10b981 !important;
             margin-bottom: 20px;
+            font-weight: 500;
         }
         .message {
             font-size: 16px;
@@ -85,6 +86,33 @@
             color: #6b7280 !important;
             margin-top: 20px;
         }
+        .features-box {
+            background-color: #f9fafb !important;
+            border-radius: 8px;
+            padding: 25px;
+            margin: 30px 0;
+        }
+        .features-title {
+            font-size: 16px;
+            color: #111827 !important;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        .feature-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+        .feature-icon {
+            font-size: 20px;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+        .feature-text {
+            font-size: 14px;
+            color: #4b5563 !important;
+            line-height: 1.5;
+        }
         .warning {
             background-color: #fef3c7 !important;
             border-left: 4px solid #f59e0b !important;
@@ -118,16 +146,6 @@
             color: #10b981 !important;
             text-decoration: none;
         }
-        .social-links {
-            margin-top: 20px;
-        }
-        .social-links a {
-            display: inline-block;
-            margin: 0 10px;
-            color: #6b7280 !important;
-            text-decoration: none;
-            font-size: 14px;
-        }
         .divider {
             height: 1px;
             background-color: #e5e7eb !important;
@@ -140,6 +158,9 @@
             .code {
                 font-size: 36px;
                 letter-spacing: 6px;
+            }
+            .features-box {
+                padding: 20px 15px;
             }
         }
     </style>
@@ -156,11 +177,14 @@
 
         <!-- Content -->
         <div class="content" style="background-color: #ffffff !important;" data-ogsc="#ffffff">
-            <p class="greeting" style="color: #111827 !important;" data-ogsc="#111827">Bonjour, {{prenom}}</p>
+            <p class="greeting" style="color: #111827 !important;" data-ogsc="#111827">Bienvenue {{prenom}} ! 🎉</p>
+            <p class="welcome-text" style="color: #10b981 !important;" data-ogsc="#10b981">
+                Merci de rejoindre la communauté Marché241
+            </p>
             
             <p class="message" style="color: #4b5563 !important;" data-ogsc="#4b5563">
-                Vous avez demandé à vous connecter à votre compte vendeur Marché241. 
-                Voici votre code de vérification à usage unique :
+                Vous venez de créer votre compte vendeur sur Marché241. 
+                Pour finaliser votre inscription, veuillez vérifier votre compte avec le code ci-dessous :
             </p>
 
             <!-- Code Container -->
@@ -171,14 +195,45 @@
             </div>
 
             <p class="message" style="color: #4b5563 !important;" data-ogsc="#4b5563">
-                Entrez ce code sur la page de vérification pour accéder à votre espace vendeur.
+                Entrez ce code sur la page de vérification pour activer votre compte et accéder à votre espace vendeur.
             </p>
+
+            <!-- Features Box -->
+            <div class="features-box" style="background-color: #f9fafb !important;" data-ogsc="#f9fafb">
+                <p class="features-title" style="color: #111827 !important;" data-ogsc="#111827">
+                    Une fois votre compte activé, vous pourrez :
+                </p>
+                <div class="feature-item">
+                    <span class="feature-icon">🏪</span>
+                    <span class="feature-text" style="color: #4b5563 !important;" data-ogsc="#4b5563">
+                        <strong style="color: #4b5563 !important;" data-ogsc="#4b5563">Créer votre boutique</strong> en quelques clics
+                    </span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">📦</span>
+                    <span class="feature-text" style="color: #4b5563 !important;" data-ogsc="#4b5563">
+                        <strong style="color: #4b5563 !important;" data-ogsc="#4b5563">Ajouter vos produits</strong> avec photos et descriptions
+                    </span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">💰</span>
+                    <span class="feature-text" style="color: #4b5563 !important;" data-ogsc="#4b5563">
+                        <strong style="color: #4b5563 !important;" data-ogsc="#4b5563">Recevoir vos paiements</strong> via Airtel Money et Moov Money
+                    </span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">📊</span>
+                    <span class="feature-text" style="color: #4b5563 !important;" data-ogsc="#4b5563">
+                        <strong style="color: #4b5563 !important;" data-ogsc="#4b5563">Suivre vos ventes</strong> en temps réel depuis votre tableau de bord
+                    </span>
+                </div>
+            </div>
 
             <!-- Warning -->
             <div class="warning" style="background-color: #fef3c7 !important; border-left: 4px solid #f59e0b !important;" data-ogsc="#fef3c7">
                 <span class="warning-icon">⚠️</span>
                 <p class="warning-text" style="color: #92400e !important;" data-ogsc="#92400e">
-                    <strong style="color: #92400e !important;" data-ogsc="#92400e">Important :</strong> Si vous n'avez pas demandé ce code, ignorez cet email. 
+                    <strong style="color: #92400e !important;" data-ogsc="#92400e">Important :</strong> Si vous n'avez pas créé de compte sur Marché241, ignorez cet email. 
                     Ne partagez jamais votre code de vérification avec qui que ce soit.
                 </p>
             </div>
@@ -189,7 +244,7 @@
                 <strong style="color: #4b5563 !important;" data-ogsc="#4b5563">Besoin d'aide ?</strong>
             </p>
             <p class="message" style="margin-top: 0; font-size: 14px; color: #4b5563 !important;" data-ogsc="#4b5563">
-                Si vous rencontrez des difficultés pour vous connecter, n'hésitez pas à nous contacter.
+                Notre équipe est là pour vous accompagner. N'hésitez pas à nous contacter si vous avez des questions.
             </p>
         </div>
 

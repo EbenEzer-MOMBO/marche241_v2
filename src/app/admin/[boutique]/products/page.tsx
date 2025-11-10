@@ -808,9 +808,19 @@ export default function ProductsPage() {
                                                         )}
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap">
-                                                        <div className={`text-sm ${product.en_stock ? 'text-green-600' : 'text-red-600'}`}>
-                                                            {product.en_stock ? `${product.quantite_stock} en stock` : 'Rupture'}
+                                                        <div className={`text-sm font-medium ${product.quantite_stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                            {product.quantite_stock > 0 ? `${product.quantite_stock} unités` : 'Rupture'}
                                                         </div>
+                                                        {product.variants && product.variants.length > 0 && product.variants[0].quantites && (
+                                                            <div className="text-xs text-gray-500 mt-1">
+                                                                {product.variants[0].options.map((option: string, idx: number) => (
+                                                                    <div key={idx} className="flex justify-between">
+                                                                        <span className="truncate max-w-[80px]">{option}:</span>
+                                                                        <span className="font-medium ml-1">{product.variants[0].quantites[idx]}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap">
                                                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${product.actif
@@ -965,25 +975,38 @@ export default function ProductsPage() {
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center justify-between text-xs">
-                                                <div className="flex items-center space-x-2">
-                                                    <span className={`${product.en_stock ? 'text-green-600' : 'text-red-600'}`}>
-                                                        {product.en_stock ? `${product.quantite_stock} en stock` : 'Rupture'}
-                                                    </span>
-                                                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${product.actif
-                                                        ? 'bg-green-100 text-green-800'
-                                                        : 'bg-gray-100 text-gray-800'
-                                                        }`}>
-                                                        {product.actif ? 'Actif' : 'Inactif'}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center space-x-2 text-gray-500">
-                                                    <div className="flex items-center">
-                                                        <Star className="h-3 w-3 text-yellow-400 mr-1" />
-                                                        {product.note_moyenne}
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between text-xs">
+                                                    <div className="flex items-center space-x-2">
+                                                        <span className={`font-medium ${product.quantite_stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                            {product.quantite_stock > 0 ? `${product.quantite_stock} unités` : 'Rupture'}
+                                                        </span>
+                                                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${product.actif
+                                                            ? 'bg-green-100 text-green-800'
+                                                            : 'bg-gray-100 text-gray-800'
+                                                            }`}>
+                                                            {product.actif ? 'Actif' : 'Inactif'}
+                                                        </span>
                                                     </div>
-                                                    <span>{product.nombre_ventes} ventes</span>
+                                                    <div className="flex items-center space-x-2 text-gray-500">
+                                                        <div className="flex items-center">
+                                                            <Star className="h-3 w-3 text-yellow-400 mr-1" />
+                                                            {product.note_moyenne}
+                                                        </div>
+                                                        <span>{product.nombre_ventes} ventes</span>
+                                                    </div>
                                                 </div>
+                                                
+                                                {/* Détail des variants pour mobile */}
+                                                {product.variants && product.variants.length > 0 && product.variants[0].quantites && (
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {product.variants[0].options.map((option: string, idx: number) => (
+                                                            <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs bg-gray-100 text-gray-700">
+                                                                {option}: <span className="font-semibold ml-1">{product.variants[0].quantites[idx]}</span>
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
 
                                             {/* Badges */}

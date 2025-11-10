@@ -7,6 +7,8 @@ import { BoutiqueData } from '@/lib/services/auth';
 import { ToastContainer } from '@/components/ui/Toast';
 import { useToast } from '@/hooks/useToast';
 import Sidebar from '@/components/admin/Sidebar';
+import { getProduitsParBoutique, ProduitsResponse } from '@/lib/services/products';
+import { getCategoriesParBoutique } from '@/lib/services/categories';
 import {
   Package,
   ShoppingCart,
@@ -29,6 +31,14 @@ export default function BoutiqueDashboard() {
   const [boutique, setBoutique] = useState<BoutiqueData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [stats, setStats] = useState({
+    totalProduits: 0,
+    totalCommandes: 0,
+    totalCategories: 0,
+    produitsActifs: 0,
+    produitsEnRupture: 0
+  });
+  const [recentProducts, setRecentProducts] = useState<any[]>([]);
 
   useEffect(() => {
     const loadBoutiqueData = async () => {
@@ -52,11 +62,41 @@ export default function BoutiqueDashboard() {
         }
 
         setBoutique(boutiqueData);
+        
+        // Charger les statistiques
+        await loadStats(boutiqueData.id);
       } catch (error) {
         console.error('Erreur lors du chargement de la boutique:', error);
         showError('Erreur lors du chargement de la boutique', 'Erreur');
       } finally {
         setIsLoading(false);
+      }
+    };
+
+    const loadStats = async (boutiqueId: number) => {
+      try {
+        // Charger les produits
+        const produitsData = await getProduitsParBoutique(boutiqueId, { limite: 5 });
+        
+        // Charger les catégories
+        const categoriesData = await getCategoriesParBoutique(boutiqueId);
+        
+        // Calculer les statistiques
+        const produitsActifs = produitsData.donnees.filter(p => p.statut === 'actif').length;
+        const produitsEnRupture = produitsData.donnees.filter(p => Number(p.en_stock) === 0).length;
+        
+        setStats({
+          totalProduits: produitsData.total || 0,
+          totalCommandes: 0, // TODO: Intégrer avec l'API commandes
+          totalCategories: categoriesData.length || 0,
+          produitsActifs,
+          produitsEnRupture
+        });
+        
+        // Garder les 5 produits les plus récents
+        setRecentProducts(produitsData.donnees.slice(0, 5));
+      } catch (error) {
+        console.error('Erreur lors du chargement des statistiques:', error);
       }
     };
 
@@ -145,7 +185,8 @@ export default function BoutiqueDashboard() {
                 </div>
                 <div className="ml-3 sm:ml-4 min-w-0">
                   <p className="text-sm font-medium text-gray-600 truncate">Produits</p>
-                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{boutique.nombre_produits || 0}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.totalProduits}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{stats.produitsActifs} actifs</p>
                 </div>
               </div>
             </div>
@@ -157,7 +198,8 @@ export default function BoutiqueDashboard() {
                 </div>
                 <div className="ml-3 sm:ml-4 min-w-0">
                   <p className="text-sm font-medium text-gray-600 truncate">Commandes</p>
-                  <p className="text-xl sm:text-2xl font-bold text-gray-900">0</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.totalCommandes}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">En attente</p>
                 </div>
               </div>
             </div>
@@ -168,8 +210,9 @@ export default function BoutiqueDashboard() {
                   <Users className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
                 </div>
                 <div className="ml-3 sm:ml-4 min-w-0">
-                  <p className="text-sm font-medium text-gray-600 truncate">Clients</p>
-                  <p className="text-xl sm:text-2xl font-bold text-gray-900">0</p>
+                  <p className="text-sm font-medium text-gray-600 truncate">Catégories</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.totalCategories}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Catégories actives</p>
                 </div>
               </div>
             </div>
@@ -180,8 +223,9 @@ export default function BoutiqueDashboard() {
                   <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600" />
                 </div>
                 <div className="ml-3 sm:ml-4 min-w-0">
-                  <p className="text-sm font-medium text-gray-600 truncate">Revenus</p>
-                  <p className="text-xl sm:text-2xl font-bold text-gray-900">0 FCFA</p>
+                  <p className="text-sm font-medium text-gray-600 truncate">Stock faible</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.produitsEnRupture}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Produits en rupture</p>
                 </div>
               </div>
             </div>
@@ -192,11 +236,11 @@ export default function BoutiqueDashboard() {
             <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 sm:mb-6">Actions rapides</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               <button
-                onClick={() => router.push(`/admin/${boutique.slug}/products/new`)}
+                onClick={() => router.push(`/admin/${boutique.slug}/products`)}
                 className="flex items-center justify-center p-4 sm:p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all group"
               >
                 <Plus className="h-5 w-5 sm:h-6 sm:w-6 text-gray-400 group-hover:text-blue-500 mr-2 sm:mr-3" />
-                <span className="text-sm sm:text-base text-gray-600 group-hover:text-blue-600 font-medium">Ajouter un produit</span>
+                <span className="text-sm sm:text-base text-gray-600 group-hover:text-blue-600 font-medium">Gérer les produits</span>
               </button>
               
               <button
@@ -219,23 +263,73 @@ export default function BoutiqueDashboard() {
 
           {/* Recent Activity */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
-            <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 sm:mb-6">Activité récente</h2>
-            <div className="text-center py-8 sm:py-12">
-              <div className="mx-auto h-12 w-12 sm:h-16 sm:w-16 bg-gray-100 rounded-full flex items-center justify-center mb-3 sm:mb-4">
-                <Package className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400" />
-              </div>
-              <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">Aucune activité récente</h3>
-              <p className="text-sm sm:text-base text-gray-500 mb-4 sm:mb-6">
-                Commencez par ajouter vos premiers produits à votre boutique
-              </p>
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900">Produits récents</h2>
               <button
-                onClick={() => router.push(`/admin/${boutique.slug}/products/new`)}
-                className="inline-flex items-center px-3 sm:px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm sm:text-base"
+                onClick={() => router.push(`/admin/${boutique.slug}/products`)}
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
               >
-                <Plus className="h-4 w-4 mr-2" />
-                Ajouter mon premier produit
+                Voir tout
               </button>
             </div>
+            
+            {recentProducts.length > 0 ? (
+              <div className="space-y-3">
+                {recentProducts.map((produit) => (
+                  <div
+                    key={produit.id}
+                    className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => router.push(`/admin/${boutique.slug}/products/${produit.id}`)}
+                  >
+                    <div className="flex-shrink-0 h-12 w-12 sm:h-16 sm:w-16 bg-gray-100 rounded-lg overflow-hidden">
+                      {produit.image_principale ? (
+                        <img
+                          src={produit.image_principale}
+                          alt={produit.nom}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center">
+                          <Package className="h-6 w-6 text-gray-400" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="ml-3 flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{produit.nom}</p>
+                      <p className="text-sm text-gray-500">{produit.prix.toLocaleString()} FCFA</p>
+                    </div>
+                    <div className="flex-shrink-0 ml-2">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        produit.statut === 'actif' 
+                          ? 'bg-green-100 text-green-800' 
+                          : produit.statut === 'inactif'
+                          ? 'bg-gray-100 text-gray-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {produit.statut === 'actif' ? 'Actif' : produit.statut === 'inactif' ? 'Inactif' : 'Brouillon'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 sm:py-12">
+                <div className="mx-auto h-12 w-12 sm:h-16 sm:w-16 bg-gray-100 rounded-full flex items-center justify-center mb-3 sm:mb-4">
+                  <Package className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400" />
+                </div>
+                <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">Aucun produit</h3>
+                <p className="text-sm sm:text-base text-gray-500 mb-4 sm:mb-6">
+                  Commencez par ajouter vos premiers produits à votre boutique
+                </p>
+                <button
+                  onClick={() => router.push(`/admin/${boutique.slug}/products/new`)}
+                  className="inline-flex items-center px-3 sm:px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm sm:text-base"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ajouter mon premier produit
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
