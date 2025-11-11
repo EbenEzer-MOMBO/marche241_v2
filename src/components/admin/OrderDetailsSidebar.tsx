@@ -1,0 +1,377 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { X, Package, User, MapPin, Phone, Calendar, CreditCard, Truck } from 'lucide-react';
+import { 
+  getCommandeAvecArticles, 
+  type CommandeDetailsResponse 
+} from '@/lib/services/commandes';
+
+interface OrderDetailsSidebarProps {
+  commandeId: number | null;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const OrderDetailsSidebar = ({ commandeId, isOpen, onClose }: OrderDetailsSidebarProps) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [details, setDetails] = useState<CommandeDetailsResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadOrderDetails = async () => {
+      if (!commandeId) return;
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const data = await getCommandeAvecArticles(commandeId);
+        setDetails(data);
+      } catch (err) {
+        console.error('Erreur chargement détails commande:', err);
+        setError('Impossible de charger les détails de la commande');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (isOpen && commandeId) {
+      loadOrderDetails();
+    }
+  }, [commandeId, isOpen]);
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'XAF',
+      minimumFractionDigits: 0
+    }).format(price);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Intl.DateTimeFormat('fr-FR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(new Date(dateString));
+  };
+
+  const getStatusColor = (statut: string) => {
+    switch (statut.toLowerCase()) {
+      case 'en_attente':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'confirmee':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'en_preparation':
+        return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'expediee':
+        return 'bg-indigo-100 text-indigo-800 border-indigo-200';
+      case 'livree':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'annulee':
+        return 'bg-red-100 text-red-800 border-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getStatusLabel = (statut: string) => {
+    switch (statut.toLowerCase()) {
+      case 'en_attente':
+        return 'En attente';
+      case 'confirmee':
+        return 'Confirmée';
+      case 'en_preparation':
+        return 'En préparation';
+      case 'expediee':
+        return 'Expédiée';
+      case 'livree':
+        return 'Livrée';
+      case 'annulee':
+        return 'Annulée';
+      default:
+        return statut;
+    }
+  };
+
+  const getPaymentStatusLabel = (statut: string) => {
+    switch (statut.toLowerCase()) {
+      case 'en_attente':
+        return 'En attente';
+      case 'paye':
+        return 'Payé';
+      case 'echoue':
+        return 'Échoué';
+      case 'rembourse':
+        return 'Remboursé';
+      default:
+        return statut;
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/50 bg-opacity-50 z-40 transition-opacity"
+        onClick={onClose}
+      />
+
+      {/* Sidebar */}
+      <div className="fixed right-0 top-0 h-full w-full sm:w-[500px] lg:w-[600px] bg-white shadow-2xl z-50 overflow-y-auto">
+        {/* Header */}
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+          <h2 className="text-xl font-bold text-gray-900">Détails de la commande</h2>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            aria-label="Fermer"
+          >
+            <X className="h-5 w-5 text-gray-600" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6">
+          {isLoading && (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
+            </div>
+          )}
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
+              {error}
+            </div>
+          )}
+
+          {!isLoading && !error && details && (
+            <div className="space-y-6">
+              {/* Informations générales */}
+              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {details.commande.numero_commande}
+                  </h3>
+                  <span
+                    className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(
+                      details.commande.statut
+                    )}`}
+                  >
+                    {getStatusLabel(details.commande.statut)}
+                  </span>
+                </div>
+
+                <div className="flex items-center text-sm text-gray-600">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  <span>{formatDate(details.commande.date_commande)}</span>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                  <span className="text-sm text-gray-600">Statut paiement</span>
+                  <span className="text-sm font-medium text-gray-900">
+                    {getPaymentStatusLabel(details.commande.statut_paiement)}
+                  </span>
+                </div>
+
+                {details.commande.methode_paiement && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Méthode de paiement</span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {details.commande.methode_paiement}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Informations client */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                  <User className="h-5 w-5 mr-2" />
+                  Informations client
+                </h3>
+                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                  <div>
+                    <span className="text-sm text-gray-600">Nom</span>
+                    <p className="text-sm font-medium text-gray-900">{details.commande.client_nom}</p>
+                  </div>
+                  <div className="flex items-center">
+                    <Phone className="h-4 w-4 mr-2 text-gray-500" />
+                    <span className="text-sm font-medium text-gray-900">
+                      {details.commande.client_telephone}
+                    </span>
+                  </div>
+                  <div className="flex items-start">
+                    <MapPin className="h-4 w-4 mr-2 text-gray-500 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{details.commande.client_adresse}</p>
+                      <p className="text-sm text-gray-600">
+                        {details.commande.client_commune}, {details.commande.client_ville}
+                      </p>
+                    </div>
+                  </div>
+                  {details.commande.client_instructions && (
+                    <div className="pt-2 border-t border-gray-200">
+                      <span className="text-sm text-gray-600">Instructions</span>
+                      <p className="text-sm text-gray-900 mt-1">
+                        {details.commande.client_instructions}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Articles */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                  <Package className="h-5 w-5 mr-2" />
+                  Articles ({details.nombre_articles})
+                </h3>
+                <div className="space-y-3">
+                  {details.articles.map((article, index) => (
+                    <div
+                      key={index}
+                      className="bg-gray-50 rounded-lg p-4 flex items-start space-x-4"
+                    >
+                      {article.image_url && (
+                        <img
+                          src={article.image_url}
+                          alt={article.nom_produit}
+                          className="w-16 h-16 object-cover rounded-lg"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-medium text-gray-900 truncate">
+                          {article.nom_produit}
+                        </h4>
+                        {article.description && (
+                          <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                            {article.description}
+                          </p>
+                        )}
+                        {article.variants_selectionnes && (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {Object.entries(article.variants_selectionnes).map(([key, value]) => (
+                              <span
+                                key={key}
+                                className="text-xs bg-white px-2 py-1 rounded border border-gray-200"
+                              >
+                                {key}: {value}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <div className="mt-2 flex items-center justify-between">
+                          <span className="text-sm text-gray-600">
+                            Qté: {article.quantite} × {formatPrice(article.prix_unitaire)}
+                          </span>
+                          <span className="text-sm font-semibold text-gray-900">
+                            {formatPrice(article.quantite * article.prix_unitaire)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Récapitulatif des montants */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                  <CreditCard className="h-5 w-5 mr-2" />
+                  Récapitulatif
+                </h3>
+                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Sous-total</span>
+                    <span className="font-medium text-gray-900">
+                      {formatPrice(details.commande.sous_total)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600 flex items-center">
+                      <Truck className="h-4 w-4 mr-1" />
+                      Frais de livraison
+                    </span>
+                    <span className="font-medium text-gray-900">
+                      {formatPrice(details.commande.frais_livraison)}
+                    </span>
+                  </div>
+
+                  {details.commande.taxes > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Taxes</span>
+                      <span className="font-medium text-gray-900">
+                        {formatPrice(details.commande.taxes)}
+                      </span>
+                    </div>
+                  )}
+
+                  {details.commande.remise > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Remise</span>
+                      <span className="font-medium text-green-600">
+                        -{formatPrice(details.commande.remise)}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between pt-3 border-t-2 border-gray-300">
+                    <span className="text-base font-semibold text-gray-900">Total</span>
+                    <span className="text-xl font-bold text-gray-900">
+                      {formatPrice(details.commande.total)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Dates importantes */}
+              {(details.commande.date_confirmation || 
+                details.commande.date_expedition || 
+                details.commande.date_livraison) && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Historique</h3>
+                  <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                    {details.commande.date_confirmation && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">Date de confirmation</span>
+                        <span className="font-medium text-gray-900">
+                          {formatDate(details.commande.date_confirmation)}
+                        </span>
+                      </div>
+                    )}
+                    {details.commande.date_expedition && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">Date d'expédition</span>
+                        <span className="font-medium text-gray-900">
+                          {formatDate(details.commande.date_expedition)}
+                        </span>
+                      </div>
+                    )}
+                    {details.commande.date_livraison && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">Date de livraison</span>
+                        <span className="font-medium text-gray-900">
+                          {formatDate(details.commande.date_livraison)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+};
+
+export default OrderDetailsSidebar;
+

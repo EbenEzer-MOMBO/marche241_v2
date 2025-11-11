@@ -85,6 +85,24 @@ interface ModifierCommandeData {
   methode_paiement?: string;
 }
 
+interface ArticleDetails {
+  id?: number;
+  produit_id: number;
+  quantite: number;
+  prix_unitaire: number;
+  nom_produit: string;
+  description?: string;
+  image_url?: string;
+  variants_selectionnes?: { [key: string]: any } | null;
+}
+
+interface CommandeDetailsResponse {
+  success: boolean;
+  commande: Commande;
+  articles: ArticleDetails[];
+  nombre_articles: number;
+}
+
 /**
  * Récupérer les commandes d'une boutique
  * @param boutiqueId - ID de la boutique
@@ -180,6 +198,21 @@ export async function annulerCommande(commandeId: number): Promise<Commande> {
   }
 }
 
+/**
+ * Récupérer les détails d'une commande avec ses articles
+ * @param commandeId - ID de la commande
+ * @returns Promise<CommandeDetailsResponse>
+ */
+export async function getCommandeAvecArticles(commandeId: number): Promise<CommandeDetailsResponse> {
+  try {
+    const response = await api.get<CommandeDetailsResponse>(`/commandes/${commandeId}/articles`);
+    return response;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des détails de la commande:', error);
+    throw new Error('Impossible de récupérer les détails de la commande. Veuillez réessayer.');
+  }
+}
+
 export type { 
   CreerCommandeData, 
   ArticleCommande, 
@@ -187,5 +220,7 @@ export type {
   Commande,
   CommandesParams,
   CommandesResponse,
-  ModifierCommandeData
+  ModifierCommandeData,
+  ArticleDetails,
+  CommandeDetailsResponse
 };

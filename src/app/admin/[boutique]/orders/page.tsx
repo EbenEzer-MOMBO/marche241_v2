@@ -12,6 +12,7 @@ import {
 import { ToastContainer } from '@/components/ui/Toast';
 import { useToast } from '@/hooks/useToast';
 import Sidebar from '@/components/admin/Sidebar';
+import OrderDetailsSidebar from '@/components/admin/OrderDetailsSidebar';
 import { BoutiqueData } from '@/lib/services/auth';
 import {
   Package,
@@ -40,6 +41,10 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Commande[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  
+  // États pour le sidebar de détails
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // États pour la pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -204,6 +209,16 @@ export default function OrdersPage() {
       hour: '2-digit',
       minute: '2-digit'
     }).format(new Date(dateString));
+  };
+
+  const handleViewDetails = (orderId: number) => {
+    setSelectedOrderId(orderId);
+    setIsSidebarOpen(true);
+  };
+
+  const handleCloseSidebar = () => {
+    setIsSidebarOpen(false);
+    setSelectedOrderId(null);
   };
 
   if (isLoading) {
@@ -394,7 +409,7 @@ export default function OrdersPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
-                        onClick={() => router.push(`/admin/${boutiqueName}/orders/${order.id}`)}
+                        onClick={() => handleViewDetails(order.id)}
                         className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"
                         title="Voir détails"
                       >
@@ -449,7 +464,7 @@ export default function OrdersPage() {
                 </div>
 
                 <button
-                  onClick={() => router.push(`/admin/${boutiqueName}/orders/${order.id}`)}
+                  onClick={() => handleViewDetails(order.id)}
                   className="w-full flex items-center justify-center px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm"
                 >
                   <Eye className="h-4 w-4 mr-2" />
@@ -503,6 +518,13 @@ export default function OrdersPage() {
           )}
         </div>
       </div>
+
+      {/* Sidebar des détails de commande */}
+      <OrderDetailsSidebar
+        commandeId={selectedOrderId}
+        isOpen={isSidebarOpen}
+        onClose={handleCloseSidebar}
+      />
     </div>
   );
 }
