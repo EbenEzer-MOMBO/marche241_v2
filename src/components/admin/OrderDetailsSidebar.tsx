@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react';
 import { X, Package, User, MapPin, Phone, Calendar, CreditCard, Truck } from 'lucide-react';
 import { 
-  getCommandeAvecArticles, 
-  type CommandeDetailsResponse 
+  getCommandeAvecArticles,
+  getCommandeById,
+  type CommandeDetailsResponse,
+  type Commande
 } from '@/lib/services/commandes';
 
 interface OrderDetailsSidebarProps {
@@ -16,6 +18,7 @@ interface OrderDetailsSidebarProps {
 const OrderDetailsSidebar = ({ commandeId, isOpen, onClose }: OrderDetailsSidebarProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [details, setDetails] = useState<CommandeDetailsResponse | null>(null);
+  const [commandeInfo, setCommandeInfo] = useState<Commande | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -26,8 +29,14 @@ const OrderDetailsSidebar = ({ commandeId, isOpen, onClose }: OrderDetailsSideba
       setError(null);
 
       try {
-        const data = await getCommandeAvecArticles(commandeId);
-        setDetails(data);
+        // Récupérer les informations de la commande et les articles en parallèle
+        const [commandeData, articlesData] = await Promise.all([
+          getCommandeById(commandeId),
+          getCommandeAvecArticles(commandeId)
+        ]);
+
+        setCommandeInfo(commandeData);
+        setDetails(articlesData);
       } catch (err) {
         console.error('Erreur chargement détails commande:', err);
         setError('Impossible de charger les détails de la commande');
@@ -123,7 +132,7 @@ const OrderDetailsSidebar = ({ commandeId, isOpen, onClose }: OrderDetailsSideba
       />
 
       {/* Sidebar */}
-      <div className="fixed right-0 top-0 h-full w-full sm:w-[500px] lg:w-[600px] bg-white shadow-2xl z-50 overflow-y-auto">
+      <div className="fixed right-0 top-0 h-full sm:w-[500px] lg:w-[600px] bg-white shadow-2xl z-50 overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
           <h2 className="text-xl font-bold text-gray-900">Détails de la commande</h2>
@@ -150,40 +159,40 @@ const OrderDetailsSidebar = ({ commandeId, isOpen, onClose }: OrderDetailsSideba
             </div>
           )}
 
-          {!isLoading && !error && details && (
+          {!isLoading && !error && details && commandeInfo && (
             <div className="space-y-6">
               {/* Informations générales */}
               <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-900">
-                    {details.commande.numero_commande}
+                    {commandeInfo.numero_commande}
                   </h3>
                   <span
                     className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(
-                      details.commande.statut
+                      commandeInfo.statut
                     )}`}
                   >
-                    {getStatusLabel(details.commande.statut)}
+                    {getStatusLabel(commandeInfo.statut)}
                   </span>
                 </div>
 
                 <div className="flex items-center text-sm text-gray-600">
                   <Calendar className="h-4 w-4 mr-2" />
-                  <span>{formatDate(details.commande.date_commande)}</span>
+                  <span>{formatDate(commandeInfo.date_commande)}</span>
                 </div>
 
                 <div className="flex items-center justify-between pt-2 border-t border-gray-200">
                   <span className="text-sm text-gray-600">Statut paiement</span>
                   <span className="text-sm font-medium text-gray-900">
-                    {getPaymentStatusLabel(details.commande.statut_paiement)}
+                    {getPaymentStatusLabel(commandeInfo.statut_paiement)}
                   </span>
                 </div>
 
-                {details.commande.methode_paiement && (
+                {commandeInfo.methode_paiement && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Méthode de paiement</span>
                     <span className="text-sm font-medium text-gray-900">
-                      {details.commande.methode_paiement}
+                      {commandeInfo.methode_paiement}
                     </span>
                   </div>
                 )}
@@ -198,29 +207,44 @@ const OrderDetailsSidebar = ({ commandeId, isOpen, onClose }: OrderDetailsSideba
                 <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                   <div>
                     <span className="text-sm text-gray-600">Nom</span>
-                    <p className="text-sm font-medium text-gray-900">{details.commande.client_nom}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {commandeInfo.client_nom || 'Non renseigné'}
+                    </p>
                   </div>
-                  <div className="flex items-center">
-                    <Phone className="h-4 w-4 mr-2 text-gray-500" />
-                    <span className="text-sm font-medium text-gray-900">
-                      {details.commande.client_telephone}
-                    </span>
-                  </div>
-                  <div className="flex items-start">
-                    <MapPin className="h-4 w-4 mr-2 text-gray-500 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{details.commande.client_adresse}</p>
-                      <p className="text-sm text-gray-600">
-                        {details.commande.client_commune}, {details.commande.client_ville}
-                      </p>
+                  {commandeInfo.client_telephone && (
+                    <div className="flex items-center">
+                      <Phone className="h-4 w-4 mr-2 text-gray-500" />
+                      <span className="text-sm font-medium text-gray-900">
+                        {commandeInfo.client_telephone}
+                      </span>
                     </div>
-                  </div>
-                  {details.commande.client_instructions && (
+                  )}
+                  {(commandeInfo.client_adresse || commandeInfo.client_ville || commandeInfo.client_commune) && (
+                    <div className="flex items-start">
+                      <MapPin className="h-4 w-4 mr-2 text-gray-500 mt-0.5" />
+                      <div>
+                        {commandeInfo.client_adresse && (
+                          <p className="text-sm font-medium text-gray-900">{commandeInfo.client_adresse}</p>
+                        )}
+                        {commandeInfo.client_commune && (
+                          <p className="text-sm text-gray-600">
+                            {commandeInfo.client_commune}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {commandeInfo.client_instructions && (
                     <div className="pt-2 border-t border-gray-200">
                       <span className="text-sm text-gray-600">Instructions</span>
                       <p className="text-sm text-gray-900 mt-1">
-                        {details.commande.client_instructions}
+                        {commandeInfo.client_instructions}
                       </p>
+                    </div>
+                  )}
+                  {!commandeInfo.client_nom && !commandeInfo.client_telephone && !commandeInfo.client_adresse && (
+                    <div className="text-center py-4">
+                      <p className="text-sm text-gray-500">Aucune information client disponible</p>
                     </div>
                   )}
                 </div>
@@ -290,7 +314,7 @@ const OrderDetailsSidebar = ({ commandeId, isOpen, onClose }: OrderDetailsSideba
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-600">Sous-total</span>
                     <span className="font-medium text-gray-900">
-                      {formatPrice(details.commande.sous_total)}
+                      {formatPrice(commandeInfo.sous_total)}
                     </span>
                   </div>
 
@@ -300,24 +324,24 @@ const OrderDetailsSidebar = ({ commandeId, isOpen, onClose }: OrderDetailsSideba
                       Frais de livraison
                     </span>
                     <span className="font-medium text-gray-900">
-                      {formatPrice(details.commande.frais_livraison)}
+                      {formatPrice(commandeInfo.frais_livraison)}
                     </span>
                   </div>
 
-                  {details.commande.taxes > 0 && (
+                  {commandeInfo.taxes > 0 && (
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-600">Taxes</span>
                       <span className="font-medium text-gray-900">
-                        {formatPrice(details.commande.taxes)}
+                        {formatPrice(commandeInfo.taxes)}
                       </span>
                     </div>
                   )}
 
-                  {details.commande.remise > 0 && (
+                  {commandeInfo.remise > 0 && (
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-600">Remise</span>
                       <span className="font-medium text-green-600">
-                        -{formatPrice(details.commande.remise)}
+                        -{formatPrice(commandeInfo.remise)}
                       </span>
                     </div>
                   )}
@@ -325,40 +349,40 @@ const OrderDetailsSidebar = ({ commandeId, isOpen, onClose }: OrderDetailsSideba
                   <div className="flex items-center justify-between pt-3 border-t-2 border-gray-300">
                     <span className="text-base font-semibold text-gray-900">Total</span>
                     <span className="text-xl font-bold text-gray-900">
-                      {formatPrice(details.commande.total)}
+                      {formatPrice(commandeInfo.total)}
                     </span>
                   </div>
                 </div>
               </div>
 
               {/* Dates importantes */}
-              {(details.commande.date_confirmation || 
-                details.commande.date_expedition || 
-                details.commande.date_livraison) && (
+              {(commandeInfo.date_confirmation || 
+                commandeInfo.date_expedition || 
+                commandeInfo.date_livraison) && (
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-3">Historique</h3>
                   <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                    {details.commande.date_confirmation && (
+                    {commandeInfo.date_confirmation && (
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-600">Date de confirmation</span>
                         <span className="font-medium text-gray-900">
-                          {formatDate(details.commande.date_confirmation)}
+                          {formatDate(commandeInfo.date_confirmation)}
                         </span>
                       </div>
                     )}
-                    {details.commande.date_expedition && (
+                    {commandeInfo.date_expedition && (
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-600">Date d'expédition</span>
                         <span className="font-medium text-gray-900">
-                          {formatDate(details.commande.date_expedition)}
+                          {formatDate(commandeInfo.date_expedition)}
                         </span>
                       </div>
                     )}
-                    {details.commande.date_livraison && (
+                    {commandeInfo.date_livraison && (
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-600">Date de livraison</span>
                         <span className="font-medium text-gray-900">
-                          {formatDate(details.commande.date_livraison)}
+                          {formatDate(commandeInfo.date_livraison)}
                         </span>
                       </div>
                     )}

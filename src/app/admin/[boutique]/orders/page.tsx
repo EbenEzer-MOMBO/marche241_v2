@@ -3,11 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { 
-  getCommandesParBoutique, 
+import {
+  getCommandesParBoutique,
   modifierCommande,
   type Commande,
-  type CommandesParams 
+  type CommandesParams
 } from '@/lib/services/commandes';
 import { ToastContainer } from '@/components/ui/Toast';
 import { useToast } from '@/hooks/useToast';
@@ -23,8 +23,7 @@ import {
   XCircle,
   Truck,
   Eye,
-  AlertCircle,
-  Filter
+  AlertCircle
 } from 'lucide-react';
 
 export default function OrdersPage() {
@@ -41,48 +40,33 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Commande[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  
+
   // États pour le sidebar de détails
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // États pour la pagination
+  // États pour la pagination côté client
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalOrders, setTotalOrders] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
-  const [sortBy, setSortBy] = useState('date_commande');
-  const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC');
+  const pageSize = 10;
 
-  // Fonction pour charger les commandes
+  // Fonction pour charger toutes les commandes depuis l'API
   const loadOrders = async (boutiqueId: number) => {
     try {
       setIsLoading(true);
 
-      const params: CommandesParams = {
-        page: currentPage,
-        limite: pageSize,
-        tri_par: sortBy,
-        ordre: sortOrder
-      };
+      // Charger toutes les commandes sans pagination côté serveur
+      const response = await getCommandesParBoutique(boutiqueId, {
+        page: 1,
+        limite: 100, // Charger jusqu'à 100 commandes
+        tri_par: 'date_commande',
+        ordre: 'DESC'
+      });
 
-      if (filterStatus !== 'all') {
-        params.statut = filterStatus;
-      }
-
-      if (searchTerm) {
-        params.recherche = searchTerm;
-      }
-
-      const response = await getCommandesParBoutique(boutiqueId, params);
-      
       console.log('📦 Réponse API commandes:', response);
       console.log('📋 Données commandes:', response.commandes);
       console.log('🔢 Total commandes:', response.total);
-      
+
       setOrders(response.commandes || []);
-      setTotalOrders(response.total || 0);
-      setTotalPages(response.total_pages || 1);
     } catch (error) {
       console.error('Erreur lors du chargement des commandes:', error);
       showError('Erreur lors du chargement des commandes');
@@ -129,12 +113,27 @@ export default function OrdersPage() {
     return () => clearTimeout(timer);
   }, [user, boutiqueName, router]);
 
-  // Recharger les commandes quand les paramètres changent
-  useEffect(() => {
-    if (boutique) {
-      loadOrders(boutique.id);
-    }
-  }, [boutique, currentPage, pageSize, sortBy, sortOrder, filterStatus, searchTerm]);
+  // Filtrer et paginer les commandes côté client
+  const filteredOrders = orders.filter(order => {
+    // Filtre par statut
+    const matchStatus = filterStatus === 'all' || order.statut.toLowerCase() === filterStatus.toLowerCase();
+    
+    // Filtre par recherche
+    const searchLower = searchTerm.toLowerCase();
+    const matchSearch = !searchTerm || 
+      order.numero_commande.toLowerCase().includes(searchLower) ||
+      order.client_nom.toLowerCase().includes(searchLower) ||
+      order.client_telephone.toLowerCase().includes(searchLower);
+    
+    return matchStatus && matchSearch;
+  });
+
+  // Calcul de la pagination
+  const totalOrders = filteredOrders.length;
+  const totalPages = Math.ceil(totalOrders / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
 
   const getStatusColor = (statut: string) => {
     switch (statut.toLowerCase()) {
@@ -221,6 +220,22 @@ export default function OrdersPage() {
     setSelectedOrderId(null);
   };
 
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1); // Réinitialiser à la page 1 lors d'une recherche
+  };
+
+  const handleFilterChange = (status: string) => {
+    setFilterStatus(status);
+    setCurrentPage(1); // Réinitialiser à la page 1 lors d'un changement de filtre
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    // Scroll vers le haut lors du changement de page
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -287,66 +302,68 @@ export default function OrdersPage() {
                 type="text"
                 placeholder="Rechercher par numéro de commande, client..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
               />
             </div>
 
-            {/* Filters */}
+            {/* Filters et compteur de résultats */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
               {/* Status Filter */}
               <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={() => setFilterStatus('all')}
-                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                    filterStatus === 'all'
+                  onClick={() => handleFilterChange('all')}
+                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${filterStatus === 'all'
                       ? 'bg-black text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                    }`}
                 >
                   Toutes
                 </button>
                 <button
-                  onClick={() => setFilterStatus('en_attente')}
-                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                    filterStatus === 'en_attente'
+                  onClick={() => handleFilterChange('en_attente')}
+                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${filterStatus === 'en_attente'
                       ? 'bg-yellow-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                    }`}
                 >
                   En attente
                 </button>
                 <button
-                  onClick={() => setFilterStatus('confirmee')}
-                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                    filterStatus === 'confirmee'
+                  onClick={() => handleFilterChange('confirmee')}
+                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${filterStatus === 'confirmee'
                       ? 'bg-blue-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                    }`}
                 >
                   Confirmées
                 </button>
                 <button
-                  onClick={() => setFilterStatus('expediee')}
-                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                    filterStatus === 'expediee'
+                  onClick={() => handleFilterChange('expediee')}
+                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${filterStatus === 'expediee'
                       ? 'bg-indigo-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                    }`}
                 >
                   Expédiées
                 </button>
                 <button
-                  onClick={() => setFilterStatus('livree')}
-                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                    filterStatus === 'livree'
+                  onClick={() => handleFilterChange('livree')}
+                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${filterStatus === 'livree'
                       ? 'bg-green-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                    }`}
                 >
                   Livrées
                 </button>
               </div>
+
+              {/* Compteur de résultats */}
+              {!isLoading && totalOrders > 0 && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">{totalOrders}</span> commande{totalOrders > 1 ? 's' : ''} trouvée{totalOrders > 1 ? 's' : ''}
+                </div>
+              )}
             </div>
           </div>
 
@@ -374,10 +391,10 @@ export default function OrdersPage() {
                     Actions
                   </th>
                 </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {orders && orders.map((order) => (
-                  <tr key={order.id} className="hover:bg-gray-50">
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {paginatedOrders.map((order) => (
+                    <tr key={order.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
                         {order.numero_commande}
@@ -424,7 +441,7 @@ export default function OrdersPage() {
 
           {/* Orders Cards - Mobile */}
           <div className="lg:hidden space-y-3">
-            {orders && orders.map((order) => (
+            {paginatedOrders.map((order) => (
               <div
                 key={order.id}
                 className="bg-white rounded-lg shadow-sm border border-gray-200 p-4"
@@ -475,10 +492,12 @@ export default function OrdersPage() {
           </div>
 
           {/* Empty State */}
-          {orders && orders.length === 0 && !isLoading && (
+          {filteredOrders.length === 0 && !isLoading && (
             <div className="text-center py-12">
               <Package className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune commande trouvée</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                {searchTerm || filterStatus !== 'all' ? 'Aucune commande trouvée' : 'Aucune commande'}
+              </h3>
               <p className="text-gray-500">
                 {searchTerm || filterStatus !== 'all'
                   ? 'Aucune commande ne correspond à vos critères de recherche.'
@@ -489,27 +508,89 @@ export default function OrdersPage() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="mt-8 flex items-center justify-between border-t border-gray-200 pt-6">
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 pt-6 gap-4">
               <div className="flex items-center">
                 <p className="text-sm text-gray-700">
-                  Page <span className="font-medium">{currentPage}</span> sur{' '}
-                  <span className="font-medium">{totalPages}</span>
+                  Affichage de{' '}
+                  <span className="font-medium">
+                    {Math.min((currentPage - 1) * pageSize + 1, totalOrders)}
+                  </span>{' '}
+                  à{' '}
+                  <span className="font-medium">
+                    {Math.min(currentPage * pageSize, totalOrders)}
+                  </span>{' '}
+                  sur <span className="font-medium">{totalOrders}</span> commande{totalOrders > 1 ? 's' : ''}
                 </p>
               </div>
 
               <div className="flex items-center space-x-2">
                 <button
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
-                  className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Précédent
                 </button>
 
+                <div className="hidden sm:flex items-center space-x-1">
+                  {currentPage > 2 && (
+                    <>
+                      <button
+                        onClick={() => handlePageChange(1)}
+                        className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                      >
+                        1
+                      </button>
+                      {currentPage > 3 && (
+                        <span className="px-2 text-gray-500">...</span>
+                      )}
+                    </>
+                  )}
+
+                  {currentPage > 1 && (
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                    >
+                      {currentPage - 1}
+                    </button>
+                  )}
+
+                  <button
+                    disabled
+                    className="px-3 py-2 text-sm font-medium text-white bg-black border border-black rounded-md cursor-default"
+                  >
+                    {currentPage}
+                  </button>
+
+                  {currentPage < totalPages && (
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                    >
+                      {currentPage + 1}
+                    </button>
+                  )}
+
+                  {currentPage < totalPages - 1 && (
+                    <>
+                      {currentPage < totalPages - 2 && (
+                        <span className="px-2 text-gray-500">...</span>
+                      )}
+                      <button
+                        onClick={() => handlePageChange(totalPages)}
+                        className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                      >
+                        {totalPages}
+                      </button>
+                    </>
+                  )}
+                </div>
+
                 <button
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
-                  className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Suivant
                 </button>
