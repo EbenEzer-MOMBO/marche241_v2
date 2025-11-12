@@ -87,9 +87,31 @@ interface PanierItem {
   };
 }
 
+interface ProduitSupprime {
+  id: number;
+  nom: string;
+  raison: string;
+  variants?: { [key: string]: any };
+}
+
+interface QuantiteAjustee {
+  id: number;
+  nom: string;
+  quantiteOriginale: number;
+  nouvelleQuantite: number;
+  stockDisponible: number;
+  variants?: { [key: string]: any };
+}
+
+interface Avertissements {
+  produitsSupprimes?: ProduitSupprime[];
+  quantitesAjustees?: QuantiteAjustee[];
+}
+
 interface PanierResponse {
   success: boolean;
   panier: PanierItem[];
+  avertissements?: Avertissements;
 }
 
 /**

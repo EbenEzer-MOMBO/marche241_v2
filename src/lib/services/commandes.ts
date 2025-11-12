@@ -50,6 +50,25 @@ interface Commande {
   statut_paiement: string;
   taxes: number;
   total: number;
+  montant_paye?: number;
+  montant_restant?: number;
+  articles?: any[];
+  transactions?: Transaction[];
+}
+
+interface Transaction {
+  id: number;
+  commande_id: number;
+  reference_transaction: string;
+  montant: number;
+  methode_paiement: string;
+  statut: string;
+  numero_telephone?: string;
+  reference_operateur?: string;
+  date_creation: string;
+  date_confirmation?: string;
+  date_modification: string;
+  notes?: string;
 }
 
 interface CommandeResponse {
@@ -222,5 +241,6 @@ export type {
   CommandesResponse,
   ModifierCommandeData,
   ArticleDetails,
-  CommandeDetailsResponse
+  CommandeDetailsResponse,
+  Transaction
 };

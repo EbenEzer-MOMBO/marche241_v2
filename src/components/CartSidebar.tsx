@@ -2,18 +2,11 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { X, Spinner, Minus, Plus, Trash, Check } from '@phosphor-icons/react';
+import { X, Spinner, Minus, Plus, Trash, Check, Warning, Info } from '@phosphor-icons/react';
 import { formatPrice } from '@/lib/utils';
 import { usePanier } from '@/hooks/usePanier';
 import { getProduitImageUrl } from '@/lib/services/produits';
 import { useState } from 'react';
-
-interface RecommendedProduct {
-  id: string;
-  name: string;
-  price: number;
-  image: string;
-}
 
 interface CartSidebarProps {
   isOpen: boolean;
@@ -28,7 +21,9 @@ export default function CartSidebar({ isOpen, onClose, boutiqueName = 'marche_24
     totalItems, 
     totalPrix, 
     loading, 
-    error, 
+    error,
+    avertissements,
+    clearAvertissements,
     mettreAJourQuantite, 
     supprimerItem 
   } = usePanier();
@@ -36,30 +31,7 @@ export default function CartSidebar({ isOpen, onClose, boutiqueName = 'marche_24
   // État pour gérer les confirmations de suppression
   const [itemsToDelete, setItemsToDelete] = useState<Set<number>>(new Set());
 
-  // Produits recommandés
-  const recommendedProducts: RecommendedProduct[] = [
-    {
-      id: '2',
-      name: 'Leyla set ( boucle + bracelet +Collier )',
-      price: 15500,
-      image: '/article1.webp'
-    },
-    {
-      id: '3', 
-      name: 'Your Princess Ring',
-      price: 25500,
-      image: '/article3.webp'
-    },
-    {
-      id: '4',
-      name: 'Pinky Bow ring',
-      price: 26500,
-      image: '/article4.webp'
-    }
-  ];
-
-
-
+  
   // Fonction pour formater les variants sélectionnés
   const formatVariants = (variants: { [key: string]: any } | null) => {
     if (!variants) return '';
@@ -131,6 +103,70 @@ export default function CartSidebar({ isOpen, onClose, boutiqueName = 'marche_24
               <X size={24} />
             </button>
           </div>
+
+          {/* Avertissements */}
+          {avertissements && (avertissements.produitsSupprimes?.length || avertissements.quantitesAjustees?.length) && (
+            <div className="p-4 bg-yellow-50 border-b border-yellow-100">
+              {/* Produits supprimés */}
+              {avertissements.produitsSupprimes && avertissements.produitsSupprimes.length > 0 && (
+                <div className="mb-3">
+                  <div className="flex items-start mb-2">
+                    <Warning size={20} className="text-red-600 mr-2 mt-0.5 flex-shrink-0" weight="fill" />
+                    <div className="flex-1">
+                      <h3 className="text-sm font-semibold text-red-900 mb-1">
+                        Produit{avertissements.produitsSupprimes.length > 1 ? 's' : ''} supprimé{avertissements.produitsSupprimes.length > 1 ? 's' : ''}
+                      </h3>
+                      <div className="space-y-1">
+                        {avertissements.produitsSupprimes.map((produit, idx) => (
+                          <div key={idx} className="text-xs text-red-800">
+                            <span className="font-medium">{produit.nom}</span>
+                            {produit.variants && Object.keys(produit.variants).length > 0 && (
+                              <span className="text-red-700"> ({Object.entries(produit.variants).map(([k, v]) => `${k}: ${v}`).join(', ')})</span>
+                            )}
+                            <span className="text-red-700"> - {produit.raison}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Quantités ajustées */}
+              {avertissements.quantitesAjustees && avertissements.quantitesAjustees.length > 0 && (
+                <div className={avertissements.produitsSupprimes?.length ? 'pt-3 border-t border-yellow-200' : ''}>
+                  <div className="flex items-start mb-2">
+                    <Info size={20} className="text-orange-600 mr-2 mt-0.5 flex-shrink-0" weight="fill" />
+                    <div className="flex-1">
+                      <h3 className="text-sm font-semibold text-orange-900 mb-1">
+                        Quantité{avertissements.quantitesAjustees.length > 1 ? 's' : ''} ajustée{avertissements.quantitesAjustees.length > 1 ? 's' : ''}
+                      </h3>
+                      <div className="space-y-1">
+                        {avertissements.quantitesAjustees.map((produit, idx) => (
+                          <div key={idx} className="text-xs text-orange-800">
+                            <span className="font-medium">{produit.nom}</span>
+                            {produit.variants && Object.keys(produit.variants).length > 0 && (
+                              <span className="text-orange-700"> ({Object.entries(produit.variants).map(([k, v]) => `${k}: ${v}`).join(', ')})</span>
+                            )}
+                            <span className="text-orange-700"> - Quantité réduite de {produit.quantiteOriginale} à {produit.nouvelleQuantite} (stock: {produit.stockDisponible})</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Bouton pour fermer les avertissements */}
+              <button
+                onClick={clearAvertissements}
+                className="mt-2 text-xs text-yellow-800 hover:text-yellow-900 font-medium flex items-center"
+              >
+                <X size={14} className="mr-1" />
+                Masquer
+              </button>
+            </div>
+          )}
 
           {/* Contenu du panier */}
           <div className="flex-1 overflow-y-auto">
@@ -268,46 +304,6 @@ export default function CartSidebar({ isOpen, onClose, boutiqueName = 'marche_24
                   </div>
                 ))}
 
-                {/* Section "Les gens ont aussi acheté" */}
-                <div className="border-t border-gray-200 pt-6 mt-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Les gens ont aussi acheté
-                  </h3>
-                  <div className="space-y-4">
-                    {recommendedProducts.map((product) => (
-                      <div key={product.id} className="flex items-center space-x-3">
-                        {/* Image du produit */}
-                        <div className="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                          <Image 
-                            src={product.image} 
-                            alt={product.name} 
-                            width={48} 
-                            height={48}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-
-                        {/* Informations du produit */}
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-medium text-gray-900 line-clamp-2 mb-1">
-                            {product.name}
-                          </h4>
-                          <p className="text-sm font-semibold text-gray-900">
-                            {formatPrice(product.price)}
-                          </p>
-                        </div>
-
-                        {/* Bouton ajouter */}
-                        <button
-                          className="w-8 h-8 bg-white border border-gray-300 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors duration-200 flex-shrink-0"
-                          aria-label="Ajouter au panier"
-                        >
-                          <Plus size={16} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
 
                 {/* Total et bouton de validation */}
                 <div className="border-t border-gray-200 pt-4 mt-6">

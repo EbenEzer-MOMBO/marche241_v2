@@ -71,12 +71,35 @@ interface PanierItem {
   };
 }
 
+interface ProduitSupprime {
+  id: number;
+  nom: string;
+  raison: string;
+  variants?: { [key: string]: any };
+}
+
+interface QuantiteAjustee {
+  id: number;
+  nom: string;
+  quantiteOriginale: number;
+  nouvelleQuantite: number;
+  stockDisponible: number;
+  variants?: { [key: string]: any };
+}
+
+interface Avertissements {
+  produitsSupprimes?: ProduitSupprime[];
+  quantitesAjustees?: QuantiteAjustee[];
+}
+
 interface UsePanierResult {
   panier: PanierItem[];
   totalItems: number;
   totalPrix: number;
   loading: boolean;
   error: string | null;
+  avertissements: Avertissements | null;
+  clearAvertissements: () => void;
   ajouterProduit: (
     boutiqueId: number,
     produitId: number,
@@ -99,6 +122,7 @@ export function usePanier(): UsePanierResult {
   const [totalPrix, setTotalPrix] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [avertissements, setAvertissements] = useState<Avertissements | null>(null);
 
   const chargerPanier = useCallback(async () => {
     try {
@@ -107,6 +131,17 @@ export function usePanier(): UsePanierResult {
       
       const response = await getPanier();
       setPanier(response.panier);
+      
+      // Gérer les avertissements s'ils existent
+      if (response.avertissements) {
+        const hasWarnings = 
+          (response.avertissements.produitsSupprimes && response.avertissements.produitsSupprimes.length > 0) ||
+          (response.avertissements.quantitesAjustees && response.avertissements.quantitesAjustees.length > 0);
+        
+        if (hasWarnings) {
+          setAvertissements(response.avertissements);
+        }
+      }
       
       // Calculer les totaux à partir des données du panier
       const totalItems = response.panier.reduce((total, item) => total + item.quantite, 0);
@@ -217,6 +252,11 @@ export function usePanier(): UsePanierResult {
     }
   }, [chargerPanier]);
 
+  // Fonction pour effacer les avertissements
+  const clearAvertissements = useCallback(() => {
+    setAvertissements(null);
+  }, []);
+
   // Charger le panier au montage du composant
   useEffect(() => {
     chargerPanier();
@@ -228,6 +268,8 @@ export function usePanier(): UsePanierResult {
     totalPrix,
     loading,
     error,
+    avertissements,
+    clearAvertissements,
     ajouterProduit,
     mettreAJourQuantite,
     supprimerItem,

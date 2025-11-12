@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, Package, User, MapPin, Phone, Calendar, CreditCard, Truck } from 'lucide-react';
-import { 
+import { X, Package, User, MapPin, Phone, Calendar, CreditCard, Truck, Receipt, CheckCircle2, XCircle } from 'lucide-react';
+import Image from 'next/image';
+import {
   getCommandeAvecArticles,
   getCommandeById,
   type CommandeDetailsResponse,
-  type Commande
+  type Commande,
+  type Transaction
 } from '@/lib/services/commandes';
 
 interface OrderDetailsSidebarProps {
@@ -191,9 +193,29 @@ const OrderDetailsSidebar = ({ commandeId, isOpen, onClose }: OrderDetailsSideba
                 {commandeInfo.methode_paiement && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Méthode de paiement</span>
-                    <span className="text-sm font-medium text-gray-900">
-                      {commandeInfo.methode_paiement}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {commandeInfo.methode_paiement === 'airtel_money' ? (
+                        <Image
+                          className="rounded-md"
+                          src="/airtel_money.png"
+                          alt="Airtel Money"
+                          width={40}
+                          height={40}
+                        />
+                      ) : commandeInfo.methode_paiement === 'moov_money' ? (
+                        <Image
+                          className="rounded-md"
+                          src="/moov_money.png"
+                          alt="Moov Money"
+                          width={40}
+                          height={40}
+                        />
+                      ) : (
+                        <span className="text-sm font-medium text-gray-900">
+                          {commandeInfo.methode_paiement}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -352,43 +374,151 @@ const OrderDetailsSidebar = ({ commandeId, isOpen, onClose }: OrderDetailsSideba
                       {formatPrice(commandeInfo.total)}
                     </span>
                   </div>
+
+                  {/* Montants payé et restant */}
+                  {(commandeInfo.montant_paye !== undefined || commandeInfo.montant_restant !== undefined) && (
+                    <>
+                      {commandeInfo.montant_paye !== undefined && commandeInfo.montant_paye > 0 && (
+                        <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                          <span className="text-sm text-gray-600 flex items-center">
+                            <CheckCircle2 className="h-4 w-4 mr-1 text-green-600" />
+                            Montant payé
+                          </span>
+                          <span className="text-sm font-semibold text-green-600">
+                            {formatPrice(commandeInfo.montant_paye)}
+                          </span>
+                        </div>
+                      )}
+                      {commandeInfo.montant_restant !== undefined && commandeInfo.montant_restant > 0 && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600 flex items-center">
+                            <XCircle className="h-4 w-4 mr-1 text-orange-600" />
+                            Montant restant
+                          </span>
+                          <span className="text-sm font-semibold text-orange-600">
+                            {formatPrice(commandeInfo.montant_restant)}
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
 
-              {/* Dates importantes */}
-              {(commandeInfo.date_confirmation || 
-                commandeInfo.date_expedition || 
-                commandeInfo.date_livraison) && (
+              {/* Transactions */}
+              {commandeInfo.transactions && commandeInfo.transactions.length > 0 && (
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Historique</h3>
-                  <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                    {commandeInfo.date_confirmation && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">Date de confirmation</span>
-                        <span className="font-medium text-gray-900">
-                          {formatDate(commandeInfo.date_confirmation)}
-                        </span>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                    <Receipt className="h-5 w-5 mr-2" />
+                    Transactions ({commandeInfo.transactions.length})
+                  </h3>
+                  <div className="space-y-3">
+                    {commandeInfo.transactions.map((transaction, index) => (
+                      <div
+                        key={transaction.id}
+                        className="bg-gray-50 rounded-lg p-4"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-mono text-gray-500">
+                            {transaction.reference_transaction}
+                          </span>
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${transaction.statut.toLowerCase() === 'paye'
+                                ? 'bg-green-100 text-green-800'
+                                : transaction.statut.toLowerCase() === 'en_attente'
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : transaction.statut.toLowerCase() === 'echoue'
+                                    ? 'bg-red-100 text-red-800'
+                                    : 'bg-gray-100 text-gray-800'
+                              }`}
+                          >
+                            {getPaymentStatusLabel(transaction.statut)}
+                          </span>
+                        </div>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-600">Montant</span>
+                            <span className="font-semibold text-gray-900">
+                              {formatPrice(transaction.montant)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-600">Méthode</span>
+                            <span className="font-medium text-gray-900">
+                              {transaction.methode_paiement}
+                            </span>
+                          </div>
+                          {transaction.numero_telephone && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-600">Téléphone</span>
+                              <span className="font-medium text-gray-900">
+                                {transaction.numero_telephone}
+                              </span>
+                            </div>
+                          )}
+                          {transaction.reference_operateur && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-600">Réf. opérateur</span>
+                              <span className="font-mono text-xs text-gray-900">
+                                {transaction.reference_operateur}
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex items-center justify-between pt-1 border-t border-gray-200 mt-1">
+                            <span className="text-gray-600">Date</span>
+                            <span className="text-gray-900">
+                              {formatDate(transaction.date_creation)}
+                            </span>
+                          </div>
+                          {transaction.date_confirmation && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-600">Confirmé le</span>
+                              <span className="text-gray-900">
+                                {formatDate(transaction.date_confirmation)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    )}
-                    {commandeInfo.date_expedition && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">Date d'expédition</span>
-                        <span className="font-medium text-gray-900">
-                          {formatDate(commandeInfo.date_expedition)}
-                        </span>
-                      </div>
-                    )}
-                    {commandeInfo.date_livraison && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">Date de livraison</span>
-                        <span className="font-medium text-gray-900">
-                          {formatDate(commandeInfo.date_livraison)}
-                        </span>
-                      </div>
-                    )}
+                    ))}
                   </div>
                 </div>
               )}
+
+              {/* Dates importantes */}
+              {(commandeInfo.date_confirmation ||
+                commandeInfo.date_expedition ||
+                commandeInfo.date_livraison) && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Historique</h3>
+                    <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                      {commandeInfo.date_confirmation && (
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">Date de confirmation</span>
+                          <span className="font-medium text-gray-900">
+                            {formatDate(commandeInfo.date_confirmation)}
+                          </span>
+                        </div>
+                      )}
+                      {commandeInfo.date_expedition && (
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">Date d'expédition</span>
+                          <span className="font-medium text-gray-900">
+                            {formatDate(commandeInfo.date_expedition)}
+                          </span>
+                        </div>
+                      )}
+                      {commandeInfo.date_livraison && (
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">Date de livraison</span>
+                          <span className="font-medium text-gray-900">
+                            {formatDate(commandeInfo.date_livraison)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
             </div>
           )}
         </div>

@@ -1,11 +1,13 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { CheckCircle, Mail, MessageSquare, Package, ArrowLeft } from 'lucide-react';
 
 export default function ConfirmationPage() {
   const searchParams = useSearchParams();
+  const params = useParams();
+  const boutiqueSlug = params.boutique as string;
   const numeroCommande = searchParams.get('commande');
   const typePaiement = searchParams.get('type'); // 'partiel' ou 'complet'
 
@@ -15,7 +17,7 @@ export default function ConfirmationPage() {
         {/* Card principale */}
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
           {/* Header avec animation de succès */}
-          <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-8 text-center">
+          <div className="bg-black p-8 text-center">
             <div className="inline-flex items-center justify-center w-24 h-24 bg-white rounded-full mb-4 animate-bounce">
               <CheckCircle className="w-16 h-16 text-green-500" />
             </div>
@@ -36,7 +38,7 @@ export default function ConfirmationPage() {
                   <Package className="w-6 h-6 text-gray-600 mr-3" />
                   <div>
                     <p className="text-sm text-gray-600">Numéro de commande</p>
-                    <p className="text-2xl font-bold text-gray-900">{numeroCommande}</p>
+                    <p className="text-xl font-bold text-gray-900">{numeroCommande}</p>
                   </div>
                 </div>
               </div>
@@ -88,7 +90,7 @@ export default function ConfirmationPage() {
               <h2 className="text-xl font-semibold text-gray-900 mb-4">
                 Prochaines étapes
               </h2>
-              
+
               <div className="flex items-start space-x-3">
                 <div className="flex-shrink-0">
                   <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
@@ -142,17 +144,11 @@ export default function ConfirmationPage() {
             {/* Boutons d'action */}
             <div className="flex flex-col sm:flex-row gap-3">
               <Link
-                href="/"
+                href={`/${boutiqueSlug}`}
                 className="flex-1 flex items-center justify-center px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Retour à l'accueil
-              </Link>
-              <Link
-                href="/boutique"
-                className="flex-1 flex items-center justify-center px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
-              >
-                Continuer mes achats
+                Retour à la boutique
               </Link>
             </div>
           </div>

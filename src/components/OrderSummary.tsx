@@ -12,6 +12,7 @@ import { useEffect } from 'react';
 import { getCommunesActives } from '@/lib/services/communes';
 import { initierPaiementMobile, verifierPaiementEnBoucle, type PaiementMobileData } from '@/lib/services/paiements';
 import { creerTransaction, type CreerTransactionData } from '@/lib/services/transactions';
+import { checkWhatsAppNumber } from '@/lib/services/whatsapp';
 import PhoneNumberInput from '@/components/ui/PhoneNumberInput';
 import PaymentProgressBar from '@/components/ui/PaymentProgressBar';
 import PaymentCountdown from '@/components/ui/PaymentCountdown';
@@ -64,6 +65,12 @@ export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) 
     district: '',
     additionalInfo: ''
   });
+  
+  // États pour la vérification WhatsApp
+  const [isPhoneValid, setIsPhoneValid] = useState(false);
+  const [isCheckingWhatsApp, setIsCheckingWhatsApp] = useState(false);
+  const [whatsAppError, setWhatsAppError] = useState<string | null>(null);
+  const [whatsAppExists, setWhatsAppExists] = useState<boolean | null>(null);
 
   // Utilisation du hook panier pour récupérer les vraies données
   const { panier, totalItems, totalPrix, loading } = usePanier();
@@ -90,6 +97,41 @@ export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) 
 
     loadCommunes();
   }, [boutiqueId]);
+
+  // Vérifier le numéro WhatsApp quand il est valide
+  useEffect(() => {
+    const verifyWhatsApp = async () => {
+      if (isPhoneValid && deliveryAddress.phone) {
+        setIsCheckingWhatsApp(true);
+        setWhatsAppError(null);
+        setWhatsAppExists(null);
+
+        try {
+          const result = await checkWhatsAppNumber(deliveryAddress.phone);
+          setWhatsAppExists(result.existsWhatsapp);
+          
+          if (!result.existsWhatsapp) {
+            setWhatsAppError('Ce numéro n\'est pas enregistré sur WhatsApp');
+          }
+        } catch (error) {
+          setWhatsAppError('Impossible de vérifier le numéro');
+          setWhatsAppExists(false);
+        } finally {
+          setIsCheckingWhatsApp(false);
+        }
+      } else {
+        setWhatsAppExists(null);
+        setWhatsAppError(null);
+      }
+    };
+
+    // Debounce pour éviter trop de requêtes
+    const timer = setTimeout(() => {
+      verifyWhatsApp();
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [deliveryAddress.phone, isPhoneValid]);
 
   const subtotal = totalPrix;
 
@@ -139,6 +181,9 @@ export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) 
       deliveryAddress.address.trim() !== '' &&
       deliveryAddress.city.trim() !== '';
 
+    // Vérifier que le numéro WhatsApp est valide et vérifié
+    const isWhatsAppValid = whatsAppExists === true && !isCheckingWhatsApp;
+
     // Vérifier qu'un mode de paiement est sélectionné
     const isPaymentSelected = selectedPayment !== null;
 
@@ -150,13 +195,19 @@ export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) 
     // Vérifier que les frais de livraison sont calculés (commune sélectionnée)
     const isDeliveryFeeSet = deliveryFee > 0;
 
-    return isAddressComplete && isPaymentSelected && isPaymentPhoneValid && isDeliveryFeeSet;
+    return isAddressComplete && isWhatsAppValid && isPaymentSelected && isPaymentPhoneValid && isDeliveryFeeSet;
   };
 
   // Génère le message approprié pour le bouton selon l'état de validation
   const getButtonMessage = () => {
     if (!deliveryAddress.fullName || !deliveryAddress.phone || !deliveryAddress.address) {
       return 'Complétez votre adresse de livraison';
+    }
+    if (isCheckingWhatsApp) {
+      return 'Vérification du numéro WhatsApp...';
+    }
+    if (whatsAppExists !== true) {
+      return 'Numéro WhatsApp requis';
     }
     if (!deliveryAddress.city) {
       return 'Sélectionnez une commune pour continuer';
@@ -649,10 +700,41 @@ export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) 
                   <PhoneNumberInput
                     value={deliveryAddress.phone}
                     onChange={(value) => handleAddressChange('phone', value)}
+                    onValidationChange={setIsPhoneValid}
                     placeholder="6XXXXXXX"
                     required
                     className="w-full"
                   />
+                  
+                  {/* Statut de vérification WhatsApp */}
+                  {isPhoneValid && (
+                    <div className="mt-2">
+                      {isCheckingWhatsApp && (
+                        <div className="flex items-center text-sm text-gray-600">
+                          <div className="animate-spin mr-2 h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                          Vérification du numéro WhatsApp...
+                        </div>
+                      )}
+                      
+                      {!isCheckingWhatsApp && whatsAppExists === true && (
+                        <div className="flex items-center text-sm text-green-600">
+                          <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Numéro WhatsApp vérifié ✓
+                        </div>
+                      )}
+                      
+                      {!isCheckingWhatsApp && whatsAppExists === false && (
+                        <div className="flex items-center text-sm text-red-600">
+                          <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          {whatsAppError || 'Numéro non enregistré sur WhatsApp'}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="md:col-span-2 space-y-2">
                   <label className="block text-sm font-medium text-gray-700">Adresse complète *</label>
