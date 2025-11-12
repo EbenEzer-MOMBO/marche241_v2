@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { formatPrice } from '@/lib/utils';
 import { BoutiqueConfig } from '@/lib/boutiques';
@@ -46,6 +47,9 @@ interface Commune {
 }
 
 export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) {
+  const params = useParams();
+  const boutiqueSlug = params.boutique as string;
+  
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>(null);
   const [paymentPhone, setPaymentPhone] = useState('');
   const [paymentPhoneError, setPaymentPhoneError] = useState('');
@@ -68,6 +72,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) 
   const [showProgressBar, setShowProgressBar] = useState(false);
   const [showCountdown, setShowCountdown] = useState(false);
   const [currentBillId, setCurrentBillId] = useState<string>('');
+  const [cancelSignal] = useState<{ cancelled: boolean }>({ cancelled: false });
 
   // Charger les communes au montage du composant
   useEffect(() => {
@@ -99,15 +104,15 @@ export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) 
 
   const deliveryFee = getDeliveryFee();
 
-  // Calcul des frais de transaction (1%)
+  // Calcul des frais de transaction (2.5%)
   const getTransactionFee = () => {
-    const transactionRate = 0.01; // 1%
+    const transactionRate = 0.025; // 2.5%
 
     if (payOnDelivery) {
-      // Pour paiement à la livraison : 1% seulement sur les frais de livraison
+      // Pour paiement à la livraison : 2.5% seulement sur les frais de livraison
       return Math.round(deliveryFee * transactionRate);
     } else {
-      // Pour paiement normal : 1% sur le total (sous-total + livraison)
+      // Pour paiement normal : 2.5% sur le total (sous-total + livraison)
       const baseAmount = subtotal + deliveryFee;
       return Math.round(baseAmount * transactionRate);
     }
@@ -134,14 +139,13 @@ export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) 
       deliveryAddress.address.trim() !== '' &&
       deliveryAddress.city.trim() !== '';
 
-    // Vérifier qu'un mode de paiement est sélectionné (ou paiement à la livraison)
-    const isPaymentSelected = selectedPayment !== null || payOnDelivery;
+    // Vérifier qu'un mode de paiement est sélectionné
+    const isPaymentSelected = selectedPayment !== null;
 
-    // Vérifier que le numéro de paiement est valide (sauf si paiement à la livraison)
-    const isPaymentPhoneValid = payOnDelivery ||
-      (paymentPhone.length === 9 &&
-        paymentPhoneError === '' &&
-        selectedPayment !== null);
+    // Vérifier que le numéro de paiement est valide
+    const isPaymentPhoneValid = paymentPhone.length === 9 &&
+      paymentPhoneError === '' &&
+      selectedPayment !== null;
 
     // Vérifier que les frais de livraison sont calculés (commune sélectionnée)
     const isDeliveryFeeSet = deliveryFee > 0;
@@ -157,15 +161,15 @@ export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) 
     if (!deliveryAddress.city) {
       return 'Sélectionnez une commune pour continuer';
     }
-    if (!selectedPayment && !payOnDelivery) {
+    if (!selectedPayment) {
       return 'Sélectionnez un mode de paiement';
     }
-    if (selectedPayment && !payOnDelivery && (!paymentPhone || paymentPhoneError)) {
+    if (!paymentPhone || paymentPhoneError) {
       return 'Saisissez un numéro de paiement valide';
     }
 
     if (payOnDelivery) {
-      return `Confirmer la commande (${formatPrice(totalToPay)})`;
+      return `Payer les frais (${formatPrice(totalToPay)})`;
     }
     return `Confirmer et payer ${formatPrice(totalToPay)}`;
   };
@@ -232,13 +236,16 @@ export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) 
       return;
     }
 
-    // Vérifier qu'un mode de paiement est sélectionné (sauf paiement à la livraison)
-    if (!payOnDelivery && !selectedPayment) {
+    // Vérifier qu'un mode de paiement est sélectionné
+    if (!selectedPayment) {
       error('Veuillez sélectionner un mode de paiement');
       return;
     }
 
     setIsSubmitting(true);
+    
+    // Réinitialiser le signal d'annulation
+    cancelSignal.cancelled = false;
 
     try {
       // Étape 1: Créer la commande
@@ -272,97 +279,211 @@ export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) 
 
       console.log('Réponse complète de la commande:', commande);
 
-      // Étape 2: Initier le paiement mobile (sauf si paiement à la livraison)
-      if (!payOnDelivery && selectedPayment) {
-        // Séparer le nom complet en prénom et nom
+      // Étape 2: Gestion du paiement selon le mode choisi
+      if (payOnDelivery) {
+        // ============================================
+        // MODE: Paiement à la livraison (Frais uniquement)
+        // ============================================
+        
+        // Payer uniquement les frais de livraison + frais de transaction
         const nameParts = deliveryAddress.fullName;
-
-        // Mapper le mode de paiement
         const paymentSystem = selectedPayment === 'moov' ? 'moovmoney' : 'airtelmoney';
 
         const paiementData: PaiementMobileData = {
-          email: 'ebenezermombo@gmail.com', // Email générique
+          email: 'ebenezermombo@gmail.com',
           msisdn: paymentPhone,
-          amount: totalToPay,
+          amount: totalToPay, // Frais de livraison + frais de transaction
           reference: commande.commande.numero_commande,
           payment_system: paymentSystem,
-          description: `Paiement commande ${commande.commande.numero_commande}`,
+          description: `Paiement frais de livraison - Commande ${commande.commande.numero_commande}`,
           lastname: nameParts,
           firstname: nameParts
         };
 
-        // Afficher la barre de progression pendant l'initialisation
         setShowProgressBar(true);
 
         const paiement = await initierPaiementMobile(paiementData);
 
         if (paiement.success) {
-          console.log('Paiement initié:', paiement);
+          console.log('Paiement frais de livraison initié:', paiement);
 
-          // Masquer la barre de progression et afficher le décompte
           setShowProgressBar(false);
           if (paiement.bill_id) {
             setCurrentBillId(paiement.bill_id);
             setShowCountdown(true);
 
-            // Démarrer immédiatement la vérification en parallèle
-            verifierPaiementEnBoucle(paiement.bill_id)
-              .then(verificationResult => {
-                if (verificationResult.status === 'paye') {
-                  success('Paiement confirmé avec succès !', 'Paiement réussi', 5000);
-                  console.log('Paiement confirmé:', verificationResult);
-                } else if (verificationResult.status === 'echec') {
-                  error('Le paiement a échoué. Veuillez réessayer.');
-                  console.log('Paiement échoué:', verificationResult);
-                } else if (verificationResult.status === 'rembourse') {
-                  error('Le paiement a été annulé.');
-                  console.log('Paiement annulé:', verificationResult);
-                } else {
-                  // Timeout - paiement toujours en attente
-                  error('Délai d\'attente dépassé. Vérifiez votre téléphone et réessayez si nécessaire.');
-                  console.log('Timeout de vérification:', verificationResult);
-                }
+            // Créer immédiatement la transaction en attente
+            const transactionFraisData: CreerTransactionData = {
+              reference_transaction: commande.commande.numero_commande,
+              commande_id: commande.commande.id,
+              montant: totalToPay,
+              methode_paiement: selectedPayment === 'moov' ? 'moov_money' : 'airtel_money',
+              type_paiement: 'frais_livraison',
+              numero_telephone: paymentPhone,
+              reference_operateur: paiement.bill_id || '',
+              note: 'Paiement des frais de livraison - Commande ' + commande.commande.numero_commande
+            };
 
-                // Fermer le décompte une fois la vérification terminée
-                setShowCountdown(false);
-                setIsSubmitting(false);
+            try {
+              const transactionFrais = await creerTransaction(transactionFraisData);
+              console.log('Transaction frais créée:', transactionFrais);
+            } catch (err) {
+              console.error('Erreur transaction frais:', err);
+              error('Erreur lors de la création de la transaction.');
+            }
+
+            // Vérifier le paiement des frais
+            verifierPaiementEnBoucle(paiement.bill_id, 60000, 5000, cancelSignal)
+              .then(async (verificationResult) => {
+                console.log('📊 Résultat final de la vérification (frais):', verificationResult);
+                
+                if (verificationResult.status === 'paye' || verificationResult.status === 'paid' || verificationResult.status === 'processed') {
+                  // Fermer immédiatement le countdown
+                  setShowCountdown(false);
+                  setIsSubmitting(false);
+                  
+                  // Afficher un message de succès
+                  success(
+                    'Paiement confirmé ! Redirection vers la page de confirmation...',
+                    'Paiement réussi',
+                    2000
+                  );
+                  
+                  // Rediriger vers la page de confirmation après 2 secondes
+                  setTimeout(() => {
+                    window.location.href = `/${boutiqueSlug}/confirmation?commande=${commande.commande.numero_commande}&type=partiel`;
+                  }, 2000);
+                } else if (verificationResult.status === 'echec' || verificationResult.status === 'failed') {
+                  error(verificationResult.message || 'Le paiement des frais de livraison a échoué. Veuillez réessayer.');
+                  setShowCountdown(false);
+                  setIsSubmitting(false);
+                } else if (verificationResult.status === 'rembourse' || verificationResult.status === 'refunded') {
+                  error('Le paiement a été annulé.');
+                  setShowCountdown(false);
+                  setIsSubmitting(false);
+                } else {
+                  // Statut en attente ou timeout
+                  error('Le paiement est toujours en attente. Vérifiez votre téléphone ou contactez le support.');
+                  setShowCountdown(false);
+                  setIsSubmitting(false);
+                }
               })
               .catch(verificationError => {
-                console.error('Erreur lors de la vérification du paiement:', verificationError);
-                error('Erreur lors de la vérification du paiement. Contactez le support si le problème persiste.');
+                console.error('Erreur vérification paiement frais:', verificationError);
+                // Ne pas afficher d'erreur si l'utilisateur a annulé
+                if (!cancelSignal.cancelled) {
+                  error('Erreur lors de la vérification du paiement.');
+                }
                 setShowCountdown(false);
                 setIsSubmitting(false);
               });
           }
+        } else {
+          setShowProgressBar(false);
+          error(paiement.message || 'Erreur lors de l\'initiation du paiement des frais');
+        }
 
-          // Créer la transaction après l'initiation du paiement
-          const transactionData: CreerTransactionData = {
-            commande_id: commande.commande.id,
-            reference_transaction: commande.commande.numero_commande,
-            montant: totalToPay,
-            methode_paiement: 'mobile_money',
-            statut: 'en_attente',
-            numero_telephone: paymentPhone,
-            reference_operateur: paiement.bill_id || '',
-            notes: `Paiement ${paymentSystem} pour commande ${commande.commande.numero_commande}`
-          };
+      } else if (selectedPayment) {
+        // ============================================
+        // MODE: Paiement complet immédiat
+        // ============================================
+        
+        const nameParts = deliveryAddress.fullName;
+        const paymentSystem = selectedPayment === 'moov' ? 'moovmoney' : 'airtelmoney';
 
-          try {
-            const transaction = await creerTransaction(transactionData);
-            console.log('Transaction créée:', transaction);
+        const paiementData: PaiementMobileData = {
+          email: 'ebenezermombo@gmail.com',
+          msisdn: paymentPhone,
+          amount: totalToPay,
+          reference: commande.commande.numero_commande,
+          payment_system: paymentSystem,
+          description: `Paiement complet - Commande ${commande.commande.numero_commande}`,
+          lastname: nameParts,
+          firstname: nameParts
+        };
 
-            // La vérification sera démarrée par le composant PaymentCountdown
-          } catch (error) {
-            console.error('Erreur lors de la création de la transaction:', error);
-            // Ne pas faire échouer le processus si la transaction échoue
+        setShowProgressBar(true);
+
+        const paiement = await initierPaiementMobile(paiementData);
+
+        if (paiement.success) {
+          console.log('Paiement complet initié:', paiement);
+
+          setShowProgressBar(false);
+          if (paiement.bill_id) {
+            setCurrentBillId(paiement.bill_id);
+            setShowCountdown(true);
+
+            // Créer immédiatement la transaction en attente
+            const transactionCompletData: CreerTransactionData = {
+              reference_transaction: commande.commande.numero_commande,
+              commande_id: commande.commande.id,
+              montant: totalToPay,
+              methode_paiement: selectedPayment === 'moov' ? 'moov_money' : 'airtel_money',
+              type_paiement: 'paiement_complet',
+              numero_telephone: paymentPhone,
+              reference_operateur: paiement.bill_id || '',
+              note: 'Paiement complet de la commande - Commande ' + commande.commande.numero_commande
+            };
+
+            try {
+              const transactionComplete = await creerTransaction(transactionCompletData);
+              console.log('Transaction complète créée:', transactionComplete);
+            } catch (err) {
+              console.error('Erreur transaction complète:', err);
+              error('Erreur lors de la création de la transaction.');
+            }
+
+            // Vérifier le paiement complet
+            verifierPaiementEnBoucle(paiement.bill_id, 60000, 5000, cancelSignal)
+              .then(async (verificationResult) => {
+                console.log('📊 Résultat final de la vérification (complet):', verificationResult);
+                
+                if (verificationResult.status === 'paye' || verificationResult.status === 'paid' || verificationResult.status === 'processed') {
+                  // Fermer immédiatement le countdown
+                  setShowCountdown(false);
+                  setIsSubmitting(false);
+                  
+                  // Afficher un message de succès
+                  success(
+                    'Paiement confirmé ! Redirection vers la page de confirmation...',
+                    'Paiement réussi',
+                    2000
+                  );
+                  
+                  // Rediriger vers la page de confirmation après 2 secondes
+                  setTimeout(() => {
+                    window.location.href = `/${boutiqueSlug}/confirmation?commande=${commande.commande.numero_commande}&type=complet`;
+                  }, 2000);
+                } else if (verificationResult.status === 'echec' || verificationResult.status === 'failed') {
+                  error(verificationResult.message || 'Le paiement a échoué. Veuillez réessayer.');
+                  setShowCountdown(false);
+                  setIsSubmitting(false);
+                } else if (verificationResult.status === 'rembourse' || verificationResult.status === 'refunded') {
+                  error('Le paiement a été annulé.');
+                  setShowCountdown(false);
+                  setIsSubmitting(false);
+                } else {
+                  // Statut en attente ou timeout
+                  error('Le paiement est toujours en attente. Vérifiez votre téléphone ou contactez le support.');
+                  setShowCountdown(false);
+                  setIsSubmitting(false);
+                }
+              })
+              .catch(verificationError => {
+                console.error('Erreur vérification paiement complet:', verificationError);
+                // Ne pas afficher d'erreur si l'utilisateur a annulé
+                if (!cancelSignal.cancelled) {
+                  error('Erreur lors de la vérification du paiement.');
+                }
+                setShowCountdown(false);
+                setIsSubmitting(false);
+              });
           }
         } else {
           setShowProgressBar(false);
           error(paiement.message || 'Erreur lors de l\'initiation du paiement');
         }
-      } else {
-        // Paiement à la livraison
-        success('Commande confirmée ! Paiement à la livraison.', 'Succès', 4000);
       }
 
       console.log('Commande créée:', commande);
@@ -392,8 +513,16 @@ export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) 
   };
 
   const handleCancelPayment = () => {
+    console.log('🛑 Annulation du paiement demandée');
+    // Activer le signal d'annulation pour arrêter la vérification en boucle
+    cancelSignal.cancelled = true;
+    
+    // Fermer les composants visuels
     setShowCountdown(false);
+    setShowProgressBar(false);
     setIsSubmitting(false);
+    
+    // Afficher un message d'annulation
     error('Paiement annulé par l\'utilisateur.');
   };
 
@@ -728,8 +857,8 @@ export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) 
                       Frais de transaction
                       <span className="text-xs text-gray-500 block">
                         {payOnDelivery
-                          ? '(1% sur frais de livraison)'
-                          : '(1% sur total commande)'
+                          ? '(2.5% sur frais de livraison)'
+                          : '(2.5% sur total commande)'
                         }
                       </span>
                     </span>

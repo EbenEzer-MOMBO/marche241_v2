@@ -10,9 +10,9 @@ interface PaymentCountdownProps {
   phoneNumber: string;
 }
 
-export default function PaymentCountdown({ 
-  duration, 
-  onComplete, 
+export default function PaymentCountdown({
+  duration,
+  onComplete,
   onCancel,
   paymentMethod,
   phoneNumber
@@ -106,7 +106,7 @@ export default function PaymentCountdown({
                   className="transition-all duration-1000 ease-linear"
                 />
               </svg>
-              
+
               {/* Temps restant au centre */}
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center">
@@ -122,12 +122,12 @@ export default function PaymentCountdown({
 
             {/* Barre de progression linéaire */}
             <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
-              <div 
+              <div
                 className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full transition-all duration-1000 ease-linear"
                 style={{ width: `${progress}%` }}
               ></div>
             </div>
-            
+
             <p className="text-sm text-gray-600">
               Vérification automatique en cours...
             </p>
