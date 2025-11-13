@@ -696,7 +696,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId }: OrderSummaryProps) 
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Téléphone (WhatsApp si possible) *</label>
+                  <label className="block text-sm font-medium text-gray-700">WhatsApp (pour recevoir les mises à jour)*</label>
                   <PhoneNumberInput
                     value={deliveryAddress.phone}
                     onChange={(value) => handleAddressChange('phone', value)}
