@@ -9,6 +9,9 @@ import { useToast } from '@/hooks/useToast';
 import Sidebar from '@/components/admin/Sidebar';
 import { getProduitsParBoutique, ProduitsResponse } from '@/lib/services/products';
 import { getCategoriesParBoutique } from '@/lib/services/categories';
+import { getStatistiquesDashboard, StatistiquesDashboard } from '@/lib/services/statistiques';
+import { ChartEvolutionCA } from '@/components/admin/ChartEvolutionCA';
+import { ChartRepartitionCommandes } from '@/components/admin/ChartRepartitionCommandes';
 import {
   Package,
   ShoppingCart,
@@ -31,6 +34,8 @@ export default function BoutiqueDashboard() {
   const [boutique, setBoutique] = useState<BoutiqueData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [periode, setPeriode] = useState<number>(7);
+  const [statistiques, setStatistiques] = useState<StatistiquesDashboard | null>(null);
   const [stats, setStats] = useState({
     totalProduits: 0,
     totalCommandes: 0,
@@ -81,13 +86,17 @@ export default function BoutiqueDashboard() {
         // Charger les catégories
         const categoriesData = await getCategoriesParBoutique(boutiqueId);
         
+        // Charger les statistiques complètes
+        const statsData = await getStatistiquesDashboard(boutiqueId, periode);
+        setStatistiques(statsData);
+        
         // Calculer les statistiques
         const produitsActifs = produitsData.donnees.filter(p => p.statut === 'actif').length;
         const produitsEnRupture = produitsData.donnees.filter(p => Number(p.en_stock) === 0).length;
         
         setStats({
           totalProduits: produitsData.total || 0,
-          totalCommandes: 0, // TODO: Intégrer avec l'API commandes
+          totalCommandes: statsData.total_commandes || 0,
           totalCategories: categoriesData.length || 0,
           produitsActifs,
           produitsEnRupture
@@ -107,6 +116,28 @@ export default function BoutiqueDashboard() {
 
     return () => clearTimeout(timer);
   }, [user, boutiqueName, router, verifierBoutique, showError]);
+
+  // Recharger les statistiques quand la période change
+  useEffect(() => {
+    const reloadStatistiques = async () => {
+      if (!boutique?.id) return;
+
+      try {
+        const statsData = await getStatistiquesDashboard(boutique.id, periode);
+        setStatistiques(statsData);
+        
+        // Mettre à jour aussi le nombre total de commandes
+        setStats(prev => ({
+          ...prev,
+          totalCommandes: statsData.total_commandes || 0
+        }));
+      } catch (error) {
+        console.error('Erreur lors du rechargement des statistiques:', error);
+      }
+    };
+
+    reloadStatistiques();
+  }, [periode, boutique?.id]);
 
   if (isLoading) {
     return (
@@ -176,6 +207,42 @@ export default function BoutiqueDashboard() {
 
         {/* Dashboard Content */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 lg:p-6">
+          {/* Sélecteur de période */}
+          <div className="mb-4 sm:mb-6 flex justify-end">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 inline-flex">
+              <button
+                onClick={() => setPeriode(7)}
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium transition-colors ${
+                  periode === 7
+                    ? 'bg-black text-white'
+                    : 'text-gray-700 hover:bg-gray-50'
+                } rounded-l-lg`}
+              >
+                7 jours
+              </button>
+              <button
+                onClick={() => setPeriode(30)}
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium transition-colors border-x border-gray-200 ${
+                  periode === 30
+                    ? 'bg-black text-white'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                30 jours
+              </button>
+              <button
+                onClick={() => setPeriode(90)}
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium transition-colors ${
+                  periode === 90
+                    ? 'bg-black text-white'
+                    : 'text-gray-700 hover:bg-gray-50'
+                } rounded-r-lg`}
+              >
+                90 jours
+              </button>
+            </div>
+          </div>
+
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
             <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
@@ -231,6 +298,23 @@ export default function BoutiqueDashboard() {
             </div>
           </div>
 
+          {/* Graphiques */}
+          {statistiques && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
+              {/* Graphique Évolution du CA */}
+              <ChartEvolutionCA
+                data={statistiques.ca_evolution}
+                caTotal={statistiques.ca_total}
+                variation={statistiques.variation_ca}
+              />
+
+              {/* Graphique Répartition des commandes */}
+              {statistiques.commandes_par_statut.length > 0 && (
+                <ChartRepartitionCommandes data={statistiques.commandes_par_statut} />
+              )}
+            </div>
+          )}
+
           {/* Quick Actions */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
             <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 sm:mb-6">Actions rapides</h2>
@@ -279,7 +363,7 @@ export default function BoutiqueDashboard() {
                   <div
                     key={produit.id}
                     className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => router.push(`/admin/${boutique.slug}/products/${produit.id}`)}
+                    onClick={() => {}}
                   >
                     <div className="flex-shrink-0 h-12 w-12 sm:h-16 sm:w-16 bg-gray-100 rounded-lg overflow-hidden">
                       {produit.image_principale ? (
@@ -326,7 +410,7 @@ export default function BoutiqueDashboard() {
                   className="inline-flex items-center px-3 sm:px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm sm:text-base"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Ajouter mon premier produit
+                  Ajouter mon premier produit v
                 </button>
               </div>
             )}
