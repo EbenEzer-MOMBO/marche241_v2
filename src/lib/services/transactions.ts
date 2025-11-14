@@ -18,15 +18,18 @@ interface CreerTransactionData {
 interface Transaction {
   id: number;
   commande_id: number;
+  reference_transaction: string;
   montant: number;
   methode_paiement: string;
   type_paiement: string;
   statut: string;
+  description?: string | null;
   numero_telephone?: string;
   reference_operateur?: string | null;
-  description?: string | null;
   date_creation: string;
+  date_confirmation?: string | null;
   date_modification?: string;
+  notes?: string | null;
 }
 
 interface TransactionResponse {
@@ -57,4 +60,55 @@ export async function creerTransaction(transactionData: CreerTransactionData): P
   }
 }
 
-export type { CreerTransactionData, Transaction, TransactionResponse };
+/**
+ * Paramètres pour récupérer les transactions d'une boutique
+ */
+interface TransactionsParams {
+  page?: number;
+  limite?: number;
+}
+
+/**
+ * Réponse de l'API pour la liste des transactions
+ */
+interface TransactionsResponse {
+  success: boolean;
+  transactions: Transaction[];
+  total: number;
+  page: number;
+  limite: number;
+  total_pages: number;
+}
+
+/**
+ * Récupérer toutes les transactions d'une boutique
+ * @param boutiqueId - ID de la boutique
+ * @param params - Paramètres de pagination
+ * @returns Promise<TransactionsResponse>
+ */
+export async function getTransactionsParBoutique(
+  boutiqueId: number,
+  params?: TransactionsParams
+): Promise<TransactionsResponse> {
+  try {
+    const queryParams = new URLSearchParams();
+    
+    if (params?.page) {
+      queryParams.append('page', params.page.toString());
+    }
+    
+    if (params?.limite) {
+      queryParams.append('limite', params.limite.toString());
+    }
+    
+    const url = `/transactions/boutique/${boutiqueId}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const response = await api.get<TransactionsResponse>(url);
+    
+    return response;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des transactions:', error);
+    throw new Error('Impossible de récupérer les transactions. Veuillez réessayer.');
+  }
+}
+
+export type { CreerTransactionData, Transaction, TransactionResponse, TransactionsParams, TransactionsResponse };

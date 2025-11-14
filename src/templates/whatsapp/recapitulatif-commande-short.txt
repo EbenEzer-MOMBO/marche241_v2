@@ -1,0 +1,43 @@
+✅ *COMMANDE CONFIRMÉE !* 🎉
+
+Merci *{{nom_client}}* ! 🙏
+
+*N° Commande :* `{{numero_commande}}`
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+📦 *ARTICLES*
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+{{#each articles}}
+• {{nom_produit}}{{#if variants}} ({{variants}}){{/if}}
+  {{quantite}}x {{prix_unitaire}} FCFA = *{{sous_total}} FCFA*
+
+{{/each}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+💰 *TOTAL : {{total}} FCFA*
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+{{#if paiement_complet}}
+✅ Paiement confirmé : *{{montant_paye}} FCFA*
+
+{{else}}
+💰 Frais payés : {{montant_paye}} FCFA
+⚠️ *Reste à payer : {{montant_restant}} FCFA*
+(en espèces à la livraison)
+
+{{/if}}
+
+📍 *Livraison*
+{{adresse_client}}, {{ville_client}}
+⏱️ Délai : {{delai_livraison}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+Vous serez notifié de l'expédition ! 📨
+
+Questions ? Répondez à ce message.
+
+*{{nom_boutique}}* 🛍️
+_Powered by Marché241_ 🇬🇦
+

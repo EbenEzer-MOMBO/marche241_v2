@@ -51,7 +51,12 @@ export function ChartEvolutionCA({ data, caTotal, variation }: ChartEvolutionCAP
     <div className="bg-white rounded-lg shadow p-6">
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h3 className="text-lg font-medium text-gray-900 mb-1">Évolution du chiffre d'affaires</h3>
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="text-lg font-medium text-gray-900">Évolution du chiffre d'affaires</h3>
+            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+              Commandes confirmées
+            </span>
+          </div>
           <p className="text-3xl font-bold text-gray-900 mb-2">{formatMontant(caTotal)}</p>
           <div className="flex items-center">
             {variation >= 0 ? (

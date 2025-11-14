@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmation de commande - {{numero_commande}}</title>
+    <style>
+        /* Empêcher Gmail d'inverser les couleurs en mode sombre */
+        u + .body .container {
+            background-color: #ffffff !important;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f3f4f6 !important;
+            color: #111827 !important;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff !important;
+        }
+        .header {
+            padding: 10px 20px;
+            text-align: center;
+        }
+        .content {
+            padding: 10px 30px;
+            background-color: #ffffff !important;
+        }
+        .success-badge {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+        }
+        .success-title {
+            font-size: 28px;
+            color: #10b981 !important;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .success-subtitle {
+            font-size: 16px;
+            color: #6b7280 !important;
+        }
+        .greeting {
+            font-size: 20px;
+            color: #111827 !important;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        .message {
+            font-size: 16px;
+            color: #4b5563 !important;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        .order-box {
+            background-color: #f9fafb !important;
+            border: 2px solid #10b981 !important;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 30px 0;
+            text-align: center;
+        }
+        .order-number {
+            font-size: 14px;
+            color: #6b7280 !important;
+            margin-bottom: 5px;
+        }
+        .order-code {
+            font-size: 24px;
+            color: #10b981 !important;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        .section-title {
+            font-size: 18px;
+            color: #111827 !important;
+            font-weight: 600;
+            margin: 30px 0 15px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e5e7eb !important;
+        }
+        .info-grid {
+            width: 100%;
+            margin: 15px 0;
+        }
+        .info-row {
+            padding: 8px 0;
+        }
+        .info-label {
+            font-size: 14px;
+            color: #6b7280 !important;
+            display: inline-block;
+            width: 140px;
+        }
+        .info-value {
+            font-size: 14px;
+            color: #111827 !important;
+            font-weight: 500;
+        }
+        .product-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        .product-table th {
+            background-color: #f9fafb !important;
+            color: #6b7280 !important;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 12px 8px;
+            text-align: left;
+            border-bottom: 2px solid #e5e7eb !important;
+        }
+        .product-table td {
+            padding: 12px 8px;
+            border-bottom: 1px solid #e5e7eb !important;
+            font-size: 14px;
+            color: #111827 !important;
+        }
+        .product-name {
+            font-weight: 500;
+        }
+        .variant-badge {
+            display: inline-block;
+            background-color: #f3f4f6 !important;
+            color: #6b7280 !important;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin: 2px;
+        }
+        .total-section {
+            margin: 30px 0;
+            padding: 20px;
+            background-color: #f9fafb !important;
+            border-radius: 8px;
+        }
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 15px;
+        }
+        .total-label {
+            color: #6b7280 !important;
+        }
+        .total-value {
+            color: #111827 !important;
+            font-weight: 500;
+        }
+        .total-final {
+            border-top: 2px solid #e5e7eb !important;
+            margin-top: 10px;
+            padding-top: 15px;
+        }
+        .total-final .total-label {
+            font-size: 18px;
+            color: #111827 !important;
+            font-weight: 600;
+        }
+        .total-final .total-value {
+            font-size: 20px;
+            color: #10b981 !important;
+            font-weight: bold;
+        }
+        .payment-status-box {
+            background-color: #f0fdf4 !important;
+            border-left: 4px solid #10b981 !important;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 30px 0;
+        }
+        .payment-status-box.partial {
+            background-color: #fffbeb !important;
+            border-left: 4px solid #f59e0b !important;
+        }
+        .payment-status-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .payment-status-box .payment-status-title {
+            color: #047857 !important;
+        }
+        .payment-status-box.partial .payment-status-title {
+            color: #92400e !important;
+        }
+        .payment-status-text {
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .payment-status-box .payment-status-text {
+            color: #065f46 !important;
+        }
+        .payment-status-box.partial .payment-status-text {
+            color: #78350f !important;
+        }
+        .payment-detail {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(0,0,0,0.1);
+        }
+        .payment-amount {
+            font-size: 18px;
+            font-weight: bold;
+            color: #10b981 !important;
+        }
+        .payment-status-box.partial .payment-amount {
+            color: #f59e0b !important;
+        }
+        .next-steps-box {
+            background-color: #eff6ff !important;
+            border-left: 4px solid #3b82f6 !important;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 30px 0;
+        }
+        .next-steps-title {
+            font-size: 16px;
+            color: #1e40af !important;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+        .step-number {
+            width: 24px;
+            height: 24px;
+            background-color: #3b82f6 !important;
+            color: #ffffff !important;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+        .step-text {
+            font-size: 14px;
+            color: #1e3a8a !important;
+            line-height: 1.5;
+        }
+        .cta-container {
+            text-align: center;
+            margin: 40px 0;
+        }
+        .cta-button {
+            display: inline-block;
+            padding: 16px 40px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+        }
+        .support-box {
+            background-color: #f9fafb !important;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 30px 0;
+            text-align: center;
+        }
+        .support-title {
+            font-size: 16px;
+            color: #111827 !important;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .support-text {
+            font-size: 14px;
+            color: #6b7280 !important;
+            line-height: 1.5;
+        }
+        .footer {
+            background-color: #f9fafb !important;
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #e5e7eb !important;
+        }
+        .footer-text {
+            font-size: 14px;
+            color: #6b7280 !important;
+            margin: 5px 0;
+        }
+        .footer-link {
+            color: #10b981 !important;
+            text-decoration: none;
+        }
+        .divider {
+            height: 1px;
+            background-color: #e5e7eb !important;
+            margin: 30px 0;
+        }
+        @media only screen and (max-width: 600px) {
+            .content {
+                padding: 10px 20px;
+            }
+            .success-title {
+                font-size: 24px;
+            }
+            .product-table {
+                font-size: 12px;
+            }
+            .product-table th,
+            .product-table td {
+                padding: 8px 4px;
+            }
+            .cta-button {
+                padding: 14px 30px;
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+<body style="background-color: #f3f4f6 !important; color: #111827 !important;">
+    <div class="container" style="background-color: #ffffff !important;" data-ogsc="#ffffff">
+        <!-- Header -->
+        <div class="header">
+            <div class="">
+                <img src="https://i.ibb.co/HTsY5jdM/marche241-without-text-1180x1180-t.png" alt="{{nom_boutique}}" 
+                width="110px" height="110px"/>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="content" style="background-color: #ffffff !important;" data-ogsc="#ffffff">
+            <!-- Success Badge -->
+            <div class="success-badge">
+                <h1 class="success-title" style="color: #10b981 !important;" data-ogsc="#10b981">Commande Confirmée !</h1>
+                <p class="success-subtitle" style="color: #6b7280 !important;" data-ogsc="#6b7280">Merci pour votre confiance</p>
+            </div>
+
+            <p class="greeting" style="color: #111827 !important;" data-ogsc="#111827">Bonjour {{nom_client}}, 👋</p>
+            
+            <p class="message" style="color: #4b5563 !important;" data-ogsc="#4b5563">
+                Nous avons bien reçu votre commande et nous vous remercions de votre confiance. 
+                Voici un récapitulatif de votre commande :
+            </p>
+
+            <!-- Order Number Box -->
+            <div class="order-box" style="background-color: #f9fafb !important; border: 2px solid #10b981 !important;" data-ogsc="#f9fafb">
+                <p class="order-number" style="color: #6b7280 !important;" data-ogsc="#6b7280">Numéro de commande</p>
+                <p class="order-code" style="color: #10b981 !important;" data-ogsc="#10b981">{{numero_commande}}</p>
+            </div>
+
+            <!-- Delivery Information -->
+            <h2 class="section-title" style="color: #111827 !important; border-bottom: 2px solid #e5e7eb !important;" data-ogsc="#111827">
+                📦 Informations de livraison
+            </h2>
+            <div class="info-grid">
+                <div class="info-row">
+                    <span class="info-label" style="color: #6b7280 !important;" data-ogsc="#6b7280">Destinataire :</span>
+                    <span class="info-value" style="color: #111827 !important;" data-ogsc="#111827">{{nom_client}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label" style="color: #6b7280 !important;" data-ogsc="#6b7280">Téléphone :</span>
+                    <span class="info-value" style="color: #111827 !important;" data-ogsc="#111827">{{telephone_client}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label" style="color: #6b7280 !important;" data-ogsc="#6b7280">Adresse :</span>
+                    <span class="info-value" style="color: #111827 !important;" data-ogsc="#111827">{{adresse_client}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label" style="color: #6b7280 !important;" data-ogsc="#6b7280">Ville :</span>
+                    <span class="info-value" style="color: #111827 !important;" data-ogsc="#111827">{{ville_client}}, {{commune_client}}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label" style="color: #6b7280 !important;" data-ogsc="#6b7280">Délai de livraison :</span>
+                    <span class="info-value" style="color: #111827 !important;" data-ogsc="#111827">{{delai_livraison}}</span>
+                </div>
+            </div>
+
+            <!-- Products -->
+            <h2 class="section-title" style="color: #111827 !important; border-bottom: 2px solid #e5e7eb !important;" data-ogsc="#111827">
+                🛍️ Articles commandés
+            </h2>
+            <table class="product-table">
+                <thead>
+                    <tr>
+                        <th style="background-color: #f9fafb !important; color: #6b7280 !important; border-bottom: 2px solid #e5e7eb !important;" data-ogsc="#f9fafb">Produit</th>
+                        <th style="background-color: #f9fafb !important; color: #6b7280 !important; border-bottom: 2px solid #e5e7eb !important;" data-ogsc="#f9fafb">Prix</th>
+                        <th style="background-color: #f9fafb !important; color: #6b7280 !important; border-bottom: 2px solid #e5e7eb !important;" data-ogsc="#f9fafb">Qté</th>
+                        <th style="background-color: #f9fafb !important; color: #6b7280 !important; border-bottom: 2px solid #e5e7eb !important;" data-ogsc="#f9fafb">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each articles}}
+                    <tr>
+                        <td style="border-bottom: 1px solid #e5e7eb !important; color: #111827 !important;" data-ogsc="#111827">
+                            <span class="product-name">{{nom_produit}}</span>
+                            {{#if variants}}
+                            <br>
+                            {{#each variants}}
+                            <span class="variant-badge" style="background-color: #f3f4f6 !important; color: #6b7280 !important;" data-ogsc="#f3f4f6">{{this}}</span>
+                            {{/each}}
+                            {{/if}}
+                        </td>
+                        <td style="border-bottom: 1px solid #e5e7eb !important; color: #111827 !important;" data-ogsc="#111827">{{prix_unitaire}} FCFA</td>
+                        <td style="border-bottom: 1px solid #e5e7eb !important; color: #111827 !important;" data-ogsc="#111827">{{quantite}}</td>
+                        <td style="border-bottom: 1px solid #e5e7eb !important; color: #111827 !important;" data-ogsc="#111827"><strong>{{sous_total}} FCFA</strong></td>
+                    </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+
+            <!-- Total -->
+            <div class="total-section" style="background-color: #f9fafb !important;" data-ogsc="#f9fafb">
+                <div class="total-row">
+                    <span class="total-label" style="color: #6b7280 !important;" data-ogsc="#6b7280">Sous-total</span>
+                    <span class="total-value" style="color: #111827 !important;" data-ogsc="#111827">{{sous_total}} FCFA</span>
+                </div>
+                <div class="total-row">
+                    <span class="total-label" style="color: #6b7280 !important;" data-ogsc="#6b7280">Frais de livraison</span>
+                    <span class="total-value" style="color: #111827 !important;" data-ogsc="#111827">{{frais_livraison}} FCFA</span>
+                </div>
+                <div class="total-row">
+                    <span class="total-label" style="color: #6b7280 !important;" data-ogsc="#6b7280">Taxes</span>
+                    <span class="total-value" style="color: #111827 !important;" data-ogsc="#111827">{{taxes}} FCFA</span>
+                </div>
+                <div class="total-row total-final" style="border-top: 2px solid #e5e7eb !important;" data-ogsc="#e5e7eb">
+                    <span class="total-label" style="color: #111827 !important;" data-ogsc="#111827">Total</span>
+                    <span class="total-value" style="color: #10b981 !important;" data-ogsc="#10b981">{{total}} FCFA</span>
+                </div>
+            </div>
+
+            <!-- Payment Status -->
+            {{#if paiement_complet}}
+            <div class="payment-status-box" style="background-color: #f0fdf4 !important; border-left: 4px solid #10b981 !important;" data-ogsc="#f0fdf4">
+                <p class="payment-status-title" style="color: #047857 !important;" data-ogsc="#047857">
+                    ✅ Paiement confirmé
+                </p>
+                <p class="payment-status-text" style="color: #065f46 !important;" data-ogsc="#065f46">
+                    Votre paiement de <strong class="payment-amount" style="color: #10b981 !important;" data-ogsc="#10b981">{{montant_paye}} FCFA</strong> 
+                    a été confirmé avec succès via {{methode_paiement}}.
+                </p>
+                <p class="payment-status-text" style="color: #065f46 !important;" data-ogsc="#065f46">
+                    Votre commande est maintenant en cours de préparation.
+                </p>
+            </div>
+            {{else}}
+            <div class="payment-status-box partial" style="background-color: #fffbeb !important; border-left: 4px solid #f59e0b !important;" data-ogsc="#fffbeb">
+                <p class="payment-status-title" style="color: #92400e !important;" data-ogsc="#92400e">
+                    💰 Paiement partiel - Livraison
+                </p>
+                <p class="payment-status-text" style="color: #78350f !important;" data-ogsc="#78350f">
+                    Vous avez payé les frais de livraison : <strong class="payment-amount" style="color: #f59e0b !important;" data-ogsc="#f59e0b">{{montant_paye}} FCFA</strong>
+                </p>
+                <div class="payment-detail">
+                    <p class="payment-status-text" style="color: #78350f !important;" data-ogsc="#78350f">
+                        <strong>Montant restant à payer à la livraison :</strong><br>
+                        <span class="payment-amount" style="color: #f59e0b !important; font-size: 22px;" data-ogsc="#f59e0b">{{montant_restant}} FCFA</span>
+                    </p>
+                    <p class="payment-status-text" style="color: #78350f !important; font-size: 13px; margin-top: 10px;" data-ogsc="#78350f">
+                        Préparez ce montant en espèces pour la livraison.
+                    </p>
+                </div>
+            </div>
+            {{/if}}
+
+            <!-- Next Steps -->
+            <div class="next-steps-box" style="background-color: #eff6ff !important; border-left: 4px solid #3b82f6 !important;" data-ogsc="#eff6ff">
+                <p class="next-steps-title" style="color: #1e40af !important;" data-ogsc="#1e40af">
+                    📋 Prochaines étapes
+                </p>
+                <div class="step-item">
+                    <div class="step-number" style="background-color: #3b82f6 !important; color: #ffffff !important;" data-ogsc="#3b82f6">1</div>
+                    <div class="step-text" style="color: #1e3a8a !important;" data-ogsc="#1e3a8a">
+                        Nous préparons votre commande avec soin
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-number" style="background-color: #3b82f6 !important; color: #ffffff !important;" data-ogsc="#3b82f6">2</div>
+                    <div class="step-text" style="color: #1e3a8a !important;" data-ogsc="#1e3a8a">
+                        Vous recevrez une notification WhatsApp lors de l'expédition
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="step-number" style="background-color: #3b82f6 !important; color: #ffffff !important;" data-ogsc="#3b82f6">3</div>
+                    <div class="step-text" style="color: #1e3a8a !important;" data-ogsc="#1e3a8a">
+                        Livraison prévue dans {{delai_livraison}}
+                    </div>
+                </div>
+            </div>
+
+            <div class="divider" style="background-color: #e5e7eb !important;" data-ogsc="#e5e7eb"></div>
+
+            <!-- Support Box -->
+            <div class="support-box" style="background-color: #f9fafb !important;" data-ogsc="#f9fafb">
+                <p class="support-title" style="color: #111827 !important;" data-ogsc="#111827">
+                    💬 Besoin d'aide ?
+                </p>
+                <p class="support-text" style="color: #6b7280 !important;" data-ogsc="#6b7280">
+                    Pour toute question concernant votre commande, n'hésitez pas à nous contacter via WhatsApp 
+                    au <strong style="color: #6b7280 !important;" data-ogsc="#6b7280">{{telephone_boutique}}</strong> 
+                    ou répondez simplement à cet email.
+                </p>
+            </div>
+
+            <p class="message" style="text-align: center; color: #4b5563 !important; margin-top: 30px;" data-ogsc="#4b5563">
+                Merci de faire confiance à <strong style="color: #4b5563 !important;" data-ogsc="#4b5563">{{nom_boutique}}</strong> ! 🙏
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer" style="background-color: #f9fafb !important; border-top: 1px solid #e5e7eb !important;" data-ogsc="#f9fafb">
+            <p class="footer-text" style="color: #6b7280 !important;" data-ogsc="#6b7280">
+                <strong style="color: #6b7280 !important;" data-ogsc="#6b7280">{{nom_boutique}}</strong>
+            </p>
+            <p class="footer-text" style="color: #6b7280 !important;" data-ogsc="#6b7280">
+                Propulsé par <a href="https://marche241.ga" class="footer-link" style="color: #10b981 !important;" data-ogsc="#10b981">Marché241</a>
+            </p>
+            
+            <div class="divider" style="margin: 20px auto; max-width: 200px; background-color: #e5e7eb !important;" data-ogsc="#e5e7eb"></div>
+            
+            <p class="footer-text" style="font-size: 12px; color: #6b7280 !important;" data-ogsc="#6b7280">
+                Cet email a été envoyé automatiquement suite à votre commande n°{{numero_commande}}.
+            </p>
+            <p class="footer-text" style="font-size: 12px; color: #9ca3af !important;" data-ogsc="#9ca3af">
+                © 2025 Marché241. Tous droits réservés.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+

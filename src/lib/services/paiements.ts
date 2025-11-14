@@ -15,6 +15,49 @@ interface PaiementMobileData {
   firstname: string;
 }
 
+export interface WebhookPaiementData {
+  billId: string;
+  boutique: {
+    id: number;
+    nom: string;
+    slug: string;
+    telephone?: string;
+  };
+  commande: {
+    id: number;
+    numero_commande: string;
+    total: number;
+    sous_total: number;
+    frais_livraison: number;
+    taxes: number;
+  };
+  produits: Record<number, {
+    id: number;
+    nom: string;
+    prix_unitaire: number;
+    quantite: number;
+    sous_total: number;
+    variants?: Record<string, string>;
+    variants_string?: string;
+    image_url?: string;
+  }>;
+  client: {
+    nom: string;
+    telephone: string;
+    whatsapp: string; // Format: "24162648538" (sans +)
+    email: string;
+    adresse: string;
+    ville: string;
+    commune: string;
+  };
+  paiement: {
+    montant: number;
+    type_paiement: string;
+    methode_paiement: string;
+    reference: string;
+  };
+}
+
 interface PaiementMobileResponse {
   success: boolean;
   bill_id?: string;
@@ -32,13 +75,64 @@ interface VerificationPaiementResponse {
 }
 
 /**
+ * Envoyer les données de paiement au webhook
+ * @param webhookData - Données à envoyer au webhook
+ */
+async function envoyerWebhookPaiement(webhookData: WebhookPaiementData): Promise<void> {
+  try {
+    const webhookUrl = process.env.NEXT_PUBLIC_WEBHOOK_PAYMENT;
+    
+    if (!webhookUrl) {
+      console.warn('⚠️ WEBHOOK_PAYMENT non configuré, envoi ignoré');
+      return;
+    }
+
+    console.log('📤 Envoi des données au webhook:', webhookUrl);
+    
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(webhookData),
+    });
+
+    if (response.ok) {
+      console.log('✅ Webhook envoyé avec succès');
+    } else {
+      console.error('❌ Erreur lors de l\'envoi du webhook:', response.status, response.statusText);
+    }
+  } catch (error) {
+    // Ne pas bloquer le flux principal si le webhook échoue
+    console.error('❌ Erreur lors de l\'envoi du webhook:', error);
+  }
+}
+
+/**
  * Initier un paiement mobile
  * @param paiementData - Données du paiement à initier
+ * @param webhookData - Données optionnelles à envoyer au webhook après initiation
  * @returns Promise<PaiementMobileResponse>
  */
-export async function initierPaiementMobile(paiementData: PaiementMobileData): Promise<PaiementMobileResponse> {
+export async function initierPaiementMobile(
+  paiementData: PaiementMobileData,
+  webhookData?: WebhookPaiementData
+): Promise<PaiementMobileResponse> {
   try {
     const response = await api.post<PaiementMobileResponse>('/paiements/mobile', paiementData);
+    
+    // Envoyer les données au webhook si disponibles
+    if (response.success && response.bill_id && webhookData) {
+      // S'assurer que le billId dans webhookData correspond à celui retourné
+      const webhookDataWithBillId = {
+        ...webhookData,
+        billId: response.bill_id
+      };
+      
+      // Envoyer au webhook en arrière-plan (ne pas attendre)
+      envoyerWebhookPaiement(webhookDataWithBillId).catch(console.error);
+    }
+    
     return response;
   } catch (error) {
     console.error('Erreur lors de l\'initiation du paiement:', error);

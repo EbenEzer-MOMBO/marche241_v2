@@ -51,7 +51,7 @@ export default async function OrderPage({ params }: OrderPageProps) {
                 Vérifiez vos articles et finalisez votre commande
               </p>
             </div>
-            <OrderSummary boutiqueConfig={boutiqueConfig} boutiqueId={boutiqueData.id} />
+            <OrderSummary boutiqueConfig={boutiqueConfig} boutiqueId={boutiqueData.id} boutiqueTelephone={boutiqueData.telephone} />
           </div>
         </div>
       </div>

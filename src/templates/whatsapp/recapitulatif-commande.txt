@@ -1,0 +1,86 @@
+✅ *COMMANDE CONFIRMÉE !* 🎉
+
+Bonjour *{{nom_client}}* ! 👋
+
+Merci pour votre confiance. Voici le récapitulatif de votre commande :
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 *NUMÉRO DE COMMANDE*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+```
+{{numero_commande}}
+```
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📦 *LIVRAISON*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+👤 *Destinataire :* {{nom_client}}
+📱 *Téléphone :* {{telephone_client}}
+📍 *Adresse :* {{adresse_client}}
+🏙️ *Ville :* {{ville_client}}, {{commune_client}}
+⏱️ *Délai :* {{delai_livraison}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🛍️ *ARTICLES COMMANDÉS*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{{#each articles}}
+{{@index}}. *{{nom_produit}}*{{#if variants}}
+   _Variantes: {{variants}}_{{/if}}
+   • Prix : {{prix_unitaire}} FCFA
+   • Quantité : {{quantite}}
+   • Sous-total : *{{sous_total}} FCFA*
+
+{{/each}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💰 *RÉCAPITULATIF*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Sous-total ............. {{sous_total}} FCFA
+Frais de livraison ..... {{frais_livraison}} FCFA
+Taxes .................. {{taxes}} FCFA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+*TOTAL ................. {{total}} FCFA*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{{#if paiement_complet}}
+✅ *PAIEMENT CONFIRMÉ*
+
+Montant payé : *{{montant_paye}} FCFA*
+Méthode : {{methode_paiement}}
+
+Votre commande est maintenant en cours de préparation ! 📦
+
+{{else}}
+💰 *PAIEMENT PARTIEL*
+
+✅ Frais de livraison payés : *{{montant_paye}} FCFA*
+
+⚠️ *MONTANT À PAYER À LA LIVRAISON :*
+*{{montant_restant}} FCFA* en espèces
+
+Préparez ce montant pour la réception de votre commande.
+
+{{/if}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 *PROCHAINES ÉTAPES*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣ Préparation de votre commande
+2️⃣ Notification lors de l'expédition
+3️⃣ Livraison dans {{delai_livraison}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💬 *Besoin d'aide ?*
+Répondez à ce message ou appelez-nous :
+📞 {{telephone_boutique}}
+
+Merci de faire confiance à *{{nom_boutique}}* ! 🙏
+
+_Powered by Marché241_ 🇬🇦
+

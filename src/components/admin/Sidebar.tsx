@@ -19,7 +19,8 @@ import {
   Store,
   ChevronLeft,
   ChevronRight,
-  User
+  User,
+  CreditCard
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -100,6 +101,12 @@ export default function Sidebar({ boutique, isMobileMenuOpen = false, onToggleMo
       href: `/admin/${boutique.slug}/orders`,
       icon: ShoppingBag,
       current: pathname.includes('/orders')
+    },
+    {
+      name: 'Paiements',
+      href: `/admin/${boutique.slug}/payments`,
+      icon: CreditCard,
+      current: pathname.includes('/payments')
     },
     {
       name: 'Frais livraison',

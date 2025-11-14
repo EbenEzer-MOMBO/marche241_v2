@@ -59,9 +59,12 @@ export async function getStatistiquesDashboard(
     // Calculer l'évolution du CA par jour
     const caParJour = new Map<string, number>();
     
+    // Statuts considérés comme "confirmés" pour le CA
+    const statutsConfirmes = ['confirmee', 'en_preparation', 'expediee', 'livree'];
+    
     commandesPeriode.forEach(cmd => {
-      // Ne compter que les commandes non annulées
-      if (cmd.statut !== 'annulee') {
+      // Ne compter que les commandes confirmées (pas en attente ni annulées)
+      if (statutsConfirmes.includes(cmd.statut.toLowerCase())) {
         const date = new Date(cmd.date_commande).toISOString().split('T')[0];
         const montantActuel = caParJour.get(date) || 0;
         caParJour.set(date, montantActuel + cmd.total);
@@ -81,9 +84,9 @@ export async function getStatistiquesDashboard(
       });
     }
 
-    // Calculer le CA total de la période
+    // Calculer le CA total de la période (uniquement commandes confirmées)
     const ca_total = commandesPeriode
-      .filter(cmd => cmd.statut !== 'annulee')
+      .filter(cmd => statutsConfirmes.includes(cmd.statut.toLowerCase()))
       .reduce((sum, cmd) => sum + cmd.total, 0);
 
     // Calculer le CA de la période précédente pour comparaison
@@ -96,7 +99,7 @@ export async function getStatistiquesDashboard(
     });
 
     const ca_periode_precedente = commandesPeriodePrecedente
-      .filter(cmd => cmd.statut !== 'annulee')
+      .filter(cmd => statutsConfirmes.includes(cmd.statut.toLowerCase()))
       .reduce((sum, cmd) => sum + cmd.total, 0);
 
     // Calculer la variation en pourcentage
