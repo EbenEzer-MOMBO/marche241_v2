@@ -7,6 +7,7 @@ import { BoutiqueData } from '@/lib/services/auth';
 import { getProduitsParBoutique } from '@/lib/services/products';
 import { getCategoriesParBoutique } from '@/lib/services/categories';
 import { getCommunesParBoutique } from '@/lib/services/communes';
+import Image from 'next/image';
 import {
   LayoutDashboard,
   Package,
@@ -140,7 +141,18 @@ export default function Sidebar({ boutique, isMobileMenuOpen = false, onToggleMo
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
         {!isCollapsed && (
           <div className="flex items-center">
-            <Store className="h-8 w-8 text-black mr-3" />
+            {boutique.logo ? (
+              <div className="relative h-10 w-10 rounded-lg overflow-hidden flex-shrink-0 mr-3 bg-gray-100">
+                <Image
+                  src={boutique.logo}
+                  alt={boutique.nom}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            ) : (
+              <Store className="h-10 w-10 text-black mr-3 flex-shrink-0" />
+            )}
             <div className="min-w-0 flex-1">
               <h1 className="text-lg font-semibold text-gray-900 truncate">
                 {boutique.nom}
@@ -150,9 +162,24 @@ export default function Sidebar({ boutique, isMobileMenuOpen = false, onToggleMo
           </div>
         )}
         
+        {isCollapsed && boutique.logo && (
+          <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-gray-100 mx-auto">
+            <Image
+              src={boutique.logo}
+              alt={boutique.nom}
+              fill
+              className="object-cover"
+            />
+          </div>
+        )}
+        
+        {isCollapsed && !boutique.logo && (
+          <Store className="h-10 w-10 text-black mx-auto" />
+        )}
+        
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="hidden lg:block p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+          className="hidden lg:block p-1.5 rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0"
         >
           {isCollapsed ? (
             <ChevronRight className="h-5 w-5 text-gray-500" />
@@ -218,7 +245,11 @@ export default function Sidebar({ boutique, isMobileMenuOpen = false, onToggleMo
         <div className="space-y-1">
           <button
             onClick={() => router.push(`/admin/${boutique.slug}/settings`)}
-            className="w-full flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors"
+            className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+              pathname.includes('/settings')
+                ? 'bg-black text-white'
+                : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+            }`}
           >
             <Settings className={`h-5 w-5 ${isCollapsed ? '' : 'mr-3'} flex-shrink-0`} />
             {!isCollapsed && <span>Paramètres</span>}

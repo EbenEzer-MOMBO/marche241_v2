@@ -8,6 +8,7 @@ interface AuthUser {
   email: string;
   nom: string;
   telephone?: string;
+  ville?: string;
 }
 
 interface UseAuthReturn {
@@ -19,6 +20,7 @@ interface UseAuthReturn {
   verifier: (data: VerifierCodeData) => Promise<boolean>;
   inscrire: (data: InscriptionData) => Promise<{ success: boolean; email?: string }>;
   verifierBoutique: () => Promise<BoutiqueData | null>;
+  updateUser: (userData: Partial<AuthUser>) => void;
   logout: () => void;
   toasts: any[];
   removeToast: (id: string) => void;
@@ -43,7 +45,8 @@ export function useAuth(): UseAuthReturn {
           id: parsedUser.id.toString(),
           email: parsedUser.email,
           nom: parsedUser.nom,
-          telephone: parsedUser.telephone
+          telephone: parsedUser.telephone,
+          ville: parsedUser.ville
         });
       } catch (error) {
         console.error('Erreur lors du parsing des données utilisateur:', error);
@@ -108,7 +111,8 @@ export function useAuth(): UseAuthReturn {
           id: response.vendeur.id.toString(),
           email: response.vendeur.email,
           nom: response.vendeur.nom,
-          telephone: undefined
+          telephone: response.vendeur.telephone,
+          ville: response.vendeur.ville
         });
         success('Connexion réussie', `Bienvenue ${response.vendeur.nom}`);
         
@@ -226,6 +230,13 @@ export function useAuth(): UseAuthReturn {
     }
   }, [user?.id]);
 
+  const updateUser = (userData: Partial<AuthUser>) => {
+    if (user) {
+      const updatedUser = { ...user, ...userData };
+      setUser(updatedUser);
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_user');
@@ -243,6 +254,7 @@ export function useAuth(): UseAuthReturn {
     verifier,
     inscrire,
     verifierBoutique,
+    updateUser,
     logout,
     toasts,
     removeToast

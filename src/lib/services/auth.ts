@@ -56,6 +56,8 @@ export interface VerifierCodeResponse {
     email: string;
     nom: string;
     statut: string;
+    telephone?: string;
+    ville?: string;
   };
   token?: string;
   tentatives_restantes?: number;
@@ -108,6 +110,43 @@ export interface CreerBoutiqueResponse {
   success: boolean;
   message: string;
   boutique?: BoutiqueData;
+}
+
+export interface ModifierBoutiqueData {
+  nom?: string;
+  slug?: string;
+  description?: string;
+  logo?: string;
+  couleur_primaire?: string;
+  couleur_secondaire?: string;
+  adresse?: string;
+  telephone?: string;
+}
+
+export interface ModifierBoutiqueResponse {
+  success: boolean;
+  message: string;
+  boutique?: BoutiqueData;
+}
+
+export interface ModifierVendeurData {
+  nom?: string;
+  email?: string;
+  telephone?: string;
+  ville?: string;
+}
+
+export interface ModifierVendeurResponse {
+  success: boolean;
+  message: string;
+  vendeur?: {
+    id: number;
+    email: string;
+    nom: string;
+    telephone?: string;
+    ville?: string;
+    statut: string;
+  };
 }
 
 /**
@@ -325,5 +364,71 @@ export async function creerBoutique(data: CreerBoutiqueData): Promise<CreerBouti
     
     // Fallback pour les autres erreurs
     throw new Error('Impossible de créer la boutique. Veuillez réessayer.');
+  }
+}
+
+/**
+ * Modifier les informations d'une boutique
+ * @param boutiqueId - ID de la boutique à modifier
+ * @param data - Données de modification de la boutique
+ * @returns Promise<ModifierBoutiqueResponse>
+ */
+export async function modifierBoutique(boutiqueId: number, data: ModifierBoutiqueData): Promise<ModifierBoutiqueResponse> {
+  try {
+    const response = await api.put<ModifierBoutiqueResponse>(`/boutiques/${boutiqueId}`, data);
+    return response;
+  } catch (error: any) {
+    console.error('Erreur lors de la modification de la boutique:', error);
+    
+    // Vérifier si c'est une ApiError avec un status
+    if (error.status) {
+      if (error.status === 400) {
+        throw new Error('Données invalides. Veuillez vérifier vos informations.');
+      } else if (error.status === 401) {
+        throw new Error('Non autorisé. Veuillez vous reconnecter.');
+      } else if (error.status === 404) {
+        throw new Error('Boutique introuvable.');
+      } else if (error.status === 409) {
+        throw new Error('Une boutique avec ce slug existe déjà.');
+      } else if (error.status === 500) {
+        throw new Error('Erreur serveur. Veuillez réessayer plus tard.');
+      }
+    }
+    
+    // Fallback pour les autres erreurs
+    throw new Error('Impossible de modifier la boutique. Veuillez réessayer.');
+  }
+}
+
+/**
+ * Modifier les informations d'un vendeur
+ * @param vendeurId - ID du vendeur à modifier
+ * @param data - Données de modification du vendeur
+ * @returns Promise<ModifierVendeurResponse>
+ */
+export async function modifierVendeur(vendeurId: number, data: ModifierVendeurData): Promise<ModifierVendeurResponse> {
+  try {
+    const response = await api.put<ModifierVendeurResponse>(`/vendeurs/${vendeurId}`, data);
+    return response;
+  } catch (error: any) {
+    console.error('Erreur lors de la modification du vendeur:', error);
+    
+    // Vérifier si c'est une ApiError avec un status
+    if (error.status) {
+      if (error.status === 400) {
+        throw new Error('Données invalides. Veuillez vérifier vos informations.');
+      } else if (error.status === 401) {
+        throw new Error('Non autorisé. Veuillez vous reconnecter.');
+      } else if (error.status === 404) {
+        throw new Error('Vendeur introuvable.');
+      } else if (error.status === 409) {
+        throw new Error('Un compte avec cet email existe déjà.');
+      } else if (error.status === 500) {
+        throw new Error('Erreur serveur. Veuillez réessayer plus tard.');
+      }
+    }
+    
+    // Fallback pour les autres erreurs
+    throw new Error('Impossible de modifier le profil. Veuillez réessayer.');
   }
 }

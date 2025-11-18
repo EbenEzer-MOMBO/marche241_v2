@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface Country {
   code: string;
@@ -45,6 +45,23 @@ export default function PhoneNumberInput({
   const phoneNumber = value.startsWith(selectedCountry.dialCode) 
     ? value.slice(selectedCountry.dialCode.length) 
     : value;
+
+  // Valider le numéro à l'initialisation et lors du changement de value
+  useEffect(() => {
+    if (phoneNumber.length > 0) {
+      const valid = selectedCountry.phonePattern.test(phoneNumber);
+      setIsValid(valid);
+      
+      if (onValidationChange) {
+        onValidationChange(valid);
+      }
+    } else {
+      setIsValid(false);
+      if (onValidationChange) {
+        onValidationChange(false);
+      }
+    }
+  }, [value, selectedCountry, phoneNumber, onValidationChange]);
 
   const handleCountrySelect = (country: Country) => {
     setSelectedCountry(country);
