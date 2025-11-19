@@ -110,8 +110,9 @@ export default function CreateBoutiquePage() {
       if (response.success) {
         success('Boutique créée avec succès', 'Votre boutique est maintenant en ligne !');
         
-        // Redirection vers la boutique après un court délai
+        // Stocker la boutique dans le localStorage et rediriger
         if (response.boutique) {
+          localStorage.setItem('admin_boutique', JSON.stringify(response.boutique));
           setTimeout(() => {
             router.push(`/admin/${response.boutique!.slug}`);
           }, 1500);

@@ -66,9 +66,7 @@ export default function SidebarMenu({ isOpen = true, onClose }: SidebarMenuProps
                 className="flex items-center space-x-3 px-3 py-3 rounded-lg text-gray-dark hover:bg-accent/20 hover:text-primary transition-all duration-200 group"
                 onClick={onClose} // Fermer le sidebar sur mobile après clic
               >
-                <span className="text-xl group-hover:scale-110 transition-transform duration-200">
-                  {getIconeCategorie(categorie.nom)}
-                </span>
+                
                 <span className="font-medium">
                   {categorie.nom}
                 </span>

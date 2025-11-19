@@ -120,11 +120,13 @@ export function useAuth(): UseAuthReturn {
         console.log('📊 État de la boutique:', response.hasBoutique);
         
         if (response.hasBoutique && response.boutique) {
-          // Le vendeur a une boutique, utiliser le slug
+          // Le vendeur a une boutique, stocker les données et utiliser le slug
+          localStorage.setItem('admin_boutique', JSON.stringify(response.boutique));
           console.log('✅ Boutique trouvée, redirection vers:', `/admin/${response.boutique.slug}`);
           router.push(`/admin/${response.boutique.slug}`);
         } else {
-          // Pas de boutique, rediriger vers la création
+          // Pas de boutique, supprimer les données si elles existent
+          localStorage.removeItem('admin_boutique');
           console.log('❌ Aucune boutique trouvée, redirection vers la création');
           router.push('/admin/boutique/create');
         }
@@ -211,12 +213,15 @@ export function useAuth(): UseAuthReturn {
       if (response.boutiques && response.boutiques.length > 0) {
         console.log('✅ Boutiques trouvées:', response.boutiques.length);
         console.log('📋 Première boutique:', response.boutiques[0]);
+        // Stocker la boutique dans le localStorage
+        localStorage.setItem('admin_boutique', JSON.stringify(response.boutiques[0]));
         // Retourner la première boutique (pour l'instant on assume qu'un vendeur n'a qu'une boutique)
         return response.boutiques[0];
       }
       
       console.log('❌ Aucune boutique trouvée dans la réponse');
-      // Pas de boutique trouvée - retourner null
+      // Pas de boutique trouvée - supprimer les données si elles existent
+      localStorage.removeItem('admin_boutique');
       return null;
     } catch (error: any) {
       console.error('🚨 Erreur lors de la vérification de la boutique:', error);
@@ -240,6 +245,7 @@ export function useAuth(): UseAuthReturn {
   const logout = () => {
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_user');
+    localStorage.removeItem('admin_boutique');
     setUser(null);
     success('Déconnexion réussie', 'À bientôt !');
     router.push('/admin/login');

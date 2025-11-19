@@ -6,9 +6,29 @@ import Image from 'next/image';
 
 export default function LandingPage() {
   const [isVisible, setIsVisible] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [boutiqueSlug, setBoutiqueSlug] = useState<string | null>(null);
 
   useEffect(() => {
     setIsVisible(true);
+    
+    // Vérifier si l'utilisateur est authentifié
+    const token = localStorage.getItem('admin_token');
+    const boutiqueData = localStorage.getItem('admin_boutique');
+    
+    if (token) {
+      setIsAuthenticated(true);
+      
+      // Récupérer le slug de la boutique si disponible
+      if (boutiqueData) {
+        try {
+          const parsedBoutique = JSON.parse(boutiqueData);
+          setBoutiqueSlug(parsedBoutique.slug);
+        } catch (error) {
+          console.error('Erreur lors du parsing des données de la boutique:', error);
+        }
+      }
+    }
   }, []);
 
   return (
@@ -34,18 +54,29 @@ export default function LandingPage() {
               <a href="#how-it-works" className="text-gray-600 hover:text-emerald-600 transition-colors">
                 Comment ça marche
               </a>
-              <Link
-                href="/admin/login"
-                className="text-gray-600 hover:text-emerald-600 transition-colors"
-              >
-                Connexion
-              </Link>
-              <Link
-                href="/admin/register"
-                className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
-              >
-                Créer une boutique
-              </Link>
+              {!isAuthenticated ? (
+                <>
+                  <Link
+                    href="/admin/login"
+                    className="text-gray-600 hover:text-emerald-600 transition-colors"
+                  >
+                    Espace vendeur
+                  </Link>
+                  <Link
+                    href="/admin/register"
+                    className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+                  >
+                    Créer une boutique
+                  </Link>
+                </>
+              ) : (
+                <Link
+                  href={boutiqueSlug ? `/admin/${boutiqueSlug}` : '/admin/boutique/create'}
+                  className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+                >
+                  Mon espace
+                </Link>
+              )}
             </nav>
           </div>
         </div>
@@ -64,18 +95,37 @@ export default function LandingPage() {
               Une plateforme minimaliste conçue pour les commerçants gabonais.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link
-                href="/admin/register"
-                className="w-full sm:w-auto px-8 py-4 bg-emerald-600 text-white text-lg font-semibold rounded-lg hover:bg-emerald-700 transform hover:scale-105 transition-all shadow-lg"
-              >
-                Commencer gratuitement
-              </Link>
-              <Link
-                href="/marche_241"
-                className="w-full sm:w-auto px-8 py-4 bg-white text-emerald-600 text-lg font-semibold rounded-lg hover:bg-gray-50 border-2 border-emerald-600 transform hover:scale-105 transition-all"
-              >
-                Découvrir les boutiques
-              </Link>
+              {!isAuthenticated ? (
+                <>
+                  <Link
+                    href="/admin/register"
+                    className="w-full sm:w-auto px-8 py-4 bg-emerald-600 text-white text-lg font-semibold rounded-lg hover:bg-emerald-700 transform hover:scale-105 transition-all shadow-lg"
+                  >
+                    Commencer gratuitement
+                  </Link>
+                  <Link
+                    href="/admin/login"
+                    className="w-full sm:w-auto px-8 py-4 bg-white text-emerald-600 text-lg font-semibold rounded-lg hover:bg-gray-50 border-2 border-emerald-600 transform hover:scale-105 transition-all"
+                  >
+                    Espace vendeur
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href={boutiqueSlug ? `/admin/${boutiqueSlug}` : '/admin/boutique/create'}
+                    className="w-full sm:w-auto px-8 py-4 bg-emerald-600 text-white text-lg font-semibold rounded-lg hover:bg-emerald-700 transform hover:scale-105 transition-all shadow-lg"
+                  >
+                    Accéder à ma boutique
+                  </Link>
+                  <Link
+                    href="/marche_241"
+                    className="w-full sm:w-auto px-8 py-4 bg-white text-emerald-600 text-lg font-semibold rounded-lg hover:bg-gray-50 border-2 border-emerald-600 transform hover:scale-105 transition-all"
+                  >
+                    Découvrir les boutiques
+                  </Link>
+                </>
+              )}
             </div>
           </div>
 
@@ -275,12 +325,21 @@ export default function LandingPage() {
           <p className="text-xl text-emerald-100 mb-8">
             Rejoignez les commerçants qui font confiance à Marché241
           </p>
-          <Link
-            href="/admin/register"
-            className="inline-block px-8 py-4 bg-white text-emerald-600 text-lg font-semibold rounded-lg hover:bg-gray-100 transform hover:scale-105 transition-all shadow-xl"
-          >
-            Créer ma boutique gratuitement
-          </Link>
+          {!isAuthenticated ? (
+            <Link
+              href="/admin/register"
+              className="inline-block px-8 py-4 bg-white text-emerald-600 text-lg font-semibold rounded-lg hover:bg-gray-100 transform hover:scale-105 transition-all shadow-xl"
+            >
+              Créer ma boutique gratuitement
+            </Link>
+          ) : (
+            <Link
+              href={boutiqueSlug ? `/admin/${boutiqueSlug}` : '/admin/boutique/create'}
+              className="inline-block px-8 py-4 bg-white text-emerald-600 text-lg font-semibold rounded-lg hover:bg-gray-100 transform hover:scale-105 transition-all shadow-xl"
+            >
+              Accéder à ma boutique
+            </Link>
+          )}
         </div>
       </section>
 

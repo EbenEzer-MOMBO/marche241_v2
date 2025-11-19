@@ -51,27 +51,50 @@ export async function getProduitsParBoutique(
   }
 ): Promise<{ produits: ProduitDB[]; total?: number; page?: number; limite?: number }> {
   try {
-    const params = new URLSearchParams();
-    params.append('boutique_id', boutiqueId.toString());
+    // Utiliser l'endpoint /produits/boutique/{id}
+    const response = await api.get<{ success: boolean; donnees: ProduitDB[] }>(
+      `/produits/boutique/${boutiqueId}`
+    );
     
-    if (options?.page) params.append('page', options.page.toString());
-    if (options?.limite) params.append('limite', options.limite.toString());
-    if (options?.categorie_id) params.append('categorie_id', options.categorie_id.toString());
-    if (options?.featured) params.append('featured', 'true');
-    if (options?.nouveaux) params.append('nouveaux', 'true');
-    if (options?.promotion) params.append('promotion', 'true');
-
-    const response = await api.get<ApiProduitsResponse>(`/produits?${params.toString()}`);
-    
-    if (!response.success || !response.produits) {
+    if (!response.success || !response.donnees) {
       throw new Error('Erreur lors de la récupération des produits');
     }
     
+    // Filtrer et trier les produits côté client si nécessaire
+    let produits = response.donnees;
+    
+    // Filtrer par catégorie si spécifié
+    if (options?.categorie_id) {
+      produits = produits.filter(p => p.categorie_id === options.categorie_id);
+    }
+    
+    // Filtrer par featured
+    if (options?.featured) {
+      produits = produits.filter(p => p.est_featured);
+    }
+    
+    // Filtrer par nouveaux
+    if (options?.nouveaux) {
+      produits = produits.filter(p => p.est_nouveau);
+    }
+    
+    // Filtrer par promotion
+    if (options?.promotion) {
+      produits = produits.filter(p => p.est_en_promotion);
+    }
+    
+    // Pagination côté client
+    const page = options?.page || 1;
+    const limite = options?.limite || produits.length;
+    const start = (page - 1) * limite;
+    const end = start + limite;
+    const paginatedProduits = produits.slice(start, end);
+    
     return {
-      produits: response.produits,
-      total: response.total,
-      page: response.page,
-      limite: response.limite
+      produits: paginatedProduits,
+      total: produits.length,
+      page: page,
+      limite: limite
     };
   } catch (error) {
     console.error('Erreur lors de la récupération des produits:', error);

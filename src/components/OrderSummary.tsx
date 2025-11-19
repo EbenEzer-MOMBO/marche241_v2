@@ -147,15 +147,15 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
 
   const deliveryFee = getDeliveryFee();
 
-  // Calcul des frais de transaction (2.5%)
+  // Calcul des frais de transaction (4.5%)
   const getTransactionFee = () => {
-    const transactionRate = 0.025; // 2.5%
+    const transactionRate = 0.045; // 4.5%
 
     if (payOnDelivery) {
-      // Pour paiement à la livraison : 2.5% seulement sur les frais de livraison
+      // Pour paiement à la livraison : 4.5% seulement sur les frais de livraison
       return Math.round(deliveryFee * transactionRate);
     } else {
-      // Pour paiement normal : 2.5% sur le total (sous-total + livraison)
+      // Pour paiement normal : 4.5% sur le total (sous-total + livraison)
       const baseAmount = subtotal + deliveryFee;
       return Math.round(baseAmount * transactionRate);
     }
@@ -1072,11 +1072,11 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
                 {getTransactionFee() > 0 && (
                   <div className="flex justify-between items-center py-2">
                     <span className="text-gray-600">
-                      Frais de transaction
+                      Frais de commodité
                       <span className="text-xs text-gray-500 block">
                         {payOnDelivery
-                          ? '(2.5% sur frais de livraison)'
-                          : '(2.5% sur total commande)'
+                          ? '(4.5% sur frais de livraison)'
+                          : '(4.5% sur total commande)'
                         }
                       </span>
                     </span>

@@ -121,24 +121,31 @@ export default function PaymentsPage() {
       t.statut.toLowerCase() === 'paye' || t.statut.toLowerCase() === 'confirme'
     );
 
-    // Revenu total
+    // Revenu total (montant TTC - inclut déjà la taxe)
     const totalRevenue = paidTransactions.reduce((sum, t) => sum + t.montant, 0);
+    
+    // Calculer le montant HT et la taxe
+    // Le montant de transaction est TTC, donc : Montant HT = TTC / 1.045
+    const totalNetRevenue = Math.round(totalRevenue / 1.045);
+    const totalTax = totalRevenue - totalNetRevenue;
 
     // Revenu mensuel (mois en cours)
-    const monthlyRevenue = paidTransactions
-      .filter(t => {
-        const date = new Date(t.date_creation);
-        return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
-      })
-      .reduce((sum, t) => sum + t.montant, 0);
+    const monthlyTransactions = paidTransactions.filter(t => {
+      const date = new Date(t.date_creation);
+      return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+    });
+    const monthlyRevenue = monthlyTransactions.reduce((sum, t) => sum + t.montant, 0);
+    const monthlyNetRevenue = Math.round(monthlyRevenue / 1.045);
+    const monthlyTax = monthlyRevenue - monthlyNetRevenue;
 
     // Revenu annuel (année en cours)
-    const yearlyRevenue = paidTransactions
-      .filter(t => {
-        const date = new Date(t.date_creation);
-        return date.getFullYear() === currentYear;
-      })
-      .reduce((sum, t) => sum + t.montant, 0);
+    const yearlyTransactions = paidTransactions.filter(t => {
+      const date = new Date(t.date_creation);
+      return date.getFullYear() === currentYear;
+    });
+    const yearlyRevenue = yearlyTransactions.reduce((sum, t) => sum + t.montant, 0);
+    const yearlyNetRevenue = Math.round(yearlyRevenue / 1.045);
+    const yearlyTax = yearlyRevenue - yearlyNetRevenue;
 
     // Nombre de transactions payées
     const totalPaidTransactions = paidTransactions.length;
@@ -150,8 +157,14 @@ export default function PaymentsPage() {
 
     return {
       totalRevenue,
+      totalTax,
+      totalNetRevenue,
       monthlyRevenue,
+      monthlyTax,
+      monthlyNetRevenue,
       yearlyRevenue,
+      yearlyTax,
+      yearlyNetRevenue,
       totalPaidTransactions,
       averageRevenue
     };
@@ -399,7 +412,10 @@ export default function PaymentsPage() {
                 </span>
               </div>
               <h3 className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Revenu Mensuel</h3>
-              <p className="text-base sm:text-xl lg:text-2xl font-bold text-gray-900 break-words">{formatPrice(stats.monthlyRevenue)}</p>
+              <p className="text-base sm:text-xl lg:text-2xl font-bold text-gray-900 break-words">{formatPrice(stats.monthlyNetRevenue)}</p>
+              <div className="mt-2 pt-2 border-t border-gray-100">
+                <p className="text-xs text-gray-500">Brut: {formatPrice(stats.monthlyRevenue)}</p>
+              </div>
             </div>
 
             {/* Revenu Annuel */}
@@ -415,7 +431,10 @@ export default function PaymentsPage() {
                 </span>
               </div>
               <h3 className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Revenu Annuel</h3>
-              <p className="text-base sm:text-xl lg:text-2xl font-bold text-gray-900 break-words">{formatPrice(stats.yearlyRevenue)}</p>
+              <p className="text-base sm:text-xl lg:text-2xl font-bold text-gray-900 break-words">{formatPrice(stats.yearlyNetRevenue)}</p>
+              <div className="mt-2 pt-2 border-t border-gray-100">
+                <p className="text-xs text-gray-500">Brut: {formatPrice(stats.yearlyRevenue)}</p>
+              </div>
             </div>
 
             {/* Revenu Total */}
@@ -431,7 +450,10 @@ export default function PaymentsPage() {
                 </span>
               </div>
               <h3 className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Revenu Total</h3>
-              <p className="text-base sm:text-xl lg:text-2xl font-bold text-gray-900 break-words">{formatPrice(stats.totalRevenue)}</p>
+              <p className="text-base sm:text-xl lg:text-2xl font-bold text-gray-900 break-words">{formatPrice(stats.totalNetRevenue)}</p>
+              <div className="mt-2 pt-2 border-t border-gray-100">
+                <p className="text-xs text-gray-500">Brut: {formatPrice(stats.totalRevenue)}</p>
+              </div>
             </div>
 
             {/* Revenu Moyen */}
@@ -553,84 +575,92 @@ export default function PaymentsPage() {
           </div>
 
           {/* Transactions Table - Desktop */}
-          <div className="hidden lg:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
+          <div className="hidden lg:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
+            <table className="w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                     Référence
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Téléphone
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                     Date
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                     Montant
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                    Taxe
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                     Type
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                     Méthode
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                     Statut
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {paginatedTransactions.map((transaction) => (
+                {paginatedTransactions.map((transaction) => {
+                  // Le montant de la transaction est TTC (inclut déjà la taxe de 4.5%)
+                  // Pour retrouver le montant HT : Montant TTC / 1.045
+                  const netAmount = Math.round(transaction.montant / 1.045);
+                  const taxAmount = transaction.montant - netAmount;
+                  
+                  return (
                   <tr key={transaction.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <Hash className="h-4 w-4 text-gray-400 mr-1" />
-                        <div className="text-sm font-medium text-gray-900">
-                          {transaction.reference_transaction}
-                        </div>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {transaction.reference_transaction}
                       </div>
-                      {transaction.reference_operateur && (
-                        <div className="text-xs text-gray-500 mt-1">
-                          Op: {transaction.reference_operateur}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
                       {transaction.numero_telephone && (
-                        <div className="flex items-center text-sm text-gray-900">
-                          <Phone className="h-4 w-4 text-gray-400 mr-1" />
+                        <div className="text-xs text-gray-500 mt-1">
                           {transaction.numero_telephone}
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {formatDate(transaction.date_creation)}
+                        {new Intl.DateTimeFormat('fr-FR', {
+                          day: '2-digit',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }).format(new Date(transaction.date_creation))}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="text-sm font-bold text-gray-900">
                         {formatPrice(transaction.montant)}
                       </div>
+                      <div className="text-xs text-green-600">
+                        Net: {formatPrice(netAmount)}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="text-sm font-medium text-red-600">
+                        {formatPrice(taxAmount)}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getTypeColor(
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getTypeColor(
                           transaction.type_paiement
                         )}`}
                       >
                         {getTypeLabel(transaction.type_paiement)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
                         {getMethodeLabel(transaction.methode_paiement)}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(
                           transaction.statut
                         )}`}
                       >
@@ -639,14 +669,21 @@ export default function PaymentsPage() {
                       </span>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
 
           {/* Transactions Cards - Mobile */}
           <div className="lg:hidden space-y-3">
-            {paginatedTransactions.map((transaction) => (
+            {paginatedTransactions.map((transaction) => {
+              // Le montant de la transaction est TTC (inclut déjà la taxe de 4.5%)
+              // Pour retrouver le montant HT : Montant TTC / 1.045
+              const netAmount = Math.round(transaction.montant / 1.045);
+              const taxAmount = transaction.montant - netAmount;
+              
+              return (
               <div
                 key={transaction.id}
                 className="bg-white rounded-lg shadow-sm border border-gray-200 p-4"
@@ -686,6 +723,14 @@ export default function PaymentsPage() {
                     <span className="font-bold text-gray-900">{formatPrice(transaction.montant)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Taxe (4.5%):</span>
+                    <span className="font-medium text-red-600">{formatPrice(taxAmount)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Montant net:</span>
+                    <span className="font-bold text-green-600">{formatPrice(netAmount)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Type:</span>
                     <span
                       className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getTypeColor(
@@ -707,7 +752,8 @@ export default function PaymentsPage() {
                   )}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Empty State */}
