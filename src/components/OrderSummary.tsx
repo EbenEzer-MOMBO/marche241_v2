@@ -73,8 +73,8 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
   const [whatsAppError, setWhatsAppError] = useState<string | null>(null);
   const [whatsAppExists, setWhatsAppExists] = useState<boolean | null>(null);
 
-  // Utilisation du hook panier pour récupérer les vraies données
-  const { panier, totalItems, totalPrix, loading } = usePanier();
+  // Utilisation du hook panier pour récupérer les vraies données avec isolation par boutique
+  const { panier, totalItems, totalPrix, loading } = usePanier(boutiqueId);
   const { success, error, toasts, removeToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showProgressBar, setShowProgressBar] = useState(false);

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { X, Spinner, Minus, Plus, Trash, Check, Warning, Info } from '@phosphor-icons/react';
 import { formatPrice } from '@/lib/utils';
 import { usePanier } from '@/hooks/usePanier';
+import { useBoutique } from '@/hooks/useBoutique';
 import { getProduitImageUrl } from '@/lib/services/produits';
 import { useState } from 'react';
 
@@ -15,7 +16,10 @@ interface CartSidebarProps {
 }
 
 export default function CartSidebar({ isOpen, onClose, boutiqueName = 'marche_241' }: CartSidebarProps) {
-  // Hook pour gérer le panier
+  // Obtenir le boutique ID pour isoler le panier par boutique
+  const { boutique } = useBoutique(boutiqueName);
+  
+  // Hook pour gérer le panier avec boutiqueId pour isolation
   const { 
     panier, 
     totalItems, 
@@ -26,7 +30,7 @@ export default function CartSidebar({ isOpen, onClose, boutiqueName = 'marche_24
     clearAvertissements,
     mettreAJourQuantite, 
     supprimerItem 
-  } = usePanier();
+  } = usePanier(boutique?.id);
 
   // État pour gérer les confirmations de suppression
   const [itemsToDelete, setItemsToDelete] = useState<Set<number>>(new Set());

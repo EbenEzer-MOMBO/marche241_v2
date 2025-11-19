@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import { formatPrice } from '@/lib/utils';
 import { usePanier } from '@/hooks/usePanier';
+import { useBoutique } from '@/hooks/useBoutique';
 
 interface FloatingCartButtonProps {
   onCartClick: () => void;
@@ -11,7 +12,13 @@ interface FloatingCartButtonProps {
 
 export default function FloatingCartButton({ onCartClick }: FloatingCartButtonProps) {
   const pathname = usePathname();
-  const { panier, totalItems, totalPrix, loading, rafraichir } = usePanier();
+  
+  // Extraire le boutiqueName depuis le pathname pour obtenir le boutiqueId
+  const boutiqueName = pathname?.split('/')[1] || '';
+  const { boutique } = useBoutique(boutiqueName);
+  
+  // Charger le panier avec isolation par boutique
+  const { panier, totalItems, totalPrix, loading, rafraichir } = usePanier(boutique?.id);
 
   // Rafraîchir le panier au montage et écouter les changements
   useEffect(() => {

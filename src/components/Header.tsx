@@ -38,13 +38,13 @@ function getBoutiqueLogo(logoUrl?: string | null): string {
 export default function Header({ onMenuClick, onCartClick, boutiqueName, hideCartButton = false }: HeaderProps) {
   const scrollY = useScrollPosition();
   const { boutique, config, loading, error } = useBoutique(boutiqueName);
-  const { totalItems, rafraichir } = usePanier();
+  const { totalItems, rafraichir } = usePanier(boutique?.id);
 
   // Rafraîchir le panier périodiquement pour détecter les changements
   useEffect(() => {
     const interval = setInterval(() => {
       rafraichir();
-    }, 2000); // Rafraîchir toutes les 2 secondes
+    }, 5000); // Rafraîchir toutes les 5 secondes
 
     return () => clearInterval(interval);
   }, [rafraichir]);

@@ -14,11 +14,17 @@ export function generateSessionId(): string {
 
 /**
  * Récupère ou crée un ID de session avec une durée d'un mois
+ * @param boutiqueId - ID de la boutique (optionnel pour compatibilité)
  * @returns string - ID de session
  */
-export function getOrCreateSessionId(): string {
-  const SESSION_KEY = 'marche241_session_id';
-  const SESSION_EXPIRY_KEY = 'marche241_session_expiry';
+export function getOrCreateSessionId(boutiqueId?: number): string {
+  // Si un boutiqueId est fourni, créer une session spécifique à cette boutique
+  const SESSION_KEY = boutiqueId 
+    ? `marche241_session_id_${boutiqueId}` 
+    : 'marche241_session_id';
+  const SESSION_EXPIRY_KEY = boutiqueId 
+    ? `marche241_session_expiry_${boutiqueId}` 
+    : 'marche241_session_expiry';
   
   try {
     // Vérifier si une session existe et n'est pas expirée
@@ -53,10 +59,15 @@ export function getOrCreateSessionId(): string {
 
 /**
  * Supprime la session actuelle
+ * @param boutiqueId - ID de la boutique (optionnel)
  */
-export function clearSession(): void {
-  const SESSION_KEY = 'marche241_session_id';
-  const SESSION_EXPIRY_KEY = 'marche241_session_expiry';
+export function clearSession(boutiqueId?: number): void {
+  const SESSION_KEY = boutiqueId 
+    ? `marche241_session_id_${boutiqueId}` 
+    : 'marche241_session_id';
+  const SESSION_EXPIRY_KEY = boutiqueId 
+    ? `marche241_session_expiry_${boutiqueId}` 
+    : 'marche241_session_expiry';
   
   try {
     localStorage.removeItem(SESSION_KEY);
@@ -68,11 +79,16 @@ export function clearSession(): void {
 
 /**
  * Vérifie si une session est valide
+ * @param boutiqueId - ID de la boutique (optionnel)
  * @returns boolean - true si la session est valide
  */
-export function isSessionValid(): boolean {
-  const SESSION_KEY = 'marche241_session_id';
-  const SESSION_EXPIRY_KEY = 'marche241_session_expiry';
+export function isSessionValid(boutiqueId?: number): boolean {
+  const SESSION_KEY = boutiqueId 
+    ? `marche241_session_id_${boutiqueId}` 
+    : 'marche241_session_id';
+  const SESSION_EXPIRY_KEY = boutiqueId 
+    ? `marche241_session_expiry_${boutiqueId}` 
+    : 'marche241_session_expiry';
   
   try {
     const sessionId = localStorage.getItem(SESSION_KEY);

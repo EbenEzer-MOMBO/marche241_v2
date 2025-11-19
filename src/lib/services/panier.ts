@@ -129,7 +129,8 @@ export async function ajouterAuPanier(
   variantsSelectionnes: { [key: string]: string } = {}
 ): Promise<AjoutPanierResponse> {
   try {
-    const sessionId = getOrCreateSessionId();
+    // Obtenir une session spécifique à cette boutique
+    const sessionId = getOrCreateSessionId(boutiqueId);
     
     const requestData: AjoutPanierRequest = {
       session_id: sessionId,
@@ -154,11 +155,13 @@ export async function ajouterAuPanier(
 
 /**
  * Récupère le contenu du panier pour la session actuelle
+ * @param boutiqueId - L'ID de la boutique (optionnel, pour isoler les paniers par boutique)
  * @returns Promise<PanierResponse> - Contenu du panier
  */
-export async function getPanier(): Promise<PanierResponse> {
+export async function getPanier(boutiqueId?: number): Promise<PanierResponse> {
   try {
-    const sessionId = getOrCreateSessionId();
+    // Obtenir une session spécifique à cette boutique si fournie
+    const sessionId = getOrCreateSessionId(boutiqueId);
     
     const response = await api.get<PanierResponse>(`/panier/${sessionId}`);
     
@@ -221,11 +224,13 @@ export async function supprimerDuPanier(itemId: number): Promise<{ success: bool
 
 /**
  * Vide complètement le panier
+ * @param boutiqueId - L'ID de la boutique (optionnel)
  * @returns Promise<{ success: boolean; message: string }> - Réponse du vidage
  */
-export async function viderPanier(): Promise<{ success: boolean; message: string }> {
+export async function viderPanier(boutiqueId?: number): Promise<{ success: boolean; message: string }> {
   try {
-    const sessionId = getOrCreateSessionId();
+    // Obtenir une session spécifique à cette boutique si fournie
+    const sessionId = getOrCreateSessionId(boutiqueId);
     
     const response = await api.delete<{ success: boolean; message: string }>(`/panier?session_id=${sessionId}`);
     

@@ -114,9 +114,10 @@ interface UsePanierResult {
 
 /**
  * Hook pour gérer le panier d'achat
+ * @param boutiqueId - ID de la boutique (optionnel, pour isoler le panier par boutique)
  * @returns Panier, fonctions de gestion et état de chargement
  */
-export function usePanier(): UsePanierResult {
+export function usePanier(boutiqueId?: number): UsePanierResult {
   const [panier, setPanier] = useState<PanierItem[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [totalPrix, setTotalPrix] = useState(0);
@@ -129,7 +130,8 @@ export function usePanier(): UsePanierResult {
       setLoading(true);
       setError(null);
       
-      const response = await getPanier();
+      // Passer le boutiqueId pour obtenir une session spécifique à cette boutique
+      const response = await getPanier(boutiqueId);
       setPanier(response.panier);
       
       // Gérer les avertissements s'ils existent
@@ -156,7 +158,7 @@ export function usePanier(): UsePanierResult {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [boutiqueId]);
 
   const rafraichir = useCallback(async () => {
     await chargerPanier();
@@ -238,7 +240,8 @@ export function usePanier(): UsePanierResult {
     try {
       setError(null);
       
-      await viderPanier();
+      // Passer le boutiqueId pour vider uniquement le panier de cette boutique
+      await viderPanier(boutiqueId);
       
       // Recharger le panier après vidage
       await chargerPanier();
@@ -250,7 +253,7 @@ export function usePanier(): UsePanierResult {
       setError(errorMessage);
       return false;
     }
-  }, [chargerPanier]);
+  }, [chargerPanier, boutiqueId]);
 
   // Fonction pour effacer les avertissements
   const clearAvertissements = useCallback(() => {
