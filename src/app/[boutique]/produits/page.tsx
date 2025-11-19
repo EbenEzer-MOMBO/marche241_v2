@@ -171,7 +171,7 @@ export default function ProduitsPage() {
 
   return (
     <MainLayout boutiqueName={boutiqueName}>
-      <div className="bg-gray-50 min-h-screen pt-20 pb-8 sm:pt-24 lg:pt-8">
+      <div className="bg-gray-50 min-h-screen pt-20 pb-8 sm:pt-24 lg:pt-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* En-tête */}
           <div className="mb-6">
@@ -205,134 +205,134 @@ export default function ProduitsPage() {
             </div>
           </div>
 
-          <div className="flex gap-8">
-            {/* Sidebar - Desktop */}
-            <aside className="hidden lg:block w-64 flex-shrink-0">
-              <div className="bg-white rounded-xl p-6 shadow-sm sticky top-24">
+          {/* Panneau horizontal - Mobile */}
+          <div className="lg:hidden mb-6">
+            <div className="bg-white rounded-xl p-4 shadow-sm">
+              <div className="grid grid-cols-2 gap-3">
                 {/* Catégories */}
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-black mb-4">Catégories</h3>
-                  <div className="space-y-2">
-                    <button
-                      onClick={() => handleCategorieChange(null)}
-                      className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                        !selectedCategorie
-                          ? 'bg-primary text-white'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      Toutes ({produits.length})
-                    </button>
-                    {categories.map((categorie) => {
-                      const count = produits.filter(p => p.categorie?.slug === categorie.slug).length;
-                      return (
-                        <button
-                          key={categorie.id}
-                          onClick={() => handleCategorieChange(categorie.slug)}
-                          className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                            selectedCategorie === categorie.slug
-                              ? 'bg-primary text-white'
-                              : 'text-gray-700 hover:bg-gray-100'
-                          }`}
-                        >
-                          {categorie.nom} ({count})
-                        </button>
-                      );
-                    })}
-                  </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Catégories</label>
+                  <select
+                    value={selectedCategorie || ''}
+                    onChange={(e) => handleCategorieChange(e.target.value || null)}
+                    className="w-full px-2 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  >
+                    <option value="">Toutes</option>
+                    {categories.map((categorie) => (
+                      <option key={categorie.id} value={categorie.slug}>
+                        {categorie.nom}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {/* Disponibilité */}
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-black mb-4">Disponibilité</h3>
-                  <div className="space-y-2">
-                    <button
-                      onClick={() => setFilterStock('all')}
-                      className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                        filterStock === 'all'
-                          ? 'bg-primary text-white'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      Tous
-                    </button>
-                    <button
-                      onClick={() => setFilterStock('in-stock')}
-                      className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                        filterStock === 'in-stock'
-                          ? 'bg-primary text-white'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      En stock
-                    </button>
-                    <button
-                      onClick={() => setFilterStock('out-stock')}
-                      className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                        filterStock === 'out-stock'
-                          ? 'bg-primary text-white'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      Épuisés
-                    </button>
-                  </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Stock</label>
+                  <select
+                    value={filterStock}
+                    onChange={(e) => setFilterStock(e.target.value as any)}
+                    className="w-full px-2 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  >
+                    <option value="all">Tous</option>
+                    <option value="in-stock">En stock</option>
+                    <option value="out-stock">Épuisés</option>
+                  </select>
                 </div>
 
-                {/* Type de produit */}
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-black mb-4">Type</h3>
-                  <div className="space-y-2">
-                    <button
-                      onClick={() => setFilterType('all')}
-                      className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                        filterType === 'all'
-                          ? 'bg-primary text-white'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      Tous
-                    </button>
-                    <button
-                      onClick={() => setFilterType('nouveau')}
-                      className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                        filterType === 'nouveau'
-                          ? 'bg-primary text-white'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      Nouveautés
-                    </button>
-                    <button
-                      onClick={() => setFilterType('promo')}
-                      className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                        filterType === 'promo'
-                          ? 'bg-primary text-white'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      En promotion
-                    </button>
-                    <button
-                      onClick={() => setFilterType('featured')}
-                      className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                        filterType === 'featured'
-                          ? 'bg-primary text-white'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      Produits vedettes
-                    </button>
-                  </div>
+                {/* Type */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Type</label>
+                  <select
+                    value={filterType}
+                    onChange={(e) => setFilterType(e.target.value as any)}
+                    className="w-full px-2 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  >
+                    <option value="all">Tous</option>
+                    <option value="nouveau">Nouveautés</option>
+                    <option value="promo">Promos</option>
+                    <option value="featured">Vedettes</option>
+                  </select>
                 </div>
 
                 {/* Tri */}
                 <div>
-                  <h3 className="text-lg font-semibold text-black mb-4">Trier par</h3>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Trier par</label>
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as any)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full px-2 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  >
+                    <option value="recent">Récents</option>
+                    <option value="price-asc">Prix ↑</option>
+                    <option value="price-desc">Prix ↓</option>
+                    <option value="name">Nom A-Z</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-8">
+            {/* Sidebar - Desktop */}
+            <aside className="hidden lg:block w-64 flex-shrink-0">
+              <div className="bg-white rounded-xl p-4 shadow-sm sticky top-32">
+                {/* Catégories */}
+                <div className="mb-4">
+                  <h3 className="text-sm font-semibold text-black mb-2">Catégories</h3>
+                  <select
+                    value={selectedCategorie || ''}
+                    onChange={(e) => handleCategorieChange(e.target.value || null)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  >
+                    <option value="">Toutes ({produits.length})</option>
+                    {categories.map((categorie) => {
+                      const count = produits.filter(p => p.categorie?.slug === categorie.slug).length;
+                      return (
+                        <option key={categorie.id} value={categorie.slug}>
+                          {categorie.nom} ({count})
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                {/* Disponibilité */}
+                <div className="mb-4">
+                  <h3 className="text-sm font-semibold text-black mb-2">Disponibilité</h3>
+                  <select
+                    value={filterStock}
+                    onChange={(e) => setFilterStock(e.target.value as any)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  >
+                    <option value="all">Tous</option>
+                    <option value="in-stock">En stock</option>
+                    <option value="out-stock">Épuisés</option>
+                  </select>
+                </div>
+
+                {/* Type de produit */}
+                <div className="mb-4">
+                  <h3 className="text-sm font-semibold text-black mb-2">Type</h3>
+                  <select
+                    value={filterType}
+                    onChange={(e) => setFilterType(e.target.value as any)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  >
+                    <option value="all">Tous</option>
+                    <option value="nouveau">Nouveautés</option>
+                    <option value="promo">En promotion</option>
+                    <option value="featured">Produits vedettes</option>
+                  </select>
+                </div>
+
+                {/* Tri */}
+                <div>
+                  <h3 className="text-sm font-semibold text-black mb-2">Trier par</h3>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   >
                     <option value="recent">Plus récents</option>
                     <option value="price-asc">Prix croissant</option>
@@ -342,154 +342,6 @@ export default function ProduitsPage() {
                 </div>
               </div>
             </aside>
-
-            {/* Filtres - Mobile */}
-            <div className="lg:hidden fixed bottom-4 right-4 z-50">
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="bg-primary text-white p-4 rounded-full shadow-lg hover:bg-primary/90 transition-colors"
-              >
-                <Filter className="h-6 w-6" />
-              </button>
-            </div>
-
-            {/* Modal filtres mobile */}
-            {showFilters && (
-              <div className="lg:hidden fixed inset-0 bg-black/50 z-50" onClick={() => setShowFilters(false)}>
-                <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl p-6 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-bold text-black">Filtres</h3>
-                    <button onClick={() => setShowFilters(false)}>
-                      <X className="h-6 w-6" />
-                    </button>
-                  </div>
-
-                  {/* Catégories */}
-                  <div className="mb-6">
-                    <h4 className="font-semibold text-black mb-3">Catégories</h4>
-                    <div className="space-y-2">
-                      <button
-                        onClick={() => {
-                          handleCategorieChange(null);
-                          setShowFilters(false);
-                        }}
-                        className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                          !selectedCategorie
-                            ? 'bg-primary text-white'
-                            : 'text-gray-700 hover:bg-gray-100'
-                        }`}
-                      >
-                        Toutes ({produits.length})
-                      </button>
-                      {categories.map((categorie) => {
-                        const count = produits.filter(p => p.categorie?.slug === categorie.slug).length;
-                        return (
-                          <button
-                            key={categorie.id}
-                            onClick={() => {
-                              handleCategorieChange(categorie.slug);
-                              setShowFilters(false);
-                            }}
-                            className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                              selectedCategorie === categorie.slug
-                                ? 'bg-primary text-white'
-                                : 'text-gray-700 hover:bg-gray-100'
-                            }`}
-                          >
-                            {categorie.nom} ({count})
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Disponibilité */}
-                  <div className="mb-6">
-                    <h4 className="font-semibold text-black mb-3">Disponibilité</h4>
-                    <div className="space-y-2">
-                      <button
-                        onClick={() => { setFilterStock('all'); setShowFilters(false); }}
-                        className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                          filterStock === 'all' ? 'bg-primary text-white' : 'text-gray-700 hover:bg-gray-100'
-                        }`}
-                      >
-                        Tous
-                      </button>
-                      <button
-                        onClick={() => { setFilterStock('in-stock'); setShowFilters(false); }}
-                        className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                          filterStock === 'in-stock' ? 'bg-primary text-white' : 'text-gray-700 hover:bg-gray-100'
-                        }`}
-                      >
-                        En stock
-                      </button>
-                      <button
-                        onClick={() => { setFilterStock('out-stock'); setShowFilters(false); }}
-                        className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                          filterStock === 'out-stock' ? 'bg-primary text-white' : 'text-gray-700 hover:bg-gray-100'
-                        }`}
-                      >
-                        Épuisés
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Type de produit */}
-                  <div className="mb-6">
-                    <h4 className="font-semibold text-black mb-3">Type</h4>
-                    <div className="space-y-2">
-                      <button
-                        onClick={() => { setFilterType('all'); setShowFilters(false); }}
-                        className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                          filterType === 'all' ? 'bg-primary text-white' : 'text-gray-700 hover:bg-gray-100'
-                        }`}
-                      >
-                        Tous
-                      </button>
-                      <button
-                        onClick={() => { setFilterType('nouveau'); setShowFilters(false); }}
-                        className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                          filterType === 'nouveau' ? 'bg-primary text-white' : 'text-gray-700 hover:bg-gray-100'
-                        }`}
-                      >
-                        Nouveautés
-                      </button>
-                      <button
-                        onClick={() => { setFilterType('promo'); setShowFilters(false); }}
-                        className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                          filterType === 'promo' ? 'bg-primary text-white' : 'text-gray-700 hover:bg-gray-100'
-                        }`}
-                      >
-                        En promotion
-                      </button>
-                      <button
-                        onClick={() => { setFilterType('featured'); setShowFilters(false); }}
-                        className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                          filterType === 'featured' ? 'bg-primary text-white' : 'text-gray-700 hover:bg-gray-100'
-                        }`}
-                      >
-                        Produits vedettes
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Tri */}
-                  <div>
-                    <h4 className="font-semibold text-black mb-3">Trier par</h4>
-                    <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value as any)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                    >
-                      <option value="recent">Plus récents</option>
-                      <option value="price-asc">Prix croissant</option>
-                      <option value="price-desc">Prix décroissant</option>
-                      <option value="name">Nom A-Z</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Grille des produits */}
             <div className="flex-1">
@@ -545,7 +397,7 @@ export default function ProduitsPage() {
                         {produit.en_stock && (
                           <div className="absolute top-2 left-2 flex flex-col gap-1">
                             {produit.est_nouveau && (
-                              <span className="bg-secondary text-white px-2 py-1 rounded-full text-xs font-medium">
+                              <span className="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium">
                                 Nouveau
                               </span>
                             )}

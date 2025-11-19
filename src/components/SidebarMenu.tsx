@@ -115,8 +115,9 @@ export default function SidebarMenu({ isOpen = true, onClose }: SidebarMenuProps
         {/* Support client */}
         <div className="mt-8 pt-6 border-t border-accent/20">
           <Link
-            href="/contact"
+            href="https://api.whatsapp.com/send/?phone=24104694721&text&type=phone_number&app_absent=0"
             className="flex items-center justify-center space-x-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors duration-200 text-sm"
+            target="_blank"
           >
             <span>💬</span>
             <span>Support Client</span>

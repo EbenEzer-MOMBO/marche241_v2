@@ -134,13 +134,13 @@ export default function Header({ onMenuClick, onCartClick, boutiqueName, hideCar
           
           {/* Actions à droite */}
           <div className="flex items-center space-x-3">
-            <button
-              type="button"
+            <Link
+              href={`/${boutiqueName}/produits`}
               className="text-black hover:text-secondary transition-colors duration-200"
               aria-label="Rechercher"
             >
               <MagnifyingGlass size={20} />
-            </button>
+            </Link>
             
             {!hideCartButton && (
               <button
