@@ -35,7 +35,7 @@ export default function ProduitModal({
     tags: [] as string[],
     specifications: {} as Record<string, string>,
     images: [] as string[],
-    variants: [] as Array<{nom: string; options: string[]; quantites: number[]}>
+    variants: [] as Array<{ nom: string; options: string[]; quantites: number[] }>
   });
 
   const [currentTag, setCurrentTag] = useState('');
@@ -54,7 +54,7 @@ export default function ProduitModal({
     const totalStock = formData.variants.reduce((total, variant) => {
       return total + variant.quantites.reduce((sum, qty) => sum + qty, 0);
     }, 0);
-    
+
     if (totalStock !== formData.en_stock) {
       setFormData(prev => ({ ...prev, en_stock: totalStock }));
     }
@@ -65,23 +65,23 @@ export default function ProduitModal({
       console.log('[ProduitModal] Chargement du produit:', produit);
       console.log('[ProduitModal] Images du produit:', produit.images);
       console.log('[ProduitModal] Image principale:', produit.image_principale);
-      
+
       // Si images est vide mais image_principale existe, créer un tableau avec image_principale
-      const productImages = produit.images && produit.images.length > 0 
-        ? produit.images 
-        : produit.image_principale 
-          ? [produit.image_principale] 
+      const productImages = produit.images && produit.images.length > 0
+        ? produit.images
+        : produit.image_principale
+          ? [produit.image_principale]
           : [];
-      
+
       console.log('[ProduitModal] Images finales chargées:', productImages);
-      
+
       // Récupérer les variants existants et s'assurer qu'ils ont des quantites
       const existingVariants = produit.variants || [];
       const variantsWithQuantites = existingVariants.map((variant: any) => ({
         ...variant,
         quantites: variant.quantites || variant.options.map(() => 0)
       }));
-      
+
       setFormData({
         nom: produit.nom || '',
         description: produit.description || '',
@@ -121,6 +121,13 @@ export default function ProduitModal({
     try {
       // Variable pour stocker les images finales
       let finalImages = [...formData.images];
+
+      // Validation du stock obligatoire
+      if (formData.en_stock <= 0) {
+        setUploadError('Le stock doit être supérieur à 0. Veuillez ajouter des variants avec des quantités.');
+        setIsLoading(false);
+        return;
+      }
 
       // Vérifier s'il y a des images à uploader avant de soumettre le formulaire
       if (imageFiles.length > 0) {
@@ -234,8 +241,8 @@ export default function ProduitModal({
       if (options.length > 0) {
         setFormData(prev => ({
           ...prev,
-          variants: [...prev.variants, { 
-            nom: currentVariantName.trim(), 
+          variants: [...prev.variants, {
+            nom: currentVariantName.trim(),
             options,
             quantites: options.map(() => 0) // Initialiser toutes les quantités à 0
           }]
@@ -304,10 +311,10 @@ export default function ProduitModal({
       const urlParts = imageUrl.split('/');
       const bucketIndex = urlParts.indexOf('public') + 1;
       const path = urlParts.slice(bucketIndex).join('/');
-      
+
       // Supprimer l'image de Supabase Storage
       await deleteImage(path);
-      
+
       // Retirer l'image du formulaire
       setFormData(prev => ({
         ...prev,
@@ -416,89 +423,89 @@ export default function ProduitModal({
             </div>
 
             {/* Variants */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Variant (Type, Couleur, Taille, etc.)</h3>
-            
-            {/* Ajouter un variant (un seul autorisé) */}
-            {formData.variants.length === 0 && (
-              <div className="space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <input
-                    type="text"
-                    placeholder="Nom du variant (ex: Type, Couleur, Taille)"
-                    value={currentVariantName}
-                    onChange={(e) => setCurrentVariantName(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Options séparées par des virgules (ex: A, B, C, D)"
-                    value={currentVariantOptions}
-                    onChange={(e) => setCurrentVariantOptions(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={addVariant}
-                  className="inline-flex items-center px-3 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Ajouter le variant
-                </button>
-              </div>
-            )}
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Stock (Type, Couleur, Taille, etc.)</h3>
 
-            {/* Affichage du variant avec quantités */}
-            {formData.variants.length > 0 && (
-              <div className="space-y-4">
-                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="font-medium text-gray-900">{formData.variants[0].nom}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeVariant(0)}
-                      className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
-                      title="Supprimer le variant"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+              {/* Ajouter un variant (un seul autorisé) */}
+              {formData.variants.length === 0 && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <input
+                      type="text"
+                      placeholder="Nom du variant (ex: Type, Couleur, Taille)"
+                      value={currentVariantName}
+                      onChange={(e) => setCurrentVariantName(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Options séparées par des virgules (ex: A, B, C, D)"
+                      value={currentVariantOptions}
+                      onChange={(e) => setCurrentVariantOptions(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                    />
                   </div>
-                  
-                  {/* Options avec quantités */}
-                  <div className="space-y-2">
-                    {formData.variants[0].options.map((option, optionIndex) => (
-                      <div key={optionIndex} className="flex items-center justify-between p-2 bg-white rounded border border-gray-200">
-                        <span className="text-sm font-medium text-gray-700">{option}</span>
-                        <div className="flex items-center space-x-2">
-                          <label className="text-xs text-gray-500">Quantité:</label>
-                          <input
-                            type="number"
-                            min="0"
-                            value={formData.variants[0].quantites[optionIndex] || 0}
-                            onChange={(e) => updateVariantQuantity(0, optionIndex, parseInt(e.target.value) || 0)}
-                            className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-black focus:border-transparent"
-                          />
+                  <button
+                    type="button"
+                    onClick={addVariant}
+                    className="inline-flex items-center px-3 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Ajouter le variant
+                  </button>
+                </div>
+              )}
+
+              {/* Affichage du variant avec quantités */}
+              {formData.variants.length > 0 && (
+                <div className="space-y-4">
+                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="font-medium text-gray-900">{formData.variants[0].nom}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeVariant(0)}
+                        className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                        title="Supprimer le variant"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    {/* Options avec quantités */}
+                    <div className="space-y-2">
+                      {formData.variants[0].options.map((option, optionIndex) => (
+                        <div key={optionIndex} className="flex items-center justify-between p-2 bg-white rounded border border-gray-200">
+                          <span className="text-sm font-medium text-gray-700">{option}</span>
+                          <div className="flex items-center space-x-2">
+                            <label className="text-xs text-gray-500">Quantité:</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={formData.variants[0].quantites[optionIndex] || 0}
+                              onChange={(e) => updateVariantQuantity(0, optionIndex, parseInt(e.target.value) || 0)}
+                              className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-black focus:border-transparent"
+                            />
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  {/* Stock total */}
-                  <div className="mt-3 pt-3 border-t border-gray-300">
-                    <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-semibold text-emerald-900">Stock total:</span>
-                        <span className="text-lg font-bold text-emerald-600">
-                          {formData.en_stock} unités
-                        </span>
+                      ))}
+                    </div>
+
+                    {/* Stock total */}
+                    <div className="mt-3 pt-3 border-t border-gray-300">
+                      <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-semibold text-emerald-900">Stock total:</span>
+                          <span className="text-lg font-bold text-emerald-600">
+                            {formData.en_stock} unités
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
 
             {/* Prix et statut */}
             <div className="space-y-4">
