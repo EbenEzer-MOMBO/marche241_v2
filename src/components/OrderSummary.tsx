@@ -193,10 +193,10 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
       paymentPhoneError === '' &&
       selectedPayment !== null;
 
-    // Vérifier que les frais de livraison sont calculés (commune sélectionnée)
-    const isDeliveryFeeSet = deliveryFee > 0;
+    // Vérifier qu'une commune est sélectionnée (même si les frais sont à 0)
+    const isCommuneSelected = deliveryAddress.city.trim() !== '';
 
-    return isAddressComplete && isWhatsAppValid && isPaymentSelected && isPaymentPhoneValid && isDeliveryFeeSet;
+    return isAddressComplete && isWhatsAppValid && isPaymentSelected && isPaymentPhoneValid && isCommuneSelected;
   };
 
   // Génère le message approprié pour le bouton selon l'état de validation
@@ -228,6 +228,15 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
 
   const handleAddressChange = (field: keyof DeliveryAddress, value: string) => {
     setDeliveryAddress(prev => ({ ...prev, [field]: value }));
+    
+    // Si on change de commune, vérifier si les frais sont gratuits
+    if (field === 'city') {
+      const selectedCommune = communes.find(commune => commune.nom_commune === value);
+      if (selectedCommune && selectedCommune.tarif_livraison === 0) {
+        // Désactiver le paiement à la livraison si la livraison est gratuite
+        setPayOnDelivery(false);
+      }
+    }
   };
 
   const handlePaymentChange = (payment: PaymentMethod) => {
@@ -1066,7 +1075,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
                     )}
                   </span>
                   <span className="font-medium">
-                    {deliveryFee > 0 ? formatPrice(deliveryFee) : 'Sélectionnez une commune'}
+                    {deliveryAddress.city ? formatPrice(deliveryFee) : 'Sélectionnez une commune'}
                   </span>
                 </div>
                 {getTransactionFee() > 0 && (
@@ -1087,18 +1096,24 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
 
               {/* Option paiement à la livraison */}
               <div className="border-t border-b py-4 border-gray-200">
-                <label className="flex items-center cursor-pointer">
+                <label className={`flex items-center ${deliveryFee > 0 ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
                   <input
                     type="checkbox"
                     checked={payOnDelivery}
                     onChange={(e) => setPayOnDelivery(e.target.checked)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    disabled={deliveryFee === 0}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:cursor-not-allowed"
                   />
                   <span className="ml-3 text-sm font-medium text-gray-700">
                     Je paie à la livraison
                   </span>
                 </label>
-                {payOnDelivery && (
+                {deliveryFee === 0 && deliveryAddress.city && (
+                  <p className="text-xs text-gray-500 mt-2 ml-7">
+                    Non disponible pour les livraisons gratuites
+                  </p>
+                )}
+                {payOnDelivery && deliveryFee > 0 && (
                   <p className="text-xs text-gray-500 mt-2 ml-7">
                     Vous payez les frais de livraison + frais de transaction maintenant. Le reste sera payé à la réception.
                   </p>
