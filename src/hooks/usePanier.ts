@@ -3,12 +3,12 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { 
-  ajouterAuPanier, 
-  getPanier, 
-  mettreAJourQuantitePanier, 
-  supprimerDuPanier, 
-  viderPanier 
+import {
+  ajouterAuPanier,
+  getPanier,
+  mettreAJourQuantitePanier,
+  supprimerDuPanier,
+  viderPanier
 } from '@/lib/services/panier';
 
 interface PanierItem {
@@ -17,7 +17,15 @@ interface PanierItem {
   boutique_id: number;
   produit_id: number;
   quantite: number;
-  variants_selectionnes: { [key: string]: any } | null;
+  variants_selectionnes: {
+    variant?: {
+      nom: string;
+      prix: number;
+      prix_original?: number | null;
+      image?: string;
+    };
+    options?: { [key: string]: string };
+  } | null;
   date_creation: string;
   date_modification: string;
   boutique: {
@@ -104,7 +112,7 @@ interface UsePanierResult {
     boutiqueId: number,
     produitId: number,
     quantite: number,
-    variantsSelectionnes?: { [key: string]: string }
+    variantsSelectionnes?: { [key: string]: any }
   ) => Promise<boolean>;
   mettreAJourQuantite: (itemId: number, quantite: number) => Promise<boolean>;
   supprimerItem: (itemId: number) => Promise<boolean>;
@@ -129,26 +137,31 @@ export function usePanier(boutiqueId?: number): UsePanierResult {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Passer le boutiqueId pour obtenir une session spécifique à cette boutique
       const response = await getPanier(boutiqueId);
       setPanier(response.panier);
-      
+
       // Gérer les avertissements s'ils existent
       if (response.avertissements) {
-        const hasWarnings = 
+        const hasWarnings =
           (response.avertissements.produitsSupprimes && response.avertissements.produitsSupprimes.length > 0) ||
           (response.avertissements.quantitesAjustees && response.avertissements.quantitesAjustees.length > 0);
-        
+
         if (hasWarnings) {
           setAvertissements(response.avertissements);
         }
       }
-      
+
       // Calculer les totaux à partir des données du panier
       const totalItems = response.panier.reduce((total, item) => total + item.quantite, 0);
-      const totalPrix = response.panier.reduce((total, item) => total + (item.produit.prix * item.quantite), 0);
-      
+
+      // Utiliser le prix du variant si disponible, sinon le prix du produit
+      const totalPrix = response.panier.reduce((total, item) => {
+        const itemPrice = item.variants_selectionnes?.variant?.prix || item.produit.prix;
+        return total + (itemPrice * item.quantite);
+      }, 0);
+
       setTotalItems(totalItems);
       setTotalPrix(totalPrix);
     } catch (err) {
@@ -172,15 +185,15 @@ export function usePanier(boutiqueId?: number): UsePanierResult {
   ): Promise<boolean> => {
     try {
       setError(null);
-      
+
       await ajouterAuPanier(boutiqueId, produitId, quantite, variantsSelectionnes);
-      
+
       // Recharger le panier après ajout
       await chargerPanier();
-      
+
       // Émettre un événement pour notifier les autres composants
       window.dispatchEvent(new CustomEvent('cartUpdated'));
-      
+
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors de l\'ajout au panier';
@@ -196,18 +209,18 @@ export function usePanier(boutiqueId?: number): UsePanierResult {
   ): Promise<boolean> => {
     try {
       setError(null);
-      
+
       await mettreAJourQuantitePanier(itemId, quantite);
-      
+
       // Recharger le panier après mise à jour
       await chargerPanier();
-      
+
       // Émettre un événement pour notifier les autres composants
       window.dispatchEvent(new CustomEvent('cartUpdated'));
-      
+
       return true;
     } catch (err) {
-      const errorMessage = err instanceof Error ? 
+      const errorMessage = err instanceof Error ?
         err.message : 'Erreur lors de la mise à jour de la quantité';
       console.error('Erreur lors de la mise à jour de la quantité:', err);
       setError(errorMessage);
@@ -218,15 +231,15 @@ export function usePanier(boutiqueId?: number): UsePanierResult {
   const supprimerItem = useCallback(async (itemId: number): Promise<boolean> => {
     try {
       setError(null);
-      
+
       await supprimerDuPanier(itemId);
-      
+
       // Recharger le panier après suppression
       await chargerPanier();
-      
+
       // Émettre un événement pour notifier les autres composants
       window.dispatchEvent(new CustomEvent('cartUpdated'));
-      
+
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors de la suppression';
@@ -239,13 +252,13 @@ export function usePanier(boutiqueId?: number): UsePanierResult {
   const viderLePanier = useCallback(async (): Promise<boolean> => {
     try {
       setError(null);
-      
+
       // Passer le boutiqueId pour vider uniquement le panier de cette boutique
       await viderPanier(boutiqueId);
-      
+
       // Recharger le panier après vidage
       await chargerPanier();
-      
+
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors du vidage du panier';
@@ -293,14 +306,14 @@ export function useAjoutPanier() {
     boutiqueId: number,
     produitId: number,
     quantite: number,
-    variantsSelectionnes: { [key: string]: string } = {}
+    variantsSelectionnes: { [key: string]: any } = {}
   ): Promise<boolean> => {
     try {
       setLoading(true);
       setError(null);
-      
+
       await ajouterAuPanier(boutiqueId, produitId, quantite, variantsSelectionnes);
-      
+
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors de l\'ajout au panier';

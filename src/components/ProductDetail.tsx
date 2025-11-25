@@ -28,6 +28,7 @@ export default function ProductDetail({
 }: ProductDetailProps) {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [selectedVariants, setSelectedVariants] = useState<{ [key: string]: string }>({});
+  const [selectedOptions, setSelectedOptions] = useState<{ [key: string]: string }>({});
   const [quantity, setQuantity] = useState(1);
   const [product, setProduct] = useState<ProduitDetail | null>(productData || null);
   const [loading, setLoading] = useState(!productData);
@@ -68,21 +69,19 @@ export default function ProductDetail({
   useEffect(() => {
     if (product) {
       const initialVariants: { [key: string]: string } = {};
-      
-      // Vérifier si c'est la nouvelle structure avec quantités
-      if (product.variants && product.variants.length > 0 && product.variants[0].quantites) {
-        // Nouvelle structure : variants avec quantités
-        initialVariants[product.variants[0].nom] = product.variants[0].options[0];
-      } else {
-        // Ancienne structure : utiliser formatVariantsPourInterface
-        const formattedVariants = formatVariantsPourInterface(product.variants || {});
-        formattedVariants.forEach((variant) => {
-          if (variant.options.length > 0) {
-            initialVariants[variant.label] = variant.options[0];
+
+      // Nouveau format: variants est un objet avec { variants: [...], options: [...] }
+      if (product.variants && typeof product.variants === 'object') {
+        if ('variants' in product.variants && Array.isArray(product.variants.variants)) {
+          // Structure combinée: { variants: ProductVariant[], options: ProductOption[] }
+          const variantsList = product.variants.variants;
+          if (variantsList.length > 0) {
+            // Sélectionner le premier variant par défaut
+            initialVariants['variant'] = variantsList[0].nom;
           }
-        });
+        }
       }
-      
+
       setSelectedVariants(initialVariants);
     }
   }, [product]);
@@ -151,23 +150,95 @@ export default function ProductDetail({
     );
   }
 
-  // Formater les variantes pour l'interface (seulement pour ancienne structure)
-  const formattedVariants = product.variants && product.variants.length > 0 && product.variants[0].quantites
-    ? [] // Nouvelle structure : ne pas utiliser formatVariantsPourInterface
-    : formatVariantsPourInterface(product.variants || {}); // Ancienne structure
-  
-  // Préparer les images
-  const productImages = product.images && product.images.length > 0
-    ? product.images.map(img => getProduitImageUrl(img))
-    : [getProduitImageUrl(product.image_principale)];
+  // Préparer les images (produit + variants)
+  const prepareProductImages = () => {
+    const baseImages = product.images && product.images.length > 0
+      ? product.images.map(img => getProduitImageUrl(img))
+      : [getProduitImageUrl(product.image_principale)];
 
+    // Ajouter les images des variants
+    if (product.variants && typeof product.variants === 'object' && 'variants' in product.variants) {
+      const variantImages = product.variants.variants
+        .filter((v: any) => v.image)
+        .map((v: any) => getProduitImageUrl(v.image));
 
+      return [...baseImages, ...variantImages];
+    }
+
+    return baseImages;
+  };
+
+  const productImages = prepareProductImages();
+
+  // Obtenir le variant sélectionné
+  const getSelectedVariant = () => {
+    if (product?.variants && typeof product.variants === 'object' && 'variants' in product.variants) {
+      const selectedVariantName = selectedVariants['variant'];
+      if (selectedVariantName) {
+        return product.variants.variants.find((v: any) => v.nom === selectedVariantName);
+      }
+      return product.variants.variants[0]; // Premier variant par défaut
+    }
+    return null;
+  };
+
+  // Obtenir le prix à afficher (prix promo si existe, sinon prix normal)
+  const getDisplayPrice = () => {
+    const selectedVariant = getSelectedVariant();
+
+    // Si variant avec prix promo, afficher le prix promo
+    if (selectedVariant && selectedVariant.prix_promo) {
+      return selectedVariant.prix_promo;
+    }
+
+    // Si variant avec prix normal, afficher le prix normal
+    if (selectedVariant && selectedVariant.prix) {
+      return selectedVariant.prix;
+    }
+
+    // Si produit avec prix promo, afficher le prix promo
+    if (product.prix_original) {
+      return product.prix;
+    }
+
+    // Sinon afficher le prix normal du produit
+    return product.prix;
+  };
+
+  // Obtenir le prix original (barré) si un prix promo existe
+  const getOriginalPrice = () => {
+    const selectedVariant = getSelectedVariant();
+
+    // Si variant avec prix promo, afficher le prix normal du variant
+    if (selectedVariant && selectedVariant.prix_promo && selectedVariant.prix) {
+      return selectedVariant.prix;
+    }
+
+    // Si produit avec prix promo, afficher le prix original
+    if (product.prix_original) {
+      return product.prix_original;
+    }
+
+    return null;
+  };
 
   const handleVariantChange = (variantLabel: string, option: string) => {
     setSelectedVariants(prev => ({
       ...prev,
       [variantLabel]: option
     }));
+
+    // Sélectionner l'image du variant si elle existe
+    if (product?.variants && typeof product.variants === 'object' && 'variants' in product.variants) {
+      const variant = product.variants.variants.find((v: any) => v.nom === option);
+      if (variant && variant.image) {
+        const variantImageUrl = getProduitImageUrl(variant.image);
+        const imageIndex = productImages.indexOf(variantImageUrl);
+        if (imageIndex !== -1) {
+          setSelectedImageIndex(imageIndex);
+        }
+      }
+    }
   };
 
   const openFullscreen = (index: number) => {
@@ -220,20 +291,25 @@ export default function ProductDetail({
 
   // Fonction pour obtenir la quantité maximale disponible
   const getMaxQuantity = () => {
-    // Si des variants avec quantités sont présents, utiliser la quantité du variant sélectionné
-    if (product?.variants && product.variants.length > 0 && product.variants[0].quantites) {
-      const variantNom = product.variants[0].nom;
-      const selectedOption = selectedVariants[variantNom];
+    // Nouveau format: variants est un objet avec { variants: [...], options: [...] }
+    if (product?.variants && typeof product.variants === 'object') {
+      if ('variants' in product.variants && Array.isArray(product.variants.variants)) {
+        const variantsList = product.variants.variants;
+        const selectedVariantName = selectedVariants['variant'];
 
-      if (selectedOption) {
-        const optionIndex = product.variants[0].options.indexOf(selectedOption);
-        if (optionIndex !== -1) {
-          return product.variants[0].quantites[optionIndex] || 0;
+        if (selectedVariantName) {
+          // Trouver le variant sélectionné
+          const selectedVariant = variantsList.find(v => v.nom === selectedVariantName);
+          if (selectedVariant && selectedVariant.quantite !== undefined) {
+            return selectedVariant.quantite;
+          }
+        }
+
+        // Par défaut, retourner la quantité du premier variant
+        if (variantsList.length > 0 && variantsList[0].quantite !== undefined) {
+          return variantsList[0].quantite;
         }
       }
-
-      // Par défaut, prendre la quantité du premier variant
-      return product.variants[0].quantites[0] || 0;
     }
 
     // Sinon, utiliser le stock global
@@ -247,30 +323,60 @@ export default function ProductDetail({
 
   const handleAddToCart = async () => {
     if (!product) return;
-    
+
     try {
       setIsAddingToCart(true);
-      
-      // Construire le message avec les variants sélectionnés
-      let message = `${product.nom} ajouté au panier`;
-      if (Object.keys(selectedVariants).length > 0) {
-        const variantText = Object.entries(selectedVariants)
-          .map(([key, value]) => `${key}: ${value}`)
-          .join(', ');
-        message = `${product.nom} (${variantText}) ajouté au panier`;
+
+      // Valider les options requises
+      if (product.variants && typeof product.variants === 'object' && 'options' in product.variants) {
+        const requiredOptions = product.variants.options?.filter((o: any) => o.required) || [];
+        for (const option of requiredOptions) {
+          if (!selectedOptions[option.nom] || selectedOptions[option.nom].trim() === '') {
+            showError(`${option.nom} est requis`, 'Erreur', 5000);
+            setIsAddingToCart(false);
+            return;
+          }
+        }
       }
-      
+
+      // Obtenir le variant sélectionné avec toutes ses données
+      const selectedVariant = getSelectedVariant();
+
+      // Préparer les données pour le panier
+      const cartData: any = {};
+
+      // Ajouter les données du variant si présent
+      if (selectedVariant) {
+        cartData.variant = {
+          nom: selectedVariant.nom,
+          prix: selectedVariant.prix_promo || selectedVariant.prix,
+          prix_original: selectedVariant.prix_promo ? selectedVariant.prix : null,
+          image: selectedVariant.image
+        };
+      }
+
+      // Ajouter les options si présentes
+      if (Object.keys(selectedOptions).length > 0) {
+        cartData.options = selectedOptions;
+      }
+
+      // Construire le message
+      let message = `${product.nom} ajouté au panier`;
+      if (selectedVariant) {
+        message = `${product.nom} (${selectedVariant.nom}) ajouté au panier`;
+      }
+
       const isSuccess = await ajouterProduit(
         product.boutique.id,
         product.id,
         quantity,
-        selectedVariants
+        cartData
       );
-      
+
       if (isSuccess) {
         success(message, 'Succès', 4000);
-        // Optionnel: réinitialiser la quantité
-        // setQuantity(1);
+        // Réinitialiser les options après ajout
+        setSelectedOptions({});
       }
     } catch (error) {
       console.error('Erreur lors de l\'ajout au panier:', error);
@@ -356,8 +462,8 @@ export default function ProductDetail({
                     key={index}
                     onClick={() => setSelectedImageIndex(index)}
                     className={`aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 transition-all duration-200 ${selectedImageIndex === index
-                        ? 'border-primary scale-105'
-                        : 'border-transparent hover:border-gray-300'
+                      ? 'border-primary scale-105'
+                      : 'border-transparent hover:border-gray-300'
                       }`}
                   >
                     <Image
@@ -386,17 +492,17 @@ export default function ProductDetail({
                 </div>
                 <h1 className="text-3xl font-bold text-gray-900 mb-4">{product.nom}</h1>
 
-                {/* Prix */}
+                {/* Prix dynamique */}
                 <div className="flex items-center space-x-3 mb-4">
                   <span className="text-3xl font-bold text-primary">
-                    {formatPrice(product.prix)}
+                    {formatPrice(getDisplayPrice())}
                   </span>
-                  {product.prix_original && (
+                  {getOriginalPrice() && (
                     <span className="text-lg text-gray-500 line-through">
-                      {formatPrice(product.prix_original)}
+                      {formatPrice(getOriginalPrice())}
                     </span>
                   )}
-                  {product.est_en_promotion && (
+                  {(product.est_en_promotion || getSelectedVariant()?.prix_promo) && (
                     <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
                       Promotion
                     </span>
@@ -466,35 +572,53 @@ export default function ProductDetail({
                 </div>
               )}
 
-              {/* Variants avec quantités */}
-              {product.variants && product.variants.length > 0 && product.variants[0].quantites && (
+              {/* Variants - Nouveau format */}
+              {product.variants && typeof product.variants === 'object' && 'variants' in product.variants && Array.isArray(product.variants.variants) && product.variants.variants.length > 0 && (
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">{product.variants[0].nom}</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Variantes</h3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {product.variants[0].options.map((option: string, idx: number) => {
-                      const variant = product.variants?.[0];
-                      if (!variant) return null;
-
-                      const quantite = variant.quantites[idx];
-                      const isSelected = selectedVariants[variant.nom] === option;
-                      const isAvailable = quantite > 0;
+                    {product.variants.variants.map((variant: any, idx: number) => {
+                      const isSelected = selectedVariants['variant'] === variant.nom;
+                      const isAvailable = variant.quantite > 0;
 
                       return (
                         <button
-                          key={option}
-                          onClick={() => isAvailable && handleVariantChange(variant.nom, option)}
+                          key={idx}
+                          onClick={() => isAvailable && handleVariantChange('variant', variant.nom)}
                           disabled={!isAvailable}
                           className={`p-3 border-2 rounded-lg transition-all duration-200 ${isSelected
-                              ? 'border-primary bg-primary text-white'
-                              : isAvailable
-                                ? 'border-gray-300 bg-white text-gray-700 hover:border-primary'
-                                : 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
+                            ? 'border-primary bg-primary text-white'
+                            : isAvailable
+                              ? 'border-gray-300 bg-white text-gray-700 hover:border-primary'
+                              : 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
                             }`}
                         >
                           <div className="text-center">
-                            <div className="font-medium">{option}</div>
+                            <div className="font-medium">{variant.nom}</div>
+                            {(variant.prix || variant.prix_promo) && (
+                              <div className="mt-1">
+                                {variant.prix_promo ? (
+                                  // Afficher prix promo + prix normal barré
+                                  <div className="space-y-0.5">
+                                    <div className={`text-sm font-semibold ${isSelected ? 'text-white' : 'text-primary'}`}>
+                                      {formatPrice(variant.prix_promo)}
+                                    </div>
+                                    {variant.prix && (
+                                      <div className={`text-xs line-through ${isSelected ? 'text-white/70' : 'text-gray-500'}`}>
+                                        {formatPrice(variant.prix)}
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  // Afficher prix normal uniquement
+                                  <div className={`text-sm ${isSelected ? 'text-white/90' : 'text-gray-600'}`}>
+                                    {formatPrice(variant.prix)}
+                                  </div>
+                                )}
+                              </div>
+                            )}
                             <div className={`text-xs mt-1 ${isSelected ? 'text-white/80' : isAvailable ? 'text-gray-500' : 'text-gray-400'}`}>
-                              {isAvailable ? `${quantite} disp.` : 'Épuisé'}
+                              {isAvailable ? `${variant.quantite} disp.` : 'Épuisé'}
                             </div>
                           </div>
                         </button>
@@ -504,26 +628,42 @@ export default function ProductDetail({
                 </div>
               )}
 
-              {/* Fallback pour ancienne structure de variants */}
-              {formattedVariants.length > 0 && (!product.variants || product.variants.length === 0 || !product.variants[0]?.quantites) && formattedVariants.map((variant) => (
-                <div key={variant.label}>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">{variant.label}</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {variant.options.map((option) => (
-                      <button
-                        key={option}
-                        onClick={() => handleVariantChange(variant.label, option)}
-                        className={`px-4 py-2 border rounded-lg transition-all duration-200 ${selectedVariants[variant.label] === option
-                            ? 'border-primary bg-primary text-white'
-                            : 'border-gray-300 bg-white text-gray-700 hover:border-primary'
-                          }`}
-                      >
-                        {option}
-                      </button>
+              {/* Options de personnalisation */}
+              {product.variants && typeof product.variants === 'object' && 'options' in product.variants && Array.isArray(product.variants.options) && product.variants.options.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Options de personnalisation</h3>
+                  <div className="space-y-4">
+                    {product.variants.options.map((option: any, idx: number) => (
+                      <div key={idx}>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          {option.nom}
+                          {option.required && <span className="text-red-500 ml-1">*</span>}
+                        </label>
+                        {option.type === 'texte' ? (
+                          <input
+                            type="text"
+                            placeholder={`Entrez ${option.nom.toLowerCase()}`}
+                            value={selectedOptions[option.nom] || ''}
+                            onChange={(e) => setSelectedOptions(prev => ({ ...prev, [option.nom]: e.target.value }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                            required={option.required}
+                          />
+                        ) : (
+                          <input
+                            type="number"
+                            placeholder={`Entrez ${option.nom.toLowerCase()}`}
+                            value={selectedOptions[option.nom] || ''}
+                            onChange={(e) => setSelectedOptions(prev => ({ ...prev, [option.nom]: e.target.value }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                            required={option.required}
+                            min="0"
+                          />
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>
-              ))}
+              )}
 
               {/* Informations supplémentaires */}
               <div className="bg-gray-50 rounded-lg p-4 space-y-3">
@@ -747,8 +887,8 @@ export default function ProductDetail({
                     setFullscreenImageIndex(index);
                   }}
                   className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all duration-200 ${fullscreenImageIndex === index
-                      ? 'border-white scale-110'
-                      : 'border-transparent hover:border-gray-400 opacity-60 hover:opacity-100'
+                    ? 'border-white scale-110'
+                    : 'border-transparent hover:border-gray-400 opacity-60 hover:opacity-100'
                     }`}
                 >
                   <Image

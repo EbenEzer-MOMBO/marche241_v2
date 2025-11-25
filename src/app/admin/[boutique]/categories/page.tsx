@@ -31,6 +31,7 @@ interface CategorieAffichage {
   actif: boolean;
   nombre_produits: number;
   date_creation: string;
+  boutique_id?: number; // undefined = catégorie globale
 }
 
 export default function CategoriesPage() {
@@ -64,7 +65,8 @@ export default function CategoriesPage() {
         description: cat.description,
         actif: cat.statut === 'active',
         nombre_produits: cat.nombre_produits || 0,
-        date_creation: cat.date_creation.toString().split('T')[0]
+        date_creation: cat.date_creation.toString().split('T')[0],
+        boutique_id: cat.boutique_id // Préserver le boutique_id pour identifier les catégories globales
       }));
 
       setCategories(categoriesAffichage);
@@ -113,7 +115,19 @@ export default function CategoriesPage() {
     return () => clearTimeout(timer);
   }, [user, boutiqueName, router, verifierBoutique, showError]);
 
-  const filteredCategories = categories.filter(categorie =>
+  // Séparer les catégories globales des catégories personnalisées
+  const categoriesGlobales = categories.filter(cat => !cat.boutique_id);
+  const categoriesPerso = categories.filter(cat => cat.boutique_id);
+
+  // Fonction pour vérifier si une catégorie est globale
+  const isGlobalCategory = (categorie: CategorieAffichage) => !categorie.boutique_id;
+
+  const filteredCategoriesGlobales = categoriesGlobales.filter(categorie =>
+    categorie.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    categorie.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredCategoriesPerso = categoriesPerso.filter(categorie =>
     categorie.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
     categorie.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -121,6 +135,12 @@ export default function CategoriesPage() {
   const toggleCategorieStatus = async (id: number) => {
     const categorie = categories.find(cat => cat.id === id);
     if (!categorie || !boutique) return;
+
+    // Empêcher la modification des catégories globales
+    if (isGlobalCategory(categorie)) {
+      showError('Les catégories globales ne peuvent pas être modifiées', 'Action non autorisée');
+      return;
+    }
 
     try {
       // Optimistic update - mettre à jour l'UI immédiatement
@@ -148,6 +168,12 @@ export default function CategoriesPage() {
   };
 
   const handleDeleteClick = (categorie: CategorieAffichage) => {
+    // Empêcher la suppression des catégories globales
+    if (isGlobalCategory(categorie)) {
+      showError('Les catégories globales ne peuvent pas être supprimées', 'Action non autorisée');
+      return;
+    }
+
     setCategorieToDelete(categorie);
     setShowDeleteModal(true);
   };
@@ -227,6 +253,12 @@ export default function CategoriesPage() {
   };
 
   const handleEditCategorie = (categorie: CategorieAffichage) => {
+    // Empêcher la modification des catégories globales
+    if (isGlobalCategory(categorie)) {
+      showError('Les catégories globales ne peuvent pas être modifiées', 'Action non autorisée');
+      return;
+    }
+
     setEditingCategorie(categorie);
     setShowCreateModal(true);
   };
@@ -319,160 +351,309 @@ export default function CategoriesPage() {
           </div>
 
           {/* Categories List - Desktop Table */}
-          <div className="hidden lg:block bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Catégorie
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Slug
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Produits
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Statut
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date création
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredCategories.map((categorie) => (
-                    <tr key={categorie.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{categorie.nom}</div>
+          <div className="hidden lg:block space-y-6">
+            {/* Catégories Personnalisées */}
+            {filteredCategoriesPerso.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                  <Tags className="h-5 w-5 mr-2 text-purple-600" />
+                  Mes Catégories
+                  <span className="ml-2 text-sm font-normal text-gray-500">
+                    ({filteredCategoriesPerso.length})
+                  </span>
+                </h2>
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Catégorie
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Slug
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Produits
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Statut
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Date création
+                          </th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {filteredCategoriesPerso.map((categorie) => (
+                          <tr key={categorie.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div>
+                                <div className="text-sm font-medium text-gray-900">{categorie.nom}</div>
+                                {categorie.description && (
+                                  <div className="text-sm text-gray-500 truncate max-w-xs">{categorie.description}</div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-500 font-mono">{categorie.slug}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{categorie.nombre_produits}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${categorie.actif
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                {categorie.actif ? 'Active' : 'Inactive'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {new Date(categorie.date_creation).toLocaleDateString('fr-FR')}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                              <div className="flex items-center justify-end space-x-2">
+                                <button
+                                  onClick={() => toggleCategorieStatus(categorie.id)}
+                                  className={`p-1.5 rounded-lg transition-colors ${categorie.actif
+                                    ? 'text-green-600 hover:bg-green-50'
+                                    : 'text-gray-400 hover:bg-gray-50'
+                                    }`}
+                                  title={categorie.actif ? 'Désactiver' : 'Activer'}
+                                >
+                                  {categorie.actif ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                                </button>
+                                <button
+                                  onClick={() => handleEditCategorie(categorie)}
+                                  className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"
+                                  title="Modifier"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteClick(categorie)}
+                                  className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+                                  title="Supprimer"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Catégories Globales */}
+            {filteredCategoriesGlobales.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                  <Tags className="h-5 w-5 mr-2 text-blue-600" />
+                  Catégories Globales
+                  <span className="ml-2 text-sm font-normal text-gray-500">
+                    ({filteredCategoriesGlobales.length})
+                  </span>
+                </h2>
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-blue-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Catégorie
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Slug
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Produits
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Statut
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Type
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {filteredCategoriesGlobales.map((categorie) => (
+                          <tr key={categorie.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div>
+                                <div className="text-sm font-medium text-gray-900">{categorie.nom}</div>
+                                {categorie.description && (
+                                  <div className="text-sm text-gray-500 truncate max-w-xs">{categorie.description}</div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-500 font-mono">{categorie.slug}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{categorie.nombre_produits}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${categorie.actif
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                {categorie.actif ? 'Active' : 'Inactive'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                Globale
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+          </div>
+
+          {/* Categories Cards - Mobile */}
+          <div className="lg:hidden space-y-6">
+            {/* Catégories Personnalisées - Mobile */}
+            {filteredCategoriesPerso.length > 0 && (
+              <div>
+                <h2 className="text-base font-semibold text-gray-900 mb-2 flex items-center">
+                  <Tags className="h-4 w-4 mr-2 text-purple-600" />
+                  Mes Catégories
+                  <span className="ml-2 text-xs font-normal text-gray-500">
+                    ({filteredCategoriesPerso.length})
+                  </span>
+                </h2>
+                <div className="space-y-3">
+                  {filteredCategoriesPerso.map((categorie) => (
+                    <div
+                      key={categorie.id}
+                      className="bg-white rounded-lg shadow-sm border border-gray-200 p-3"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1 min-w-0 pr-2">
+                          <h3 className="text-sm font-medium text-gray-900 truncate">{categorie.nom}</h3>
+                          <p className="text-xs text-gray-500 font-mono mt-1 truncate">{categorie.slug}</p>
                           {categorie.description && (
-                            <div className="text-sm text-gray-500 truncate max-w-xs">{categorie.description}</div>
+                            <p className="text-xs text-gray-600 mt-1 line-clamp-2">{categorie.description}</p>
                           )}
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500 font-mono">{categorie.slug}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{categorie.nombre_produits}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${categorie.actif
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                          }`}>
-                          {categorie.actif ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(categorie.date_creation).toLocaleDateString('fr-FR')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end space-x-2">
+                        <div className="flex items-center space-x-1 flex-shrink-0">
                           <button
                             onClick={() => toggleCategorieStatus(categorie.id)}
-                            className={`p-1.5 rounded-lg transition-colors ${categorie.actif
+                            className={`p-1 rounded-lg transition-colors ${categorie.actif
                               ? 'text-green-600 hover:bg-green-50'
                               : 'text-gray-400 hover:bg-gray-50'
                               }`}
                             title={categorie.actif ? 'Désactiver' : 'Activer'}
                           >
-                            {categorie.actif ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                            {categorie.actif ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
                           </button>
                           <button
                             onClick={() => handleEditCategorie(categorie)}
-                            className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"
+                            className="p-1 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"
                             title="Modifier"
                           >
-                            <Edit className="h-4 w-4" />
+                            <Edit className="h-3 w-3" />
                           </button>
                           <button
                             onClick={() => handleDeleteClick(categorie)}
-                            className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+                            className="p-1 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
                             title="Supprimer"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3 w-3" />
                           </button>
                         </div>
-                      </td>
-                    </tr>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center space-x-2 min-w-0">
+                          <span className="text-gray-600 flex-shrink-0">{categorie.nombre_produits} produit(s)</span>
+                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${categorie.actif
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-gray-100 text-gray-800'
+                            }`}>
+                            {categorie.actif ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+                        <span className="text-gray-400 flex-shrink-0 ml-2">
+                          {new Date(categorie.date_creation).toLocaleDateString('fr-FR', {
+                            day: '2-digit',
+                            month: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Categories Cards - Mobile */}
-          <div className="lg:hidden space-y-3">
-            {filteredCategories.map((categorie) => (
-              <div
-                key={categorie.id}
-                className="bg-white rounded-lg shadow-sm border border-gray-200 p-3"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1 min-w-0 pr-2">
-                    <h3 className="text-sm font-medium text-gray-900 truncate">{categorie.nom}</h3>
-                    <p className="text-xs text-gray-500 font-mono mt-1 truncate">{categorie.slug}</p>
-                    {categorie.description && (
-                      <p className="text-xs text-gray-600 mt-1 line-clamp-2">{categorie.description}</p>
-                    )}
-                  </div>
-                  <div className="flex items-center space-x-1 flex-shrink-0">
-                    <button
-                      onClick={() => toggleCategorieStatus(categorie.id)}
-                      className={`p-1 rounded-lg transition-colors ${categorie.actif
-                        ? 'text-green-600 hover:bg-green-50'
-                        : 'text-gray-400 hover:bg-gray-50'
-                        }`}
-                      title={categorie.actif ? 'Désactiver' : 'Activer'}
-                    >
-                      {categorie.actif ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-                    </button>
-                    <button
-                      onClick={() => handleEditCategorie(categorie)}
-                      className="p-1 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"
-                      title="Modifier"
-                    >
-                      <Edit className="h-3 w-3" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteClick(categorie)}
-                      className="p-1 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
-                      title="Supprimer"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center space-x-2 min-w-0">
-                    <span className="text-gray-600 flex-shrink-0">{categorie.nombre_produits} produit(s)</span>
-                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${categorie.actif
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-gray-100 text-gray-800'
-                      }`}>
-                      {categorie.actif ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
-                  <span className="text-gray-400 flex-shrink-0 ml-2">
-                    {new Date(categorie.date_creation).toLocaleDateString('fr-FR', {
-                      day: '2-digit',
-                      month: '2-digit'
-                    })}
-                  </span>
                 </div>
               </div>
-            ))}
+            )}
+
+            {/* Catégories Globales - Mobile */}
+            {filteredCategoriesGlobales.length > 0 && (
+              <div>
+                <h2 className="text-base font-semibold text-gray-900 mb-2 flex items-center">
+                  <Tags className="h-4 w-4 mr-2 text-blue-600" />
+                  Catégories Globales
+                  <span className="ml-2 text-xs font-normal text-gray-500">
+                    ({filteredCategoriesGlobales.length})
+                  </span>
+                </h2>
+                <div className="space-y-3">
+                  {filteredCategoriesGlobales.map((categorie) => (
+                    <div
+                      key={categorie.id}
+                      className="bg-white rounded-lg shadow-sm border-2 border-blue-100 p-3"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1 min-w-0 pr-2">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-medium text-gray-900 truncate">{categorie.nom}</h3>
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 flex-shrink-0">
+                              Globale
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500 font-mono mt-1 truncate">{categorie.slug}</p>
+                          {categorie.description && (
+                            <p className="text-xs text-gray-600 mt-1 line-clamp-2">{categorie.description}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center space-x-2 min-w-0">
+                          <span className="text-gray-600 flex-shrink-0">{categorie.nombre_produits} produit(s)</span>
+                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${categorie.actif
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-gray-100 text-gray-800'
+                            }`}>
+                            {categorie.actif ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
           </div>
 
           {/* Empty State */}
-          {filteredCategories.length === 0 && (
+          {filteredCategoriesGlobales.length === 0 && filteredCategoriesPerso.length === 0 && (
             <div className="text-center py-12">
               <Tags className="h-16 w-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">

@@ -51,7 +51,7 @@ interface Commune {
 export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: OrderSummaryProps) {
   const params = useParams();
   const boutiqueSlug = params.boutique as string;
-  
+
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>(null);
   const [paymentPhone, setPaymentPhone] = useState('');
   const [paymentPhoneError, setPaymentPhoneError] = useState('');
@@ -66,7 +66,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
     district: '',
     additionalInfo: ''
   });
-  
+
   // États pour la vérification WhatsApp
   const [isPhoneValid, setIsPhoneValid] = useState(false);
   const [isCheckingWhatsApp, setIsCheckingWhatsApp] = useState(false);
@@ -110,7 +110,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
         try {
           const result = await checkWhatsAppNumber(deliveryAddress.phone);
           setWhatsAppExists(result.existsWhatsapp);
-          
+
           if (!result.existsWhatsapp) {
             setWhatsAppError('Ce numéro n\'est pas enregistré sur WhatsApp');
           }
@@ -228,7 +228,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
 
   const handleAddressChange = (field: keyof DeliveryAddress, value: string) => {
     setDeliveryAddress(prev => ({ ...prev, [field]: value }));
-    
+
     // Si on change de commune, vérifier si les frais sont gratuits
     if (field === 'city') {
       const selectedCommune = communes.find(commune => commune.nom_commune === value);
@@ -313,7 +313,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
     }
 
     setIsSubmitting(true);
-    
+
     // Réinitialiser le signal d'annulation
     cancelSignal.cancelled = false;
 
@@ -333,7 +333,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
         articles: panier.map(item => ({
           produit_id: item.produit_id,
           quantite: item.quantite,
-          prix_unitaire: item.produit.prix,
+          prix_unitaire: item.variants_selectionnes?.variant?.prix || item.produit.prix,
           nom_produit: item.produit.nom,
           description: item.produit.description_courte || item.produit.nom,
           variants_selectionnes: item.variants_selectionnes
@@ -354,7 +354,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
         // ============================================
         // MODE: Paiement à la livraison (Frais uniquement)
         // ============================================
-        
+
         // Payer uniquement les frais de livraison + frais de transaction
         const nameParts = deliveryAddress.fullName;
         const paymentSystem = selectedPayment === 'moov' ? 'moovmoney' : 'airtelmoney';
@@ -388,23 +388,23 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
             taxes: commande.commande.taxes
           },
           produits: panier.reduce((acc, item, index) => {
-            const variantsString = item.variants_selectionnes 
+            const variantsString = item.variants_selectionnes
               ? Object.entries(item.variants_selectionnes)
-                  .map(([key, value]) => `${key}: ${value}`)
-                  .join(', ')
+                .map(([key, value]) => `${key}: ${value}`)
+                .join(', ')
               : undefined;
-            
+
             acc[index + 1] = {
               id: item.produit_id,
               nom: item.produit.nom,
-              prix_unitaire: item.produit.prix,
+              prix_unitaire: item.variants_selectionnes?.variant?.prix || item.produit.prix,
               quantite: item.quantite,
-              sous_total: item.produit.prix * item.quantite,
+              sous_total: (item.variants_selectionnes?.variant?.prix || item.produit.prix) * item.quantite,
               variants: item.variants_selectionnes || undefined,
               variants_string: variantsString,
               image_url: item.produit.image_principale || undefined
             };
-            
+
             return acc;
           }, {} as Record<number, {
             id: number;
@@ -412,7 +412,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
             prix_unitaire: number;
             quantite: number;
             sous_total: number;
-            variants?: Record<string, string>;
+            variants?: any;
             variants_string?: string;
             image_url?: string;
           }>),
@@ -469,19 +469,19 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
             verifierPaiementEnBoucle(paiement.bill_id, 60000, 5000, cancelSignal)
               .then(async (verificationResult) => {
                 console.log('📊 Résultat final de la vérification (frais):', verificationResult);
-                
+
                 if (verificationResult.status === 'paye' || verificationResult.status === 'paid' || verificationResult.status === 'processed') {
                   // Fermer immédiatement le countdown
                   setShowCountdown(false);
                   setIsSubmitting(false);
-                  
+
                   // Afficher un message de succès
                   success(
                     'Paiement confirmé ! Redirection vers la page de confirmation...',
                     'Paiement réussi',
                     2000
                   );
-                  
+
                   // Rediriger vers la page de confirmation après 2 secondes
                   setTimeout(() => {
                     window.location.href = `/${boutiqueSlug}/confirmation?commande=${commande.commande.numero_commande}&type=partiel`;
@@ -520,7 +520,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
         // ============================================
         // MODE: Paiement complet immédiat
         // ============================================
-        
+
         const nameParts = deliveryAddress.fullName;
         const paymentSystem = selectedPayment === 'moov' ? 'moovmoney' : 'airtelmoney';
 
@@ -553,23 +553,23 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
             taxes: commande.commande.taxes
           },
           produits: panier.reduce((acc, item, index) => {
-            const variantsString = item.variants_selectionnes 
+            const variantsString = item.variants_selectionnes
               ? Object.entries(item.variants_selectionnes)
-                  .map(([key, value]) => `${key}: ${value}`)
-                  .join(', ')
+                .map(([key, value]) => `${key}: ${value}`)
+                .join(', ')
               : undefined;
-            
+
             acc[index + 1] = {
               id: item.produit_id,
               nom: item.produit.nom,
-              prix_unitaire: item.produit.prix,
+              prix_unitaire: item.variants_selectionnes?.variant?.prix || item.produit.prix,
               quantite: item.quantite,
-              sous_total: item.produit.prix * item.quantite,
+              sous_total: (item.variants_selectionnes?.variant?.prix || item.produit.prix) * item.quantite,
               variants: item.variants_selectionnes || undefined,
               variants_string: variantsString,
               image_url: item.produit.image_principale || undefined
             };
-            
+
             return acc;
           }, {} as Record<number, {
             id: number;
@@ -577,7 +577,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
             prix_unitaire: number;
             quantite: number;
             sous_total: number;
-            variants?: Record<string, string>;
+            variants?: any;
             variants_string?: string;
             image_url?: string;
           }>),
@@ -634,19 +634,19 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
             verifierPaiementEnBoucle(paiement.bill_id, 60000, 5000, cancelSignal)
               .then(async (verificationResult) => {
                 console.log('📊 Résultat final de la vérification (complet):', verificationResult);
-                
+
                 if (verificationResult.status === 'paye' || verificationResult.status === 'paid' || verificationResult.status === 'processed') {
                   // Fermer immédiatement le countdown
                   setShowCountdown(false);
                   setIsSubmitting(false);
-                  
+
                   // Afficher un message de succès
                   success(
                     'Paiement confirmé ! Redirection vers la page de confirmation...',
                     'Paiement réussi',
                     2000
                   );
-                  
+
                   // Rediriger vers la page de confirmation après 2 secondes
                   setTimeout(() => {
                     window.location.href = `/${boutiqueSlug}/confirmation?commande=${commande.commande.numero_commande}&type=complet`;
@@ -712,12 +712,12 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
     console.log('🛑 Annulation du paiement demandée');
     // Activer le signal d'annulation pour arrêter la vérification en boucle
     cancelSignal.cancelled = true;
-    
+
     // Fermer les composants visuels
     setShowCountdown(false);
     setShowProgressBar(false);
     setIsSubmitting(false);
-    
+
     // Afficher un message d'annulation
     error('Paiement annulé par l\'utilisateur.');
   };
@@ -770,26 +770,6 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
                 </div>
               ) : (
                 panier.map((item, index) => {
-                  // Construire l'affichage des variants
-                  let variantDisplay = null;
-                  
-                  if (item.variants_selectionnes && Object.keys(item.variants_selectionnes).length > 0) {
-                    const entries = Object.entries(item.variants_selectionnes);
-                    variantDisplay = (
-                      <div className="flex flex-wrap gap-1 mb-2">
-                        {entries.map(([key, value], idx) => (
-                          <span 
-                            key={idx}
-                            className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200"
-                          >
-                            {key}: <span className="ml-1 font-semibold">{value}</span>
-                          </span>
-                        ))}
-                      </div>
-                    );
-                  }
-
-                  // Utiliser l'image principale du produit ou une image par défaut
                   const imageUrl = item.produit.image_principale || '/article1.webp';
 
                   return (
@@ -804,11 +784,29 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
                       </div>
                       <div className="flex-1 ml-4">
                         <h4 className="font-medium text-gray-900 mb-1">{item.produit.nom}</h4>
-                        {variantDisplay}
+
+                        {/* Affichage du variant */}
+                        {item.variants_selectionnes?.variant && (
+                          <div className="text-sm text-gray-600 mb-1">
+                            Variant: {item.variants_selectionnes.variant.nom}
+                          </div>
+                        )}
+
+                        {/* Affichage des options */}
+                        {item.variants_selectionnes?.options && Object.keys(item.variants_selectionnes.options).length > 0 && (
+                          <div className="text-xs text-gray-600 mb-2 space-y-0.5">
+                            {Object.entries(item.variants_selectionnes.options).map(([key, value]) => (
+                              <div key={key}>
+                                <span className="font-medium">{key}:</span> {value}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
                         <div className="flex justify-between items-center">
                           <span className="text-gray-600">Quantité: {item.quantite}</span>
                           <span className="font-semibold text-lg text-black">
-                            {formatPrice(item.produit.prix * item.quantite)}
+                            {formatPrice((item.variants_selectionnes?.variant?.prix || item.produit.prix) * item.quantite)}
                           </span>
                         </div>
                       </div>
@@ -850,7 +848,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
                     required
                     className="w-full"
                   />
-                  
+
                   {/* Statut de vérification WhatsApp */}
                   {isPhoneValid && (
                     <div className="mt-2">
@@ -860,7 +858,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
                           Vérification du numéro WhatsApp...
                         </div>
                       )}
-                      
+
                       {!isCheckingWhatsApp && whatsAppExists === true && (
                         <div className="flex items-center text-sm text-green-600">
                           <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -869,7 +867,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
                           Numéro WhatsApp vérifié ✓
                         </div>
                       )}
-                      
+
                       {!isCheckingWhatsApp && whatsAppExists === false && (
                         <div className="flex items-center text-sm text-red-600">
                           <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -941,8 +939,8 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
               <div>
                 <div
                   className={`border rounded-lg p-4 cursor-pointer transition-all duration-200 ${selectedPayment === 'moov'
-                      ? 'border-2 bg-blue-50'
-                      : 'border-gray-300 hover:border-gray-400'
+                    ? 'border-2 bg-blue-50'
+                    : 'border-gray-300 hover:border-gray-400'
                     }`}
                   style={{
                     borderColor: selectedPayment === 'moov' ? boutiqueConfig.theme.primary : undefined,
@@ -977,8 +975,8 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
               <div>
                 <div
                   className={`border rounded-lg p-4 cursor-pointer transition-all duration-200 ${selectedPayment === 'airtel'
-                      ? 'border-2 bg-blue-50'
-                      : 'border-gray-300 hover:border-gray-400'
+                    ? 'border-2 bg-blue-50'
+                    : 'border-gray-300 hover:border-gray-400'
                     }`}
                   style={{
                     borderColor: selectedPayment === 'airtel' ? boutiqueConfig.theme.primary : undefined,
@@ -1019,10 +1017,10 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
                   <input
                     type="tel"
                     className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-opacity-50 ${paymentPhoneError
-                        ? 'border-red-500 focus:ring-red-500'
-                        : paymentPhone.length === 9 && !paymentPhoneError
-                          ? 'border-green-500 focus:ring-green-500'
-                          : 'border-gray-300 focus:ring-blue-500'
+                      ? 'border-red-500 focus:ring-red-500'
+                      : paymentPhone.length === 9 && !paymentPhoneError
+                        ? 'border-green-500 focus:ring-green-500'
+                        : 'border-gray-300 focus:ring-blue-500'
                       }`}
 
                     value={paymentPhone}
@@ -1143,8 +1141,8 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
                 onClick={handleSubmitOrder}
                 disabled={!isFormValid() || isSubmitting}
                 className={`w-full py-4 px-6 font-semibold rounded-lg transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-opacity-50 ${!isFormValid() || isSubmitting
-                    ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                    : 'text-white hover:opacity-90'
+                  ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                  : 'text-white hover:opacity-90'
                   }`}
                 style={{
                   backgroundColor: (!isFormValid() || isSubmitting) ? undefined : boutiqueConfig.theme.primary

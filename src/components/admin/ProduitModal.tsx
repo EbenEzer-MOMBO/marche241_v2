@@ -200,10 +200,13 @@ export default function ProduitModal({
         return;
       }
 
-      if (!formData.prix || parseFloat(formData.prix) <= 0) {
-        setError('Le prix doit être supérieur à 0');
-        setIsLoading(false);
-        return;
+      // Valider le prix uniquement si aucun variant n'est défini
+      if (formData.variants.length === 0) {
+        if (!formData.prix || parseFloat(formData.prix) <= 0) {
+          setError('Le prix doit être supérieur à 0');
+          setIsLoading(false);
+          return;
+        }
       }
 
       if (formData.en_stock <= 0) {
@@ -258,12 +261,23 @@ export default function ProduitModal({
       }
 
       // Préparer les données pour l'API
+      // Si des variants sont définis, utiliser le prix du premier variant
+      let prixProduit = parseFloat(formData.prix);
+      let prixPromoProduit = formData.prix_promo ? parseFloat(formData.prix_promo) : undefined;
+
+      if (updatedVariants.length > 0) {
+        // Utiliser le prix du premier variant
+        const firstVariant = updatedVariants[0];
+        prixProduit = firstVariant.prix || prixProduit;
+        prixPromoProduit = firstVariant.prix_promo || prixPromoProduit;
+      }
+
       const produitData: any = {
         nom: formData.nom,
         slug: formData.nom.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
         description: formData.description,
-        prix: parseFloat(formData.prix),
-        prix_promo: formData.prix_promo ? parseFloat(formData.prix_promo) : undefined,
+        prix: prixProduit,
+        prix_promo: prixPromoProduit,
         en_stock: formData.en_stock,
         quantite_stock: formData.en_stock,
         boutique_id: boutiqueId,
@@ -324,7 +338,7 @@ export default function ProduitModal({
 
           <div className="space-y-8">
             {/* Section 1: Informations de base */}
-            <div className="p-6 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="p-6 rounded-lg border border-gray-200">
               <h3 className="text-lg font-medium text-gray-900 mb-4">
                 1. Informations de base
               </h3>
@@ -358,20 +372,29 @@ export default function ProduitModal({
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Catégorie *
                   </label>
-                  <select
-                    value={formData.categorie_id}
-                    onChange={(e) => setFormData(prev => ({ ...prev, categorie_id: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                    required
-                  >
-                    <option value="">Sélectionner une catégorie</option>
-                    {categories.map(category => (
-                      <option key={category.id} value={category.id}>
-                        {category.nom}
-                      </option>
-                    ))}
-                    <option value=""><a href="/admin/categories" className="text-blue-500">Ajouter une catégorie +</a></option>
-                  </select>
+                  <div className="flex gap-2">
+                    <select
+                      value={formData.categorie_id}
+                      onChange={(e) => setFormData(prev => ({ ...prev, categorie_id: e.target.value }))}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                      required
+                    >
+                      <option value="">Sélectionner une catégorie</option>
+                      {categories.map(category => (
+                        <option key={category.id} value={category.id}>
+                          {category.nom}
+                        </option>
+                      ))}
+                    </select>
+                    <a
+                      href={`/admin/${boutiqueSlug}/categories`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-4 py-2 bg-black text-white rounded-lg hover:bg-white hover:text-black hover:border-1 hover:border-black transition-colors text-sm font-medium whitespace-nowrap"
+                    >
+                      +
+                    </a>
+                  </div>
                 </div>
 
                 <div>
@@ -392,7 +415,7 @@ export default function ProduitModal({
             </div>
 
             {/* Section 2: Images */}
-            <div className="p-6 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="p-6 rounded-lg border border-gray-200">
               <h3 className="text-lg font-medium text-gray-900 mb-4">
                 2. Images
               </h3>
@@ -409,7 +432,7 @@ export default function ProduitModal({
             </div>
 
             {/* Section 3: Tarification */}
-            <div className="p-6 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="p-6 rounded-lg border border-gray-200">
               <h3 className="text-lg font-medium text-gray-900 mb-4">
                 3. Tarification
               </h3>
@@ -475,7 +498,7 @@ export default function ProduitModal({
             </div>
 
             {/* Section 4: Variantes */}
-            <div className="p-6 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="p-6 rounded-lg border border-gray-200">
               <h3 className="text-lg font-medium text-gray-900 mb-4">
                 4. Variantes
               </h3>
@@ -490,7 +513,7 @@ export default function ProduitModal({
             </div>
 
             {/* Section 5: Options */}
-            <div className="p-6 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="p-6 rounded-lg border border-gray-200">
               <h3 className="text-lg font-medium text-gray-900 mb-4">
                 5. Options de personnalisation
               </h3>
@@ -500,6 +523,14 @@ export default function ProduitModal({
               />
             </div>
           </div>
+
+          {/* Message d'erreur global */}
+          {error && (
+            <div className="my-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start">
+              <AlertCircle className="h-5 w-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
 
           {/* Actions */}
           <div className="flex justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">

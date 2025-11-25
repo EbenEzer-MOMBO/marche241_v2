@@ -18,24 +18,24 @@ interface CartSidebarProps {
 export default function CartSidebar({ isOpen, onClose, boutiqueName = 'marche_241' }: CartSidebarProps) {
   // Obtenir le boutique ID pour isoler le panier par boutique
   const { boutique } = useBoutique(boutiqueName);
-  
+
   // Hook pour gérer le panier avec boutiqueId pour isolation
-  const { 
-    panier, 
-    totalItems, 
-    totalPrix, 
-    loading, 
+  const {
+    panier,
+    totalItems,
+    totalPrix,
+    loading,
     error,
     avertissements,
     clearAvertissements,
-    mettreAJourQuantite, 
-    supprimerItem 
+    mettreAJourQuantite,
+    supprimerItem
   } = usePanier(boutique?.id);
 
   // État pour gérer les confirmations de suppression
   const [itemsToDelete, setItemsToDelete] = useState<Set<number>>(new Set());
 
-  
+
   // Fonction pour formater les variants sélectionnés
   const formatVariants = (variants: { [key: string]: any } | null) => {
     if (!variants) return '';
@@ -226,7 +226,7 @@ export default function CartSidebar({ isOpen, onClose, boutiqueName = 'marche_24
                       {/* Image du produit */}
                       <div className="flex-shrink-0">
                         <Image
-                          src={getProduitImageUrl(item.produit.image_principale)}
+                          src={getProduitImageUrl(item.variants_selectionnes?.variant?.image || item.produit.image_principale)}
                           alt={item.produit.nom}
                           width={80}
                           height={80}
@@ -241,31 +241,53 @@ export default function CartSidebar({ isOpen, onClose, boutiqueName = 'marche_24
                             <h4 className="text-sm font-medium text-gray-900 truncate">
                               {item.produit.nom}
                             </h4>
-                            {item.variants_selectionnes && Object.keys(item.variants_selectionnes).length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {Object.entries(item.variants_selectionnes).map(([key, value], idx) => (
-                                  <span 
-                                    key={idx}
-                                    className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200"
-                                  >
-                                    {key}: <span className="ml-0.5 font-semibold">{value}</span>
-                                  </span>
+
+                            {/* Affichage du variant */}
+                            {item.variants_selectionnes?.variant && (
+                              <div className="mt-1">
+                                <span className="text-xs text-gray-600">
+                                  {item.variants_selectionnes.variant.nom}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Affichage des options */}
+                            {item.variants_selectionnes?.options && Object.keys(item.variants_selectionnes.options).length > 0 && (
+                              <div className="mt-1 space-y-0.5">
+                                {Object.entries(item.variants_selectionnes.options).map(([key, value]) => (
+                                  <div key={key} className="text-xs text-gray-600">
+                                    <span className="font-medium">{key}:</span> {value}
+                                  </div>
                                 ))}
                               </div>
                             )}
-                            <p className="text-sm font-semibold text-gray-900 mt-1">
-                              {formatPrice(item.produit.prix)}
-                            </p>
+
+                            {/* Prix avec promo si applicable */}
+                            <div className="mt-1">
+                              {item.variants_selectionnes?.variant?.prix_original ? (
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm font-semibold text-primary">
+                                    {formatPrice(item.variants_selectionnes.variant.prix)}
+                                  </p>
+                                  <p className="text-xs text-gray-500 line-through">
+                                    {formatPrice(item.variants_selectionnes.variant.prix_original)}
+                                  </p>
+                                </div>
+                              ) : (
+                                <p className="text-sm font-semibold text-gray-900">
+                                  {formatPrice(item.variants_selectionnes?.variant?.prix || item.produit.prix)}
+                                </p>
+                              )}
+                            </div>
                           </div>
-                          
+
                           {/* Bouton supprimer */}
                           <button
                             onClick={() => handleDeleteClick(item.id)}
-                            className={`ml-2 transition-all duration-300 transform ${
-                              itemsToDelete.has(item.id)
+                            className={`ml-2 transition-all duration-300 transform ${itemsToDelete.has(item.id)
                                 ? 'text-green-500 hover:text-green-600 scale-110'
                                 : 'text-gray-400 hover:text-red-500'
-                            }`}
+                              }`}
                             aria-label={itemsToDelete.has(item.id) ? "Confirmer la suppression" : "Supprimer l'article"}
                           >
                             {itemsToDelete.has(item.id) ? (
@@ -297,10 +319,10 @@ export default function CartSidebar({ isOpen, onClose, boutiqueName = 'marche_24
                               <Plus size={12} />
                             </button>
                           </div>
-                          
+
                           {/* Prix total pour cet item */}
                           <span className="text-sm font-semibold text-gray-900">
-                            {formatPrice(item.produit.prix * item.quantite)}
+                            {formatPrice((item.variants_selectionnes?.variant?.prix || item.produit.prix) * item.quantite)}
                           </span>
                         </div>
                       </div>
@@ -315,8 +337,8 @@ export default function CartSidebar({ isOpen, onClose, boutiqueName = 'marche_24
                     <span>Total ({totalItems} article{totalItems > 1 ? 's' : ''})</span>
                     <span>{formatPrice(totalPrix)}</span>
                   </div>
-                  
-                  <Link 
+
+                  <Link
                     href={`/${boutiqueName}/commande`}
                     className="w-full bg-primary text-white py-4 rounded-2xl font-medium text-lg flex items-center justify-center space-x-3 hover:bg-primary/90 transition-colors duration-200 text-decoration-none"
                     onClick={onClose}
