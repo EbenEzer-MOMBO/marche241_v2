@@ -8,28 +8,20 @@ export default function OptionsSection({
     options,
     onOptionsChange
 }: OptionsSectionProps) {
-    const [currentOptionName, setCurrentOptionName] = useState('');
-    const [currentOptionType, setCurrentOptionType] = useState<'texte' | 'numero'>('texte');
-    const [currentOptionRequired, setCurrentOptionRequired] = useState(false);
     const [error, setError] = useState<string>('');
 
-    // Ajouter une option
+    // Ajouter une option vide
     const addOption = () => {
-        if (!currentOptionName.trim()) {
-            setError('Veuillez saisir le nom de l\'option');
-            return;
-        }
-
         const newOption: ProductOption = {
-            nom: currentOptionName.trim(),
-            type: currentOptionType,
-            required: currentOptionRequired
+            nom: '',
+            type: 'texte',
+            required: false
         };
 
-        onOptionsChange([...options, newOption]);
-        setCurrentOptionName('');
-        setCurrentOptionType('texte');
-        setCurrentOptionRequired(false);
+        const updatedOptions = [...options, newOption];
+        console.log('[OptionsSection] Ajout d\'une option vide');
+        console.log('[OptionsSection] Options après ajout:', updatedOptions);
+        onOptionsChange(updatedOptions);
         setError('');
     };
 
@@ -48,14 +40,15 @@ export default function OptionsSection({
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-900">
-                    Options de personnalisation
-                </h3>
+                <div>
+                    <h3 className="text-lg font-medium text-gray-900">
+                        Options de personnalisation
+                    </h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                        Les options permettent aux clients de personnaliser leur commande (ex: message personnalisé, numéro de maillot, etc.)
+                    </p>
+                </div>
             </div>
-
-            <p className="text-sm text-gray-600">
-                Les options permettent aux clients de personnaliser leur commande (ex: message personnalisé, numéro de maillot, etc.)
-            </p>
 
             {/* Message d'erreur */}
             {error && (
@@ -65,96 +58,83 @@ export default function OptionsSection({
                 </div>
             )}
 
-            {/* Formulaire d'ajout d'option */}
-            <div className="p-4 border border-gray-300 rounded-lg space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Nom de l'option
-                        </label>
-                        <input
-                            type="text"
-                            placeholder="ex: Message personnalisé, Numéro"
-                            value={currentOptionName}
-                            onChange={(e) => setCurrentOptionName(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Type
-                        </label>
-                        <select
-                            value={currentOptionType}
-                            onChange={(e) => setCurrentOptionType(e.target.value as 'texte' | 'numero')}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                        >
-                            <option value="texte">Texte</option>
-                            <option value="numero">Numéro</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div className="flex items-center">
-                    <input
-                        type="checkbox"
-                        id="option-required"
-                        checked={currentOptionRequired}
-                        onChange={(e) => setCurrentOptionRequired(e.target.checked)}
-                        className="h-4 w-4 text-black border-gray-300 rounded focus:ring-black"
-                    />
-                    <label htmlFor="option-required" className="ml-2 text-sm text-gray-700">
-                        Option obligatoire
-                    </label>
-                </div>
-
-                <button
-                    type="button"
-                    onClick={addOption}
-                    className="inline-flex items-center px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm"
-                >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Ajouter l'option
-                </button>
-            </div>
-
             {/* Liste des options */}
             {options.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                     {options.map((option, index) => (
                         <div
                             key={index}
-                            className="p-3 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between"
+                            className="p-4 bg-white rounded-lg border-2 border-gray-200 space-y-3"
                         >
-                            <div className="flex-1">
-                                <div className="flex items-center space-x-3">
-                                    <span className="font-medium text-gray-900">{option.nom}</span>
-                                    <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded">
-                                        {option.type === 'texte' ? 'Texte' : 'Numéro'}
-                                    </span>
-                                    {option.required && (
-                                        <span className="px-2 py-0.5 bg-orange-100 text-orange-800 text-xs rounded">
-                                            Obligatoire
-                                        </span>
-                                    )}
+                            <div className="flex items-center justify-between">
+                                <h4 className="text-sm font-medium text-gray-700">Option {index + 1}</h4>
+                                <button
+                                    type="button"
+                                    onClick={() => removeOption(index)}
+                                    className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                    title="Supprimer l'option"
+                                >
+                                    <Trash2 className="h-5 w-5" />
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Nom de l'option *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={option.nom}
+                                        onChange={(e) => updateOption(index, 'nom', e.target.value)}
+                                        placeholder="ex: Message personnalisé"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Type
+                                    </label>
+                                    <select
+                                        value={option.type}
+                                        onChange={(e) => updateOption(index, 'type', e.target.value as 'texte' | 'numero')}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                                    >
+                                        <option value="texte">Texte</option>
+                                        <option value="numero">Numéro</option>
+                                    </select>
                                 </div>
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => removeOption(index)}
-                                className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
-                                title="Supprimer l'option"
-                            >
-                                <Trash2 className="h-4 w-4" />
-                            </button>
+
+                            <div className="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    id={`option-required-${index}`}
+                                    checked={option.required || false}
+                                    onChange={(e) => updateOption(index, 'required', e.target.checked)}
+                                    className="h-4 w-4 text-black border-gray-300 rounded focus:ring-black"
+                                />
+                                <label htmlFor={`option-required-${index}`} className="ml-2 text-sm text-gray-700">
+                                    Option obligatoire
+                                </label>
+                            </div>
                         </div>
                     ))}
                 </div>
             ) : (
                 <p className="text-sm text-gray-500 italic">
-                    Aucune option de personnalisation ajoutée.
+                    Aucune option de personnalisation ajoutée. Cliquez sur "Ajouter une option" pour en créer une.
                 </p>
             )}
+            <button
+                type="button"
+                onClick={addOption}
+                className="inline-flex items-center px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm"
+            >
+                <Plus className="h-4 w-4 mr-2" />
+                Ajouter une option
+            </button>
         </div>
     );
 }

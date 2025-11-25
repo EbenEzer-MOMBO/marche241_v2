@@ -43,6 +43,8 @@ export default function ProduitModal({
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string>('');
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [variantImageFiles, setVariantImageFiles] = useState<Map<number, File>>(new Map());
 
   // Charger les données du produit lors de l'ouverture du modal
   useEffect(() => {
@@ -118,6 +120,66 @@ export default function ProduitModal({
     }
   }, [formData.variants]);
 
+  // Fonction pour uploader les images en attente
+  const uploadPendingImages = async (): Promise<string[]> => {
+    if (imageFiles.length === 0) {
+      console.log('[ProduitModal] Aucune image en attente d\'upload');
+      return [];
+    }
+
+    console.log(`[ProduitModal] Upload de ${imageFiles.length} image(s) en attente...`);
+    setIsUploading(true);
+    setError('');
+
+    try {
+      const { uploadMultipleImages } = await import('@/lib/services/upload');
+      const uploadedImgs = await uploadMultipleImages(imageFiles, boutiqueSlug, 'produits');
+      const newImageUrls = uploadedImgs.map(img => img.url);
+
+      console.log('[ProduitModal] Images uploadées avec succès:', newImageUrls);
+      setImageFiles([]);
+      return newImageUrls;
+    } catch (err: any) {
+      console.error('[ProduitModal] Erreur lors de l\'upload des images:', err);
+      throw new Error(err.message || 'Erreur lors de l\'upload des images');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Fonction pour uploader les images de variantes en attente
+  const uploadVariantImages = async (): Promise<Map<number, string>> => {
+    const uploadedUrls = new Map<number, string>();
+
+    if (variantImageFiles.size === 0) {
+      console.log('[ProduitModal] Aucune image de variant en attente');
+      return uploadedUrls;
+    }
+
+    console.log(`[ProduitModal] Upload de ${variantImageFiles.size} image(s) de variant en attente...`);
+    setIsUploading(true);
+
+    try {
+      const { uploadImage } = await import('@/lib/services/upload');
+
+      // Uploader chaque image de variant
+      for (const [index, file] of variantImageFiles.entries()) {
+        console.log(`[ProduitModal] Upload image variant ${index}:`, file.name);
+        const result = await uploadImage(file, boutiqueSlug, 'produits/variants');
+        uploadedUrls.set(index, result.url);
+      }
+
+      console.log('[ProduitModal] Images de variants uploadées avec succès');
+      setVariantImageFiles(new Map());
+      return uploadedUrls;
+    } catch (err: any) {
+      console.error('[ProduitModal] Erreur lors de l\'upload des images de variants:', err);
+      throw new Error(err.message || 'Erreur lors de l\'upload des images de variants');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   // Gérer la soumission du formulaire
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,6 +212,51 @@ export default function ProduitModal({
         return;
       }
 
+      // Uploader les images en attente avant la validation
+      console.log('[ProduitModal] Vérification des images en attente...');
+      console.log('[ProduitModal] Images déjà uploadées:', formData.images);
+      console.log('[ProduitModal] Fichiers en attente:', imageFiles.length);
+      console.log('[ProduitModal] Images de variants en attente:', variantImageFiles.size);
+      console.log('[ProduitModal] Variants:', formData.variants);
+      console.log('[ProduitModal] Options:', formData.options);
+
+      let newlyUploadedImages: string[] = [];
+      if (imageFiles.length > 0) {
+        console.log('[ProduitModal] Upload des images en attente...');
+        newlyUploadedImages = await uploadPendingImages();
+      }
+
+      // Uploader les images de variantes en attente
+      let variantUploadedUrls = new Map<number, string>();
+      if (variantImageFiles.size > 0) {
+        console.log('[ProduitModal] Upload des images de variants...');
+        variantUploadedUrls = await uploadVariantImages();
+      }
+
+      // Mettre à jour les variantes avec les nouvelles images
+      const updatedVariants = formData.variants.map((variant, index) => {
+        if (variantUploadedUrls.has(index)) {
+          return { ...variant, image: variantUploadedUrls.get(index) };
+        }
+        return variant;
+      });
+
+      // Combiner les images existantes avec les nouvelles
+      const allImages = [...formData.images, ...newlyUploadedImages];
+      console.log('[ProduitModal] Total images après upload:', allImages);
+
+      // Déterminer l'image principale
+      let imagePrincipale = allImages.length > 0 ? allImages[0] : null;
+
+      // Si pas d'image principale, utiliser l'image du premier variant qui en a une
+      if (!imagePrincipale) {
+        const variantWithImage = updatedVariants.find(v => v.image);
+        if (variantWithImage) {
+          imagePrincipale = variantWithImage.image!;
+          console.log('[ProduitModal] Utilisation de l\'image du variant comme image principale:', imagePrincipale);
+        }
+      }
+
       // Préparer les données pour l'API
       const produitData: any = {
         nom: formData.nom,
@@ -161,11 +268,11 @@ export default function ProduitModal({
         quantite_stock: formData.en_stock,
         boutique_id: boutiqueId,
         categorie_id: parseInt(formData.categorie_id),
-        images: formData.images,
-        image_principale: formData.images.length > 0 ? formData.images[0] : null,
+        images: allImages,
+        image_principale: imagePrincipale,
         // Combiner variants et options dans un seul JSON
         variants: {
-          variants: formData.variants,
+          variants: updatedVariants,
           options: formData.options
         },
         statut: formData.statut,
@@ -263,6 +370,22 @@ export default function ProduitModal({
                         {category.nom}
                       </option>
                     ))}
+                    <option value=""><a href="/admin/categories" className="text-blue-500">Ajouter une catégorie +</a></option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Statut *
+                  </label>
+                  <select
+                    value={formData.statut}
+                    onChange={(e) => setFormData(prev => ({ ...prev, statut: e.target.value as 'actif' | 'inactif' | 'brouillon' }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                    required
+                  >
+                    <option value="actif">Actif</option>
+                    <option value="inactif">Inactif</option>
                   </select>
                 </div>
               </div>
@@ -279,6 +402,9 @@ export default function ProduitModal({
                 boutiqueSlug={boutiqueSlug}
                 isUploading={isUploading}
                 onUploadStateChange={setIsUploading}
+                imageFiles={imageFiles}
+                onImageFilesChange={setImageFiles}
+                onUploadPendingImages={uploadPendingImages}
               />
             </div>
 
@@ -287,35 +413,31 @@ export default function ProduitModal({
               <h3 className="text-lg font-medium text-gray-900 mb-4">
                 3. Tarification
               </h3>
-              <div className="space-y-4">
-                {/* Stock total (calculé automatiquement) */}
-                <div className="p-4 bg-white border border-gray-300 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Quantité en stock
-                      </label>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Calculé automatiquement à partir des variantes
-                      </p>
-                    </div>
-                    <div className="text-2xl font-bold text-gray-900">
-                      {formData.en_stock} unités
-                    </div>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-4">
+              {/* Message d'information si variants actifs */}
+              {formData.variants.length > 0 && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-700">
+                    ℹ️ Les champs de tarification sont désactivés car des variantes sont définies.
+                    Les prix et quantités sont gérés au niveau de chaque variante.
+                  </p>
+                </div>
+              )}
+
+              <div className="space-y-4">
+
+                <div className="grid grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Prix (FCFA) *
+                      Prix<br></br> (FCFA) *
                     </label>
                     <input
                       type="number"
                       step="0.01"
                       value={formData.prix}
                       onChange={(e) => setFormData(prev => ({ ...prev, prix: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      disabled={formData.variants.length > 0}
                       required
                     />
                   </div>
@@ -329,25 +451,25 @@ export default function ProduitModal({
                       step="0.01"
                       value={formData.prix_promo}
                       onChange={(e) => setFormData(prev => ({ ...prev, prix_promo: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      disabled={formData.variants.length > 0}
                     />
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Statut *
-                  </label>
-                  <select
-                    value={formData.statut}
-                    onChange={(e) => setFormData(prev => ({ ...prev, statut: e.target.value as 'actif' | 'inactif' | 'brouillon' }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                    required
-                  >
-                    <option value="actif">Actif</option>
-                    <option value="inactif">Inactif</option>
-                    <option value="brouillon">Brouillon</option>
-                  </select>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Quantité en stock *
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.en_stock}
+                      onChange={(e) => setFormData(prev => ({ ...prev, en_stock: parseInt(e.target.value) || 0 }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      disabled={formData.variants.length > 0}
+                      required
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -361,6 +483,9 @@ export default function ProduitModal({
                 variants={formData.variants}
                 onVariantsChange={(variants) => setFormData(prev => ({ ...prev, variants }))}
                 boutiqueSlug={boutiqueSlug}
+                variantImageFiles={variantImageFiles}
+                onVariantImageFilesChange={setVariantImageFiles}
+                onUploadVariantImages={uploadVariantImages}
               />
             </div>
 

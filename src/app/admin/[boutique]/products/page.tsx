@@ -295,8 +295,8 @@ export default function ProductsPage() {
             ));
 
             // Appel API réel
-            await modifierProduit(id, { 
-                statut: product.actif ? 'inactif' : 'actif' 
+            await modifierProduit(id, {
+                statut: product.actif ? 'inactif' : 'actif'
             });
 
             success(`Produit ${!product.actif ? 'activé' : 'désactivé'}`, 'Succès');
@@ -336,6 +336,26 @@ export default function ProductsPage() {
     };
 
     const handleEditProduct = (product: ProduitAffichage) => {
+        console.log('[handleEditProduct] Produit à éditer:', product);
+
+        // Extraire les variantes et options depuis le JSON
+        let variantsData: any[] = [];
+        let optionsData: any[] = [];
+
+        if (product.variants) {
+            // Si variants est un objet avec variants et options séparés
+            if (typeof product.variants === 'object' && 'variants' in product.variants) {
+                variantsData = product.variants.variants || [];
+                optionsData = product.variants.options || [];
+                console.log('[handleEditProduct] Variants extraits:', variantsData);
+                console.log('[handleEditProduct] Options extraites:', optionsData);
+            } else if (Array.isArray(product.variants)) {
+                // Si c'est un tableau de variants
+                variantsData = product.variants;
+                console.log('[handleEditProduct] Variants (tableau):', variantsData);
+            }
+        }
+
         // Convertir ProduitAffichage en ProduitDB pour le modal
         const produitDB: ProduitDB = {
             id: product.id,
@@ -343,10 +363,14 @@ export default function ProductsPage() {
             slug: product.slug,
             description: product.description,
             prix: product.prix,
+            prix_promo: product.prix_original, // Mapper prix_original vers prix_promo
             prix_original: product.prix_original,
             image_principale: product.image_principale,
             images: product.images || [],
-            variants: product.variants || [],
+            variants: {
+                variants: variantsData,
+                options: optionsData
+            },
             en_stock: product.en_stock,
             quantite_stock: product.quantite_stock || 0,
             actif: product.actif,
@@ -364,6 +388,7 @@ export default function ProductsPage() {
             date_modification: new Date()
         };
 
+        console.log('[handleEditProduct] ProduitDB préparé pour le modal:', produitDB);
         setProductToEdit(produitDB);
         setShowProductModal(true);
     };
@@ -385,7 +410,7 @@ export default function ProductsPage() {
                     variants: produitData.variants,
                     statut: produitData.statut
                 });
-                
+
                 // Mettre à jour l'interface utilisateur
                 const produitAffichage: ProduitAffichage = {
                     ...products.find(p => p.id === productToEdit.id)!,
@@ -410,9 +435,9 @@ export default function ProductsPage() {
                         slug: categories.find(c => c.id === produitModifie.categorie_id)?.slug || 'sans-categorie'
                     }
                 };
-                
+
                 console.log('Produit modifié:', produitAffichage);
-                
+
                 setProducts(prev => prev.map(p => p.id === productToEdit.id ? produitAffichage : p));
                 success('Produit modifié avec succès', 'Succès');
             } else {
@@ -431,7 +456,7 @@ export default function ProductsPage() {
                     variants: produitData.variants,
                     statut: produitData.statut
                 });
-                
+
                 // Convertir en ProduitAffichage pour l'interface
                 const nouveauProduit: ProduitAffichage = {
                     id: nouveauProduitDB.id,
@@ -468,7 +493,7 @@ export default function ProductsPage() {
                 };
 
                 console.log(nouveauProduit);
-                
+
                 setProducts(prev => [...prev, nouveauProduit]);
                 success('Produit créé avec succès', 'Succès');
             }
@@ -996,7 +1021,7 @@ export default function ProductsPage() {
                                                         <span>{product.nombre_ventes} ventes</span>
                                                     </div>
                                                 </div>
-                                                
+
                                                 {/* Détail des variants pour mobile */}
                                                 {product.variants && product.variants.length > 0 && product.variants[0].quantites && (
                                                     <div className="flex flex-wrap gap-1">

@@ -8,30 +8,26 @@ import { uploadImage, deleteImage } from '@/lib/services/upload';
 export default function VariantsSection({
     variants,
     onVariantsChange,
-    boutiqueSlug
+    boutiqueSlug,
+    variantImageFiles,
+    onVariantImageFilesChange,
+    onUploadVariantImages
 }: VariantsSectionProps) {
-    const [currentVariantName, setCurrentVariantName] = useState('');
-    const [uploadingImageFor, setUploadingImageFor] = useState<number | null>(null);
     const [error, setError] = useState<string>('');
 
     // Calculer le stock total
     const totalStock = variants.reduce((total, variant) => total + variant.quantite, 0);
 
-    // Ajouter une variante
+    // Ajouter une variante vide
     const addVariant = () => {
-        if (!currentVariantName.trim()) {
-            setError('Veuillez remplir le nom de la variante');
-            return;
-        }
-
         const newVariant: ProductVariant = {
-            nom: currentVariantName.trim(),
+            nom: '',
             quantite: 0
         };
 
         onVariantsChange([...variants, newVariant]);
-        setCurrentVariantName('');
         setError('');
+        console.log('[VariantsSection] Ajout d\'une variante vide');
     };
 
     // Supprimer une variante
@@ -69,25 +65,15 @@ export default function VariantsSection({
         onVariantsChange(newVariants);
     };
 
-    // Upload d'image pour une variante
-    const handleImageUpload = async (index: number, file: File) => {
-        setUploadingImageFor(index);
-        setError('');
-
-        try {
-            const result = await uploadImage(file, boutiqueSlug, 'produits/variants');
-            const newVariants = [...variants];
-            newVariants[index].image = result.url;
-            onVariantsChange(newVariants);
-        } catch (err: any) {
-            console.error('Erreur lors de l\'upload de l\'image:', err);
-            setError(err.message || 'Erreur lors de l\'upload de l\'image');
-        } finally {
-            setUploadingImageFor(null);
-        }
+    // Gérer la sélection d'image pour une variante
+    const handleImageSelect = (index: number, file: File) => {
+        const newFiles = new Map(variantImageFiles);
+        newFiles.set(index, file);
+        onVariantImageFilesChange(newFiles);
+        console.log(`[VariantsSection] Image sélectionnée pour variant ${index}:`, file.name);
     };
 
-    // Supprimer l'image d'une variante
+    // Supprimer l'image d'une variante (déjà uploadée)
     const removeVariantImage = async (index: number) => {
         const imageUrl = variants[index].image;
         if (!imageUrl) return;
@@ -109,22 +95,31 @@ export default function VariantsSection({
         }
     };
 
+    // Supprimer un fichier en attente
+    const removePendingImage = (index: number) => {
+        const newFiles = new Map(variantImageFiles);
+        newFiles.delete(index);
+        onVariantImageFilesChange(newFiles);
+    };
+
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-900">
-                    Variantes
-                </h3>
-                {totalStock > 0 && (
-                    <div className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-lg text-sm font-semibold">
-                        Stock total: {totalStock} unités
-                    </div>
-                )}
-            </div>
+                <div>
+                    <h3 className="text-lg font-medium text-gray-900">
+                        Variantes
+                    </h3>
+                    {totalStock > 0 && (
+                        <div className="mt-1 px-3 py-1 bg-emerald-100 text-emerald-800 rounded-lg text-sm font-semibold inline-block">
+                            Stock total: {totalStock} unités
+                        </div>
+                    )}
+                    <p className="text-sm text-gray-600 mt-1">
+                        Les variantes permettent de proposer différentes déclinaisons du produit (couleur, taille, type, etc.)
+                    </p>
+                </div>
 
-            <p className="text-sm text-gray-600">
-                Les variantes permettent de proposer différentes déclinaisons du produit (couleur, taille, type, etc.)
-            </p>
+            </div>
 
             {/* Message d'erreur */}
             {error && (
@@ -133,27 +128,6 @@ export default function VariantsSection({
                     <p className="text-sm text-red-600">{error}</p>
                 </div>
             )}
-
-            {/* Formulaire d'ajout de variante */}
-            <div className="p-4 border border-gray-300 rounded-lg space-y-3">
-                <div className="flex gap-3">
-                    <input
-                        type="text"
-                        placeholder="Nom de la variante (ex: Rouge, Bleu, Taille M)"
-                        value={currentVariantName}
-                        onChange={(e) => setCurrentVariantName(e.target.value)}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                    />
-                    <button
-                        type="button"
-                        onClick={addVariant}
-                        className="inline-flex items-center px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm"
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Ajouter
-                    </button>
-                </div>
-            </div>
 
             {/* Liste des variantes */}
             {variants.length > 0 ? (
@@ -183,18 +157,18 @@ export default function VariantsSection({
                             </div>
 
                             {/* Grille des champs */}
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-3 gap-3">
                                 {/* Prix */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Prix (FCFA)
+                                        Prix <br></br> (FCFA)*
                                     </label>
                                     <input
                                         type="number"
                                         step="0.01"
                                         value={variant.prix || ''}
                                         onChange={(e) => updateVariantPrice(index, e.target.value)}
-                                        placeholder="Optionnel"
+                                        placeholder="5000"
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
                                     />
                                 </div>
@@ -214,23 +188,10 @@ export default function VariantsSection({
                                     />
                                 </div>
 
-                                {/* UGS (SKU) - Placeholder pour correspondre à l'image */}
+                                {/* Quantité en stock */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        UGS
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="SKU"
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                                        disabled
-                                    />
-                                </div>
-
-                                {/* Poids (Quantité) */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Poids (Quantité) *
+                                        Quantité en stock *
                                     </label>
                                     <input
                                         type="number"
@@ -262,6 +223,24 @@ export default function VariantsSection({
                                             <X className="h-3 w-3" />
                                         </button>
                                     </div>
+                                ) : variantImageFiles.has(index) ? (
+                                    <div className="relative inline-block">
+                                        <img
+                                            src={URL.createObjectURL(variantImageFiles.get(index)!)}
+                                            alt="Preview"
+                                            className="w-24 h-24 object-cover rounded-lg border-2 border-blue-300"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => removePendingImage(index)}
+                                            className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                        <div className="absolute bottom-0 left-0 right-0 bg-blue-500 text-white text-xs px-2 py-0.5 rounded-b-lg text-center">
+                                            En attente
+                                        </div>
+                                    </div>
                                 ) : (
                                     <div>
                                         <input
@@ -269,18 +248,17 @@ export default function VariantsSection({
                                             accept="image/*"
                                             onChange={(e) => {
                                                 const file = e.target.files?.[0];
-                                                if (file) handleImageUpload(index, file);
+                                                if (file) handleImageSelect(index, file);
                                             }}
                                             className="hidden"
                                             id={`variant-image-${index}`}
-                                            disabled={uploadingImageFor === index}
                                         />
                                         <label
                                             htmlFor={`variant-image-${index}`}
                                             className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
                                         >
                                             <Upload className="h-4 w-4 mr-2" />
-                                            {uploadingImageFor === index ? 'Upload...' : 'Téléverser une image'}
+                                            Sélectionner une image
                                         </label>
                                     </div>
                                 )}
@@ -290,9 +268,17 @@ export default function VariantsSection({
                 </div>
             ) : (
                 <p className="text-sm text-gray-500 italic">
-                    Aucune variante ajoutée. Cliquez sur "Ajouter" pour créer une variante.
+                    Aucune variante ajoutée. Cliquez sur "Ajouter une variante" pour en créer une.
                 </p>
             )}
+            <button
+                type="button"
+                onClick={addVariant}
+                className="inline-flex items-center px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm"
+            >
+                <Plus className="h-4 w-4 mr-2" />
+                Ajouter une variante
+            </button>
         </div>
     );
 }

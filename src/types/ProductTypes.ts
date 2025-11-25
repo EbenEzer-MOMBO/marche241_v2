@@ -58,6 +58,9 @@ export interface ImagesSectionProps {
     boutiqueSlug: string;
     isUploading: boolean;
     onUploadStateChange: (isUploading: boolean) => void;
+    imageFiles: File[];
+    onImageFilesChange: (files: File[]) => void;
+    onUploadPendingImages: () => Promise<string[]>;
 }
 
 /**
@@ -67,6 +70,9 @@ export interface VariantsSectionProps {
     variants: ProductVariant[];
     onVariantsChange: (variants: ProductVariant[]) => void;
     boutiqueSlug: string;
+    variantImageFiles: Map<number, File>;
+    onVariantImageFilesChange: (files: Map<number, File>) => void;
+    onUploadVariantImages: () => Promise<Map<number, string>>;
 }
 
 /**

@@ -10,9 +10,11 @@ export default function ImagesSection({
     onImagesChange,
     boutiqueSlug,
     isUploading,
-    onUploadStateChange
+    onUploadStateChange,
+    imageFiles,
+    onImageFilesChange,
+    onUploadPendingImages
 }: ImagesSectionProps) {
-    const [imageFiles, setImageFiles] = useState<File[]>([]);
     const [error, setError] = useState<string>('');
 
     // Gérer la sélection de fichiers
@@ -24,34 +26,18 @@ export default function ImagesSection({
             return;
         }
 
-        setImageFiles(prev => [...prev, ...files]);
+        onImageFilesChange([...imageFiles, ...files]);
         setError('');
     };
 
     // Supprimer un fichier sélectionné (pas encore uploadé)
     const removeFile = (index: number) => {
-        setImageFiles(prev => prev.filter((_, i) => i !== index));
+        onImageFilesChange(imageFiles.filter((_, i) => i !== index));
     };
 
-    // Uploader les images sélectionnées
+    // Uploader les images sélectionnées (appelé manuellement ou par le parent)
     const uploadImages = async () => {
-        if (imageFiles.length === 0) return;
-
-        onUploadStateChange(true);
-        setError('');
-
-        try {
-            const uploadedImgs = await uploadMultipleImages(imageFiles, boutiqueSlug, 'produits');
-            const newImageUrls = uploadedImgs.map(img => img.url);
-
-            onImagesChange([...images, ...newImageUrls]);
-            setImageFiles([]);
-        } catch (err: any) {
-            console.error('Erreur lors de l\'upload des images:', err);
-            setError(err.message || 'Erreur lors de l\'upload des images');
-        } finally {
-            onUploadStateChange(false);
-        }
+        await onUploadPendingImages();
     };
 
     // Supprimer une image existante
