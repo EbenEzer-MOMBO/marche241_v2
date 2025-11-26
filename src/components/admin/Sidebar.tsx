@@ -27,6 +27,8 @@ import {
   Check,
   Eye
 } from 'lucide-react';
+import { useToast } from '@/hooks/useToast';
+import { ToastContainer } from '@/components/ui/Toast';
 
 interface SidebarProps {
   boutique: BoutiqueData;
@@ -53,6 +55,9 @@ export default function Sidebar({ boutique, isMobileMenuOpen = false, onToggleMo
     produits: false,
     livraison: false
   });
+
+  // Hook pour les toasts
+  const { toasts, removeToast, success, error: showError } = useToast();
 
   // Charger les alertes au montage
   useEffect(() => {
@@ -130,11 +135,42 @@ export default function Sidebar({ boutique, isMobileMenuOpen = false, onToggleMo
   const handleCopyLink = async () => {
     const boutiqueUrl = `${window.location.origin}/${boutique.slug}`;
     try {
-      await navigator.clipboard.writeText(boutiqueUrl);
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
+      // Méthode 1 : Utiliser l'API Clipboard moderne (préférée)
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(boutiqueUrl);
+        setIsCopied(true);
+        success('Lien copié !', 'Succès', 2000);
+        setTimeout(() => setIsCopied(false), 2000);
+      } else {
+        // Méthode 2 : Fallback pour les navigateurs plus anciens ou contextes non sécurisés
+        const textArea = document.createElement('textarea');
+        textArea.value = boutiqueUrl;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+          const successful = document.execCommand('copy');
+          if (successful) {
+            setIsCopied(true);
+            success('Lien copié !', 'Succès', 2000);
+            setTimeout(() => setIsCopied(false), 2000);
+          } else {
+            throw new Error('Copy command was unsuccessful');
+          }
+        } catch (err) {
+          console.error('Fallback: Erreur lors de la copie', err);
+          showError('Impossible de copier le lien', 'Erreur', 3000);
+        } finally {
+          document.body.removeChild(textArea);
+        }
+      }
     } catch (err) {
       console.error('Erreur lors de la copie:', err);
+      showError('Impossible de copier le lien', 'Erreur', 3000);
     }
   };
 
