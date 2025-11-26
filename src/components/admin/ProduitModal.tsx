@@ -111,12 +111,15 @@ export default function ProduitModal({
 
   // Calculer le stock total à partir des variants
   useEffect(() => {
-    const totalStock = formData.variants.reduce((total, variant) => {
-      return total + variant.quantite;
-    }, 0);
+    // Seulement recalculer le stock si des variants existent
+    if (formData.variants.length > 0) {
+      const totalStock = formData.variants.reduce((total, variant) => {
+        return total + variant.quantite;
+      }, 0);
 
-    if (totalStock !== formData.en_stock) {
-      setFormData(prev => ({ ...prev, en_stock: totalStock }));
+      if (totalStock !== formData.en_stock) {
+        setFormData(prev => ({ ...prev, en_stock: totalStock }));
+      }
     }
   }, [formData.variants]);
 
@@ -263,13 +266,25 @@ export default function ProduitModal({
       // Préparer les données pour l'API
       // Si des variants sont définis, utiliser le prix du premier variant
       let prixProduit = parseFloat(formData.prix);
-      let prixPromoProduit = formData.prix_promo ? parseFloat(formData.prix_promo) : undefined;
+      let prixPromoProduit: number | undefined = undefined;
+      
+      // Gérer prix_promo : doit être undefined si vide, null ou zéro
+      if (formData.prix_promo && formData.prix_promo.trim() !== '') {
+        const promo = parseFloat(formData.prix_promo);
+        prixPromoProduit = promo > 0 ? promo : undefined;
+      }
 
       if (updatedVariants.length > 0) {
         // Utiliser le prix du premier variant
         const firstVariant = updatedVariants[0];
         prixProduit = firstVariant.prix || prixProduit;
-        prixPromoProduit = firstVariant.prix_promo || prixPromoProduit;
+        
+        // Pour les variants, accepter 0 comme valeur valide, mais pas null/undefined
+        if (firstVariant.prix_promo !== undefined && firstVariant.prix_promo !== null && firstVariant.prix_promo > 0) {
+          prixPromoProduit = firstVariant.prix_promo;
+        } else {
+          prixPromoProduit = undefined;
+        }
       }
 
       const produitData: any = {
@@ -277,7 +292,7 @@ export default function ProduitModal({
         slug: formData.nom.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
         description: formData.description,
         prix: prixProduit,
-        prix_promo: prixPromoProduit,
+        prix_promo: prixPromoProduit || null, // Envoyer null si undefined
         en_stock: formData.en_stock,
         quantite_stock: formData.en_stock,
         boutique_id: boutiqueId,

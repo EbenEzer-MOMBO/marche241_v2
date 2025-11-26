@@ -44,6 +44,21 @@ export function useCategories(
       
       let categoriesData = await getCategoriesParBoutique(boutiqueId);
       
+      // Charger les produits pour corriger le nombre_produits des catégories globales
+      const { getProduitsParBoutique: getProduitsService } = await import('@/lib/services/products');
+      const produitsResponse = await getProduitsService(boutiqueId, { limite: 100 });
+      const produitsBoutique = produitsResponse.donnees || [];
+      
+      // Corriger le nombre_produits pour les catégories globales
+      categoriesData = categoriesData.map(cat => {
+        // Pour les catégories globales, compter uniquement les produits de cette boutique
+        if (!cat.boutique_id) {
+          const nombreProduitsBoutique = produitsBoutique.filter(p => p.categorie_id === cat.id).length;
+          return { ...cat, nombre_produits: nombreProduitsBoutique };
+        }
+        return cat;
+      });
+      
       // Filtrer les catégories actives si demandé
       if (uniquementActives) {
         categoriesData = filtrerCategoriesActives(categoriesData);

@@ -56,7 +56,7 @@ export const metadata: Metadata = {
     description: "Plateforme de commerce en ligne pour les commerçants gabonais. Créez, gérez et développez votre boutique facilement.",
     images: [
       {
-        url: "/marche241_Web_without_text-01-01.svg",
+        url: "/marche241_Web-01.svg",
         width: 1200,
         height: 630,
         alt: "Marché241 - Boutique en ligne",
@@ -67,7 +67,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Marché241 - Créez votre boutique en ligne au Gabon",
     description: "Plateforme de commerce en ligne pour les commerçants gabonais. Créez, gérez et développez votre boutique facilement.",
-    images: ["/marche241_Web_without_text-01-01.svg"],
+    images: ["/marche241_Web-01.svg"],
     creator: "@marche241",
   },
   robots: {

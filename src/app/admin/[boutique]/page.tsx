@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/useToast';
 import Sidebar from '@/components/admin/Sidebar';
 import { getProduitsParBoutique, ProduitsResponse } from '@/lib/services/products';
 import { getCategoriesParBoutique } from '@/lib/services/categories';
+import { getCommunesParBoutique } from '@/lib/services/communes';
 import { getStatistiquesDashboard, StatistiquesDashboard } from '@/lib/services/statistiques';
 import { ChartEvolutionCA } from '@/components/admin/ChartEvolutionCA';
 import { ChartRepartitionCommandes } from '@/components/admin/ChartRepartitionCommandes';
@@ -20,7 +21,9 @@ import {
   Plus,
   Eye,
   Store,
-  Menu
+  Menu,
+  AlertCircle,
+  Truck
 } from 'lucide-react';
 
 export default function BoutiqueDashboard() {
@@ -43,6 +46,7 @@ export default function BoutiqueDashboard() {
     produitsActifs: 0,
     produitsEnRupture: 0
   });
+  const [totalCommunes, setTotalCommunes] = useState(0);
   const [recentProducts, setRecentProducts] = useState<any[]>([]);
 
   useEffect(() => {
@@ -85,6 +89,10 @@ export default function BoutiqueDashboard() {
         
         // Charger les catégories
         const categoriesData = await getCategoriesParBoutique(boutiqueId);
+        
+        // Charger les communes
+        const communesData = await getCommunesParBoutique(boutiqueId);
+        setTotalCommunes(communesData.length || 0);
         
         // Charger les statistiques complètes
         const statsData = await getStatistiquesDashboard(boutiqueId, periode);
@@ -243,56 +251,107 @@ export default function BoutiqueDashboard() {
             </div>
           </div>
 
+          {/* Alertes de configuration */}
+          {(stats.totalProduits === 0 || totalCommunes === 0) && (
+            <div className="mb-6 space-y-3">
+              {stats.totalProduits === 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                    <div className="ml-3 flex-1">
+                      <h3 className="text-sm font-semibold text-amber-900">
+                        Aucun produit dans votre boutique
+                      </h3>
+                      <p className="mt-1 text-sm text-amber-700">
+                        Commencez par ajouter des produits pour que vos clients puissent passer des commandes.
+                      </p>
+                      <button
+                        onClick={() => router.push(`/admin/${boutique?.slug}/products`)}
+                        className="mt-3 inline-flex items-center px-3 py-1.5 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors"
+                      >
+                        <Plus className="h-4 w-4 mr-1.5" />
+                        Ajouter un produit
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {totalCommunes === 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div className="ml-3 flex-1">
+                      <h3 className="text-sm font-semibold text-blue-900">
+                        Aucune zone de livraison configurée
+                      </h3>
+                      <p className="mt-1 text-sm text-blue-700">
+                        Ajoutez des communes et leurs frais de livraison pour permettre à vos clients de commander.
+                      </p>
+                      <button
+                        onClick={() => router.push(`/admin/${boutique?.slug}/shipping`)}
+                        className="mt-3 inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        <Truck className="h-4 w-4 mr-1.5" />
+                        Configurer la livraison
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-            <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-6 sm:mb-8">
+            <div className="bg-white p-3 sm:p-4 md:p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
               <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
-                  <Package className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+                <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                  <Package className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-blue-600" />
                 </div>
-                <div className="ml-3 sm:ml-4 min-w-0">
-                  <p className="text-sm font-medium text-gray-600 truncate">Produits</p>
-                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.totalProduits}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{stats.produitsActifs} actifs</p>
+                <div className="ml-2 sm:ml-3 md:ml-4 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Produits</p>
+                  <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{stats.totalProduits}</p>
+                  <p className="text-xs text-gray-500 mt-0.5 hidden sm:block">{stats.produitsActifs} actifs</p>
                 </div>
               </div>
             </div>
             
-            <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+            <div className="bg-white p-3 sm:p-4 md:p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
               <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-lg flex-shrink-0">
-                  <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
+                <div className="p-1.5 sm:p-2 bg-green-100 rounded-lg flex-shrink-0">
+                  <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-green-600" />
                 </div>
-                <div className="ml-3 sm:ml-4 min-w-0">
-                  <p className="text-sm font-medium text-gray-600 truncate">Commandes</p>
-                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.totalCommandes}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">En attente</p>
+                <div className="ml-2 sm:ml-3 md:ml-4 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Commandes</p>
+                  <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{stats.totalCommandes}</p>
+                  <p className="text-xs text-gray-500 mt-0.5 hidden sm:block">En attente</p>
                 </div>
               </div>
             </div>
             
-            <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+            <div className="bg-white p-3 sm:p-4 md:p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
               <div className="flex items-center">
-                <div className="p-2 bg-purple-100 rounded-lg flex-shrink-0">
-                  <Users className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
+                <div className="p-1.5 sm:p-2 bg-purple-100 rounded-lg flex-shrink-0">
+                  <Users className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-purple-600" />
                 </div>
-                <div className="ml-3 sm:ml-4 min-w-0">
-                  <p className="text-sm font-medium text-gray-600 truncate">Catégories</p>
-                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.totalCategories}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Catégories actives</p>
+                <div className="ml-2 sm:ml-3 md:ml-4 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Catégories</p>
+                  <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{stats.totalCategories}</p>
+                  <p className="text-xs text-gray-500 mt-0.5 hidden sm:block">Catégories actives</p>
                 </div>
               </div>
             </div>
             
-            <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+            <div className="bg-white p-3 sm:p-4 md:p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
               <div className="flex items-center">
-                <div className="p-2 bg-orange-100 rounded-lg flex-shrink-0">
-                  <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600" />
+                <div className="p-1.5 sm:p-2 bg-orange-100 rounded-lg flex-shrink-0">
+                  <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-orange-600" />
                 </div>
-                <div className="ml-3 sm:ml-4 min-w-0">
-                  <p className="text-sm font-medium text-gray-600 truncate">Stock faible</p>
-                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats.produitsEnRupture}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Produits en rupture</p>
+                <div className="ml-2 sm:ml-3 md:ml-4 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Stock faible</p>
+                  <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{stats.produitsEnRupture}</p>
+                  <p className="text-xs text-gray-500 mt-0.5 hidden sm:block">Produits en rupture</p>
                 </div>
               </div>
             </div>

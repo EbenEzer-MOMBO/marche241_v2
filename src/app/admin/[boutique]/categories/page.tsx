@@ -56,18 +56,30 @@ export default function CategoriesPage() {
   const loadCategories = async (boutiqueId: number) => {
     try {
       const categoriesData = await getCategoriesParBoutique(boutiqueId);
+      
+      // Charger les produits de la boutique pour compter correctement
+      const { getProduitsParBoutique } = await import('@/lib/services/products');
+      const produitsResponse = await getProduitsParBoutique(boutiqueId, { limite: 100 });
+      const produitsBoutique = produitsResponse.donnees || [];
 
       // Adapter les données de l'API vers le format d'affichage
-      const categoriesAffichage: CategorieAffichage[] = categoriesData.map(cat => ({
-        id: cat.id,
-        nom: cat.nom,
-        slug: cat.slug,
-        description: cat.description,
-        actif: cat.statut === 'active',
-        nombre_produits: cat.nombre_produits || 0,
-        date_creation: cat.date_creation.toString().split('T')[0],
-        boutique_id: cat.boutique_id // Préserver le boutique_id pour identifier les catégories globales
-      }));
+      const categoriesAffichage: CategorieAffichage[] = categoriesData.map(cat => {
+        // Pour les catégories globales, compter uniquement les produits de cette boutique
+        const nombreProduitsBoutique = cat.boutique_id 
+          ? (cat.nombre_produits || 0) // Catégorie spécifique : utiliser le compteur de l'API
+          : produitsBoutique.filter(p => p.categorie_id === cat.id).length; // Catégorie globale : compter manuellement
+        
+        return {
+          id: cat.id,
+          nom: cat.nom,
+          slug: cat.slug,
+          description: cat.description,
+          actif: cat.statut === 'active',
+          nombre_produits: nombreProduitsBoutique,
+          date_creation: cat.date_creation.toString().split('T')[0],
+          boutique_id: cat.boutique_id // Préserver le boutique_id pour identifier les catégories globales
+        };
+      });
 
       setCategories(categoriesAffichage);
     } catch (error) {

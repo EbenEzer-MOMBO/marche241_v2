@@ -119,7 +119,7 @@ export default function LandingPage() {
                     Accéder à ma boutique
                   </Link>
                   <Link
-                    href="/marche_241"
+                    href="/affiche_boutiques"
                     className="w-full sm:w-auto px-8 py-4 bg-white text-emerald-600 text-lg font-semibold rounded-lg hover:bg-gray-50 border-2 border-emerald-600 transform hover:scale-105 transition-all"
                   >
                     Découvrir les boutiques
@@ -366,7 +366,7 @@ export default function LandingPage() {
               <h4 className="text-white font-semibold mb-4">Liens rapides</h4>
               <ul className="space-y-2">
                 <li>
-                  <Link href="/marche_241" className="hover:text-emerald-400 transition-colors">
+                  <Link href="/affiche_boutiques" className="hover:text-emerald-400 transition-colors">
                     Boutiques
                   </Link>
                 </li>

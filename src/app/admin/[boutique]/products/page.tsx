@@ -357,13 +357,16 @@ export default function ProductsPage() {
         }
 
         // Convertir ProduitAffichage en ProduitDB pour le modal
+        // IMPORTANT: En BDD, prix = prix actuel, prix_original = ancien prix si promo
+        // Mais dans le formulaire, prix = prix de base, prix_promo = prix promotionnel
+        // Il faut donc inverser si prix_original existe
         const produitDB: ProduitDB = {
             id: product.id,
             nom: product.nom,
             slug: product.slug,
             description: product.description,
-            prix: product.prix,
-            prix_promo: product.prix_original, // Mapper prix_original vers prix_promo
+            prix: product.prix_original || product.prix, // Si promo, prendre prix_original comme base
+            prix_promo: product.prix_original ? product.prix : undefined, // Si promo, prix actuel devient promo
             prix_original: product.prix_original,
             image_principale: product.image_principale,
             images: product.images || [],
@@ -402,7 +405,7 @@ export default function ProductsPage() {
                     slug: produitData.slug || genererSlugProduit(produitData.nom),
                     description: produitData.description,
                     prix: produitData.prix,
-                    prix_promo: produitData.prix_original,
+                    prix_promo: produitData.prix_promo,
                     en_stock: produitData.en_stock,
                     categorie_id: produitData.categorie_id,
                     images: produitData.images,
@@ -418,7 +421,7 @@ export default function ProductsPage() {
                     slug: produitModifie.slug,
                     description: produitModifie.description,
                     prix: produitModifie.prix,
-                    prix_original: produitModifie.prix_promo,
+                    prix_original: produitModifie.prix_original,
                     image_principale: produitModifie.image_principale,
                     images: produitModifie.images || [],
                     variants: produitModifie.variants || [],
@@ -447,7 +450,7 @@ export default function ProductsPage() {
                     slug: produitData.slug || genererSlugProduit(produitData.nom),
                     description: produitData.description,
                     prix: produitData.prix,
-                    prix_promo: produitData.prix_original,
+                    prix_promo: produitData.prix_promo,
                     en_stock: produitData.quantite_stock,
                     boutique_id: boutique!.id,
                     categorie_id: produitData.categorie_id,
@@ -464,7 +467,7 @@ export default function ProductsPage() {
                     slug: nouveauProduitDB.slug,
                     description: nouveauProduitDB.description,
                     prix: nouveauProduitDB.prix,
-                    prix_original: nouveauProduitDB.prix_promo,
+                    prix_original: nouveauProduitDB.prix_original,
                     image_principale: nouveauProduitDB.image_principale,
                     images: nouveauProduitDB.images || [],
                     variants: nouveauProduitDB.variants || [],

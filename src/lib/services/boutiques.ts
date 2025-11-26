@@ -51,15 +51,49 @@ export async function getBoutiqueById(id: number): Promise<Boutique> {
  */
 export async function getAllBoutiques(): Promise<Boutique[]> {
   try {
-    const response = await api.get<{ success: boolean; boutiques: Boutique[] }>('/boutiques');
+    // Le backend retourne les données paginées, on récupère toutes les boutiques
+    const response = await api.get<{ 
+      success?: boolean; 
+      donnees?: Boutique[];
+      boutiques?: Boutique[];
+      total?: number;
+    }>('/boutiques?limite=100');
     
-    if (!response.success || !response.boutiques) {
+    console.log('[getAllBoutiques] Réponse API:', response);
+    
+    // Vérifier si on a des données (certaines APIs ne renvoient pas success)
+    if (response.donnees || response.boutiques) {
+      const boutiques = response.donnees || response.boutiques || [];
+      console.log('[getAllBoutiques] Nombre de boutiques récupérées:', boutiques.length);
+      return boutiques;
+    }
+    
+    // Si pas de données et success = false, erreur
+    if (response.success === false) {
       throw new Error('Erreur lors de la récupération des boutiques');
     }
     
-    return response.boutiques;
+    // Sinon retourner un tableau vide
+    console.warn('[getAllBoutiques] Aucune donnée trouvée dans la réponse');
+    return [];
   } catch (error) {
     console.error('Erreur lors de la récupération des boutiques:', error);
+    throw error;
+  }
+}
+
+/**
+ * Récupère la liste de toutes les boutiques actives
+ * @returns Promise<Boutique[]> - La liste des boutiques actives
+ */
+export async function getAllBoutiquesActives(): Promise<Boutique[]> {
+  try {
+    const boutiques = await getAllBoutiques();
+    
+    // Filtrer uniquement les boutiques actives
+    return boutiques.filter(boutique => boutique.statut === 'active');
+  } catch (error) {
+    console.error('Erreur lors de la récupération des boutiques actives:', error);
     throw error;
   }
 }
