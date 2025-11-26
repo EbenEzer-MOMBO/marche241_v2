@@ -302,14 +302,21 @@ const OrderDetailsSidebar = ({ commandeId, isOpen, onClose }: OrderDetailsSideba
                         )}
                         {article.variants_selectionnes && (
                           <div className="mt-2 flex flex-wrap gap-2">
-                            {Object.entries(article.variants_selectionnes).map(([key, value]) => (
-                              <span
-                                key={key}
-                                className="text-xs bg-white px-2 py-1 rounded border border-gray-200"
-                              >
-                                {key}: {value}
-                              </span>
-                            ))}
+                            {Object.entries(article.variants_selectionnes).map(([key, value]) => {
+                              // Si value est un objet avec un nom, afficher le nom
+                              const displayValue = typeof value === 'object' && value !== null
+                                ? (value.nom || JSON.stringify(value))
+                                : String(value);
+                              
+                              return (
+                                <span
+                                  key={key}
+                                  className="text-xs bg-white px-2 py-1 rounded border border-gray-200"
+                                >
+                                  {key}: {displayValue}
+                                </span>
+                              );
+                            })}
                           </div>
                         )}
                         <div className="mt-2 flex items-center justify-between">
