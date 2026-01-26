@@ -23,7 +23,11 @@ import {
   Store,
   Menu,
   AlertCircle,
-  Truck
+  Truck,
+  Download,
+  X,
+  Share,
+  Square
 } from 'lucide-react';
 
 export default function BoutiqueDashboard() {
@@ -48,6 +52,107 @@ export default function BoutiqueDashboard() {
   });
   const [totalCommunes, setTotalCommunes] = useState(0);
   const [recentProducts, setRecentProducts] = useState<any[]>([]);
+
+  // États pour le bouton PWA
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showPWAButton, setShowPWAButton] = useState(false);
+  const [showIOSInstructions, setShowIOSInstructions] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
+
+  // Détecter PWA et système d'exploitation
+  useEffect(() => {
+    // Enregistrer le Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('/sw.js')
+        .then((registration) => {
+          console.log('Service Worker enregistré:', registration);
+        })
+        .catch((error) => {
+          console.log('Erreur enregistrement Service Worker:', error);
+        });
+    }
+
+    // Vérifier si l'app est déjà installée
+    const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches 
+      || (window.navigator as any).standalone 
+      || document.referrer.includes('android-app://');
+    
+    setIsStandalone(isInStandaloneMode);
+
+    // Détecter iOS
+    const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    setIsIOS(iOS);
+
+    // Si déjà installé, ne pas afficher le bouton
+    if (isInStandaloneMode) {
+      setShowPWAButton(false);
+      return;
+    }
+
+    // Pour iOS, toujours afficher le bouton (sauf si déjà installé)
+    if (iOS) {
+      setShowPWAButton(true);
+      return;
+    }
+
+    // Pour Android/Desktop, écouter l'événement beforeinstallprompt
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowPWAButton(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // Masquer le bouton après installation et rediriger vers l'admin
+    window.addEventListener('appinstalled', () => {
+      setShowPWAButton(false);
+      setDeferredPrompt(null);
+      success('Application installée avec succès !', 'Installation réussie');
+      
+      // Rediriger vers la page admin après installation
+      setTimeout(() => {
+        if (boutique?.slug) {
+          window.location.href = `${window.location.origin}/admin/${boutique.slug}`;
+        }
+      }, 1000);
+    });
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, [success, boutique?.slug]);
+
+  const handleInstallPWA = async () => {
+    if (isIOS) {
+      // Afficher les instructions pour iOS
+      setShowIOSInstructions(true);
+      return;
+    }
+
+    if (!deferredPrompt) {
+      // Si pas de prompt, simplement ouvrir l'URL admin dans un nouvel onglet
+      // pour que l'utilisateur puisse l'ajouter manuellement
+      const adminUrl = `${window.location.origin}/admin/${boutique?.slug}`;
+      window.open(adminUrl, '_blank');
+      success('Ouvrez ce lien dans un nouvel onglet pour installer l\'application', 'Installation');
+      return;
+    }
+
+    // Afficher la boîte de dialogue d'installation
+    deferredPrompt.prompt();
+
+    // Attendre le choix de l'utilisateur
+    const { outcome } = await deferredPrompt.userChoice;
+
+    if (outcome === 'accepted') {
+      success('Installation en cours...', 'PWA');
+    }
+
+    setDeferredPrompt(null);
+  };
 
   useEffect(() => {
     const loadBoutiqueData = async () => {
@@ -469,13 +574,126 @@ export default function BoutiqueDashboard() {
                   className="inline-flex items-center px-3 sm:px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm sm:text-base"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Ajouter mon premier produit v
+                  Ajouter mon premier produit
                 </button>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Bouton flottant PWA */}
+      {showPWAButton && !isStandalone && (
+        <button
+          onClick={handleInstallPWA}
+          className="fixed bottom-6 right-6 bg-black text-white px-4 py-3 rounded-full shadow-lg hover:bg-gray-800 transition-all hover:scale-105 z-50 flex items-center justify-center gap-2 group"
+          aria-label="Installer l'application"
+        >
+          <Download className="h-5 w-5 flex-shrink-0" />
+          <span className="text-sm font-medium whitespace-nowrap">
+            Installer
+          </span>
+        </button>
+      )}
+
+      {/* Modal des instructions iOS */}
+      {showIOSInstructions && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[80vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-gray-900">
+                Installer {boutique.nom}
+              </h3>
+              <button
+                onClick={() => setShowIOSInstructions(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                aria-label="Fermer"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+                  <Download className="h-8 w-8 text-blue-600" />
+                </div>
+                <p className="text-gray-600">
+                  Pour installer cette application sur votre iPhone ou iPad, suivez ces étapes :
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 w-8 h-8 bg-black text-white rounded-full flex items-center justify-center font-bold text-sm">
+                    1
+                  </div>
+                  <div className="ml-4 flex-1">
+                    <p className="text-gray-900 font-medium mb-1">
+                      Appuyez sur le bouton Partager
+                    </p>
+                    <div className="flex items-center space-x-2 mt-2">
+                      <div className="p-2 bg-blue-50 rounded-lg">
+                        <Share className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        (icône en bas de l'écran)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 w-8 h-8 bg-black text-white rounded-full flex items-center justify-center font-bold text-sm">
+                    2
+                  </div>
+                  <div className="ml-4 flex-1">
+                    <p className="text-gray-900 font-medium mb-1">
+                      Sélectionnez "Sur l'écran d'accueil"
+                    </p>
+                    <div className="flex items-center space-x-2 mt-2">
+                      <div className="p-2 bg-green-50 rounded-lg">
+                        <Square className="h-5 w-5 text-green-600" />
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        Dans le menu qui s'affiche
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 w-8 h-8 bg-black text-white rounded-full flex items-center justify-center font-bold text-sm">
+                    3
+                  </div>
+                  <div className="ml-4 flex-1">
+                    <p className="text-gray-900 font-medium mb-1">
+                      Confirmez l'installation
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Appuyez sur "Ajouter" en haut à droite
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-900">
+                  <span className="font-semibold">💡 Astuce :</span> Une fois installée, l'application apparaîtra comme Ma Boutique sur votre écran d'accueil et fonctionnera comme une application .
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowIOSInstructions(false)}
+                className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors"
+              >
+                J'ai compris
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
