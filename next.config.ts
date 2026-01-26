@@ -4,6 +4,9 @@ const nextConfig: NextConfig = {
   /* config options here */
   allowedDevOrigins: ['http://192.168.1.27:3000'],
   
+  // Configuration Turbopack (Next.js 16+)
+  turbopack: {},
+  
   // Configuration des images externes
   images: {
     remotePatterns: [
