@@ -15,7 +15,7 @@ export default function manifest(): MetadataRoute.Manifest {
         src: '/marche241_Web_without_text-01-01.svg',
         sizes: 'any',
         type: 'image/svg+xml',
-        purpose: 'any maskable',
+        purpose: 'any',
       },
     ],
     categories: ['business', 'productivity'],
