@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import { HeroBanner } from '@/components/landing/HeroBanner';
@@ -13,9 +14,11 @@ import { CTASection } from '@/components/landing/CTASection';
 import Footer from '@/components/Footer';
 
 export default function LandingPage() {
+  const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [boutiqueSlug, setBoutiqueSlug] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(true);
 
   useEffect(() => {
     // Vérifier si l'utilisateur est authentifié
@@ -29,13 +32,34 @@ export default function LandingPage() {
       if (boutiqueData) {
         try {
           const parsedBoutique = JSON.parse(boutiqueData);
-          setBoutiqueSlug(parsedBoutique.slug);
+          const slug = parsedBoutique.slug;
+          setBoutiqueSlug(slug);
+          
+          // Rediriger automatiquement vers le dashboard
+          console.log('🔄 Redirection automatique vers le dashboard:', `/admin/${slug}`);
+          router.push(`/admin/${slug}`);
+          return; // Ne pas afficher la landing page
         } catch (error) {
           console.error('Erreur lors du parsing des données de la boutique:', error);
         }
       }
     }
-  }, []);
+    
+    // Si pas authentifié ou pas de boutique, afficher la landing page
+    setIsRedirecting(false);
+  }, [router]);
+
+  // Afficher un loader pendant la redirection
+  if (isRedirecting) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirection vers votre dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white">

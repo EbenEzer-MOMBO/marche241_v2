@@ -13,18 +13,12 @@ export default function BoutiqueNotFound() {
         </p>
         <div className="space-y-4">
           <Link
-            href="/marche_241"
+            href="/"
             className="inline-block bg-foreground text-white px-6 py-3 rounded-lg font-medium hover:bg-foreground/90 transition-colors duration-200"
           >
-            Visiter Marché241
+            Retour à la page d'accueil
           </Link>
           <br />
-          <Link
-            href="/boutique_de_joline"
-            className="inline-block border-2 border-foreground text-foreground px-6 py-3 rounded-lg font-medium hover:bg-foreground hover:text-white transition-colors duration-200"
-          >
-            Visiter Boutique de Joline
-          </Link>
         </div>
       </div>
     </div>

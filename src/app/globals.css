@@ -9,6 +9,20 @@
   cursor: zoom-out;
 }
 
+/* Animation pour l'effet de brillance sur les barres */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}
+
 /* Variables CSS pour les thèmes des boutiques */
 .boutique-container {
   --primary-color: #10b981;

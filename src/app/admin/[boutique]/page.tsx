@@ -11,23 +11,28 @@ import { getProduitsParBoutique, ProduitsResponse } from '@/lib/services/product
 import { getCategoriesParBoutique } from '@/lib/services/categories';
 import { getCommunesParBoutique } from '@/lib/services/communes';
 import { getStatistiquesDashboard, StatistiquesDashboard } from '@/lib/services/statistiques';
+import { getProduitsLesPlusVus, ProduitPopulaire } from '@/lib/services/vues';
 import { ChartEvolutionCA } from '@/components/admin/ChartEvolutionCA';
 import { ChartRepartitionCommandes } from '@/components/admin/ChartRepartitionCommandes';
+import { StatsCard } from '@/components/admin/dashboard/StatsCard';
+import { PeriodSelector } from '@/components/admin/dashboard/PeriodSelector';
+import { ConfigAlert } from '@/components/admin/dashboard/ConfigAlert';
+import { QuickActions } from '@/components/admin/dashboard/QuickActions';
+import { RecentProducts } from '@/components/admin/dashboard/RecentProducts';
+import { TopViewedProducts } from '@/components/admin/dashboard/TopViewedProducts';
 import {
   Package,
   ShoppingCart,
   Users,
   TrendingUp,
-  Plus,
   Eye,
   Store,
   Menu,
-  AlertCircle,
-  Truck,
   Download,
   X,
   Share,
-  Square
+  Square,
+  BarChart3
 } from 'lucide-react';
 
 export default function BoutiqueDashboard() {
@@ -52,6 +57,7 @@ export default function BoutiqueDashboard() {
   });
   const [totalCommunes, setTotalCommunes] = useState(0);
   const [recentProducts, setRecentProducts] = useState<any[]>([]);
+  const [topViewedProducts, setTopViewedProducts] = useState<ProduitPopulaire[]>([]);
 
   // États pour le bouton PWA
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -133,11 +139,10 @@ export default function BoutiqueDashboard() {
     }
 
     if (!deferredPrompt) {
-      // Si pas de prompt, simplement ouvrir l'URL admin dans un nouvel onglet
-      // pour que l'utilisateur puisse l'ajouter manuellement
-      const adminUrl = `${window.location.origin}/admin/${boutique?.slug}`;
-      window.open(adminUrl, '_blank');
-      success('Ouvrez ce lien dans un nouvel onglet pour installer l\'application', 'Installation');
+      // Si pas de prompt, ouvrir l'URL racine pour installer depuis là
+      const rootUrl = window.location.origin;
+      window.open(rootUrl, '_blank');
+      success('Ouvrez la page d\'accueil pour installer l\'application', 'Installation');
       return;
     }
 
@@ -156,6 +161,14 @@ export default function BoutiqueDashboard() {
 
   useEffect(() => {
     const loadBoutiqueData = async () => {
+      // Vérifier d'abord si un token existe
+      const token = localStorage.getItem('admin_token');
+      if (!token) {
+        console.log('❌ Aucun token trouvé, redirection vers login');
+        router.push('/admin/login?session=expired');
+        return;
+      }
+
       if (!user) {
         router.push('/admin/login');
         return;
@@ -179,8 +192,15 @@ export default function BoutiqueDashboard() {
         
         // Charger les statistiques
         await loadStats(boutiqueData.id);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Erreur lors du chargement de la boutique:', error);
+        
+        // Si c'est une erreur 401, rediriger vers login
+        if (error?.status === 401 || error?.message?.includes('Token invalide')) {
+          router.push('/admin/login?session=expired');
+          return;
+        }
+        
         showError('Erreur lors du chargement de la boutique', 'Erreur');
       } finally {
         setIsLoading(false);
@@ -217,8 +237,21 @@ export default function BoutiqueDashboard() {
         
         // Garder les 5 produits les plus récents
         setRecentProducts(produitsData.donnees.slice(0, 5));
-      } catch (error) {
+        
+        // Charger les produits les plus vus
+        const topProducts = await getProduitsLesPlusVus(boutiqueId, 5);
+        setTopViewedProducts(topProducts);
+      } catch (error: any) {
         console.error('Erreur lors du chargement des statistiques:', error);
+        
+        // Si c'est une erreur 401, rediriger vers login
+        if (error?.status === 401 || error?.message?.includes('Token invalide')) {
+          router.push('/admin/login?session=expired');
+          return;
+        }
+        
+        // Pour les autres erreurs, afficher un message
+        showError('Erreur lors du chargement des statistiques', 'Erreur');
       }
     };
 
@@ -322,262 +355,122 @@ export default function BoutiqueDashboard() {
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 lg:p-6">
           {/* Sélecteur de période */}
           <div className="mb-4 sm:mb-6 flex justify-end">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 inline-flex">
-              <button
-                onClick={() => setPeriode(7)}
-                className={`px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium transition-colors ${
-                  periode === 7
-                    ? 'bg-black text-white'
-                    : 'text-gray-700 hover:bg-gray-50'
-                } rounded-l-lg`}
-              >
-                7 jours
-              </button>
-              <button
-                onClick={() => setPeriode(30)}
-                className={`px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium transition-colors border-x border-gray-200 ${
-                  periode === 30
-                    ? 'bg-black text-white'
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                30 jours
-              </button>
-              <button
-                onClick={() => setPeriode(90)}
-                className={`px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium transition-colors ${
-                  periode === 90
-                    ? 'bg-black text-white'
-                    : 'text-gray-700 hover:bg-gray-50'
-                } rounded-r-lg`}
-              >
-                90 jours
-              </button>
-            </div>
+            <PeriodSelector periode={periode} onChange={setPeriode} />
           </div>
 
           {/* Alertes de configuration */}
           {(stats.totalProduits === 0 || totalCommunes === 0) && (
             <div className="mb-6 space-y-3">
               {stats.totalProduits === 0 && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                  <div className="flex items-start">
-                    <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                    <div className="ml-3 flex-1">
-                      <h3 className="text-sm font-semibold text-amber-900">
-                        Aucun produit dans votre boutique
-                      </h3>
-                      <p className="mt-1 text-sm text-amber-700">
-                        Commencez par ajouter des produits pour que vos clients puissent passer des commandes.
-                      </p>
-                      <button
-                        onClick={() => router.push(`/admin/${boutique?.slug}/products`)}
-                        className="mt-3 inline-flex items-center px-3 py-1.5 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors"
-                      >
-                        <Plus className="h-4 w-4 mr-1.5" />
-                        Ajouter un produit
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                <ConfigAlert 
+                  type="products" 
+                  onAction={() => router.push(`/admin/${boutique?.slug}/products`)} 
+                />
               )}
               
               {totalCommunes === 0 && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-start">
-                    <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                    <div className="ml-3 flex-1">
-                      <h3 className="text-sm font-semibold text-blue-900">
-                        Aucune zone de livraison configurée
-                      </h3>
-                      <p className="mt-1 text-sm text-blue-700">
-                        Ajoutez des communes et leurs frais de livraison pour permettre à vos clients de commander.
-                      </p>
-                      <button
-                        onClick={() => router.push(`/admin/${boutique?.slug}/shipping`)}
-                        className="mt-3 inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                      >
-                        <Truck className="h-4 w-4 mr-1.5" />
-                        Configurer la livraison
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                <ConfigAlert 
+                  type="shipping" 
+                  onAction={() => router.push(`/admin/${boutique?.slug}/shipping`)} 
+                />
               )}
             </div>
           )}
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-6 sm:mb-8">
-            <div className="bg-white p-3 sm:p-4 md:p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-              <div className="flex items-center">
-                <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg flex-shrink-0">
-                  <Package className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-blue-600" />
-                </div>
-                <div className="ml-2 sm:ml-3 md:ml-4 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Produits</p>
-                  <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{stats.totalProduits}</p>
-                  <p className="text-xs text-gray-500 mt-0.5 hidden sm:block">{stats.produitsActifs} actifs</p>
-                </div>
-              </div>
-            </div>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6 mb-6 sm:mb-8">
+            <StatsCard
+              icon={Package}
+              iconColor="blue"
+              label="Produits"
+              value={stats.totalProduits}
+              subtitle={`${stats.produitsActifs} actifs`}
+            />
             
-            <div className="bg-white p-3 sm:p-4 md:p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-              <div className="flex items-center">
-                <div className="p-1.5 sm:p-2 bg-green-100 rounded-lg flex-shrink-0">
-                  <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-green-600" />
-                </div>
-                <div className="ml-2 sm:ml-3 md:ml-4 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Commandes</p>
-                  <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{stats.totalCommandes}</p>
-                  <p className="text-xs text-gray-500 mt-0.5 hidden sm:block">En attente</p>
-                </div>
-              </div>
-            </div>
+            <StatsCard
+              icon={ShoppingCart}
+              iconColor="green"
+              label="Commandes"
+              value={stats.totalCommandes}
+              subtitle="Total"
+            />
             
-            <div className="bg-white p-3 sm:p-4 md:p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-              <div className="flex items-center">
-                <div className="p-1.5 sm:p-2 bg-purple-100 rounded-lg flex-shrink-0">
-                  <Users className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-purple-600" />
-                </div>
-                <div className="ml-2 sm:ml-3 md:ml-4 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Catégories</p>
-                  <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{stats.totalCategories}</p>
-                  <p className="text-xs text-gray-500 mt-0.5 hidden sm:block">Catégories actives</p>
-                </div>
-              </div>
-            </div>
+            <StatsCard
+              icon={Users}
+              iconColor="purple"
+              label="Catégories"
+              value={stats.totalCategories}
+              subtitle="Catégories actives"
+            />
             
-            <div className="bg-white p-3 sm:p-4 md:p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-              <div className="flex items-center">
-                <div className="p-1.5 sm:p-2 bg-orange-100 rounded-lg flex-shrink-0">
-                  <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-orange-600" />
-                </div>
-                <div className="ml-2 sm:ml-3 md:ml-4 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Stock faible</p>
-                  <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{stats.produitsEnRupture}</p>
-                  <p className="text-xs text-gray-500 mt-0.5 hidden sm:block">Produits en rupture</p>
-                </div>
-              </div>
-            </div>
+            <StatsCard
+              icon={TrendingUp}
+              iconColor="orange"
+              label="Stock faible"
+              value={stats.produitsEnRupture}
+              subtitle="Produits en rupture"
+            />
+
+            <StatsCard
+              icon={Eye}
+              iconColor="indigo"
+              label="Vues (mois)"
+              value={statistiques?.vues_mois || 0}
+              subtitle="Ce mois-ci"
+            />
+
+            <StatsCard
+              icon={BarChart3}
+              iconColor="amber"
+              label="Vues (total)"
+              value={statistiques?.vues_total || 0}
+              subtitle="Depuis création"
+            />
           </div>
 
           {/* Graphiques */}
-          {statistiques && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
-              {/* Graphique Évolution du CA */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
+            {/* Graphique Évolution du CA */}
+            {statistiques && (
               <ChartEvolutionCA
                 data={statistiques.ca_evolution}
                 caTotal={statistiques.ca_total}
                 variation={statistiques.variation_ca}
               />
+            )}
 
-              {/* Graphique Répartition des commandes */}
-              {statistiques.commandes_par_statut.length > 0 && (
-                <ChartRepartitionCommandes data={statistiques.commandes_par_statut} />
-              )}
-            </div>
-          )}
-
-          {/* Quick Actions */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-6 sm:mb-8">
-            <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 sm:mb-6">Actions rapides</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              <button
-                onClick={() => router.push(`/admin/${boutique.slug}/products`)}
-                className="flex items-center justify-center p-4 sm:p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all group"
-              >
-                <Plus className="h-5 w-5 sm:h-6 sm:w-6 text-gray-400 group-hover:text-blue-500 mr-2 sm:mr-3" />
-                <span className="text-sm sm:text-base text-gray-600 group-hover:text-blue-600 font-medium">Gérer les produits</span>
-              </button>
-              
-              <button
-                onClick={() => router.push(`/admin/${boutique.slug}/orders`)}
-                className="flex items-center justify-center p-4 sm:p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all group"
-              >
-                <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 text-gray-400 group-hover:text-green-500 mr-2 sm:mr-3" />
-                <span className="text-sm sm:text-base text-gray-600 group-hover:text-green-600 font-medium">Voir les commandes</span>
-              </button>
-              
-              <button
-                onClick={() => router.push(`/admin/${boutique.slug}/categories`)}
-                className="flex items-center justify-center p-4 sm:p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all group"
-              >
-                <Package className="h-5 w-5 sm:h-6 sm:w-6 text-gray-400 group-hover:text-purple-500 mr-2 sm:mr-3" />
-                <span className="text-sm sm:text-base text-gray-600 group-hover:text-purple-600 font-medium">Gérer les catégories</span>
-              </button>
-            </div>
+            {/* Graphique Répartition des commandes - Toujours afficher */}
+            {statistiques && (
+              <ChartRepartitionCommandes 
+                data={statistiques.commandes_par_statut.length > 0 
+                  ? statistiques.commandes_par_statut 
+                  : [{ statut: 'En attente', nombre: 0, pourcentage: 0 }]
+                } 
+              />
+            )}
           </div>
 
-          {/* Recent Activity */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h2 className="text-base sm:text-lg font-semibold text-gray-900">Produits récents</h2>
-              <button
-                onClick={() => router.push(`/admin/${boutique.slug}/products`)}
-                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-              >
-                Voir tout
-              </button>
-            </div>
+          {/* Quick Actions */}
+          <div className="mb-6 sm:mb-8">
+            <QuickActions 
+              boutiqueSlug={boutique.slug} 
+              onNavigate={(path) => router.push(path)} 
+            />
+          </div>
+
+          {/* Recent Activity & Top Viewed Products */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <RecentProducts
+              products={recentProducts}
+              boutiqueSlug={boutique.slug}
+              onNavigate={(path) => router.push(path)}
+            />
             
-            {recentProducts.length > 0 ? (
-              <div className="space-y-3">
-                {recentProducts.map((produit) => (
-                  <div
-                    key={produit.id}
-                    className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => {}}
-                  >
-                    <div className="flex-shrink-0 h-12 w-12 sm:h-16 sm:w-16 bg-gray-100 rounded-lg overflow-hidden">
-                      {produit.image_principale ? (
-                        <img
-                          src={produit.image_principale}
-                          alt={produit.nom}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center">
-                          <Package className="h-6 w-6 text-gray-400" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="ml-3 flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{produit.nom}</p>
-                      <p className="text-sm text-gray-500">{produit.prix.toLocaleString()} FCFA</p>
-                    </div>
-                    <div className="flex-shrink-0 ml-2">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        produit.statut === 'actif' 
-                          ? 'bg-green-100 text-green-800' 
-                          : produit.statut === 'inactif'
-                          ? 'bg-gray-100 text-gray-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {produit.statut === 'actif' ? 'Actif' : produit.statut === 'inactif' ? 'Inactif' : 'Brouillon'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 sm:py-12">
-                <div className="mx-auto h-12 w-12 sm:h-16 sm:w-16 bg-gray-100 rounded-full flex items-center justify-center mb-3 sm:mb-4">
-                  <Package className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400" />
-                </div>
-                <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">Aucun produit</h3>
-                <p className="text-sm sm:text-base text-gray-500 mb-4 sm:mb-6">
-                  Commencez par ajouter vos premiers produits à votre boutique
-                </p>
-                <button
-                  onClick={() => router.push(`/admin/${boutique.slug}/products/new`)}
-                  className="inline-flex items-center px-3 sm:px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm sm:text-base"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Ajouter mon premier produit
-                </button>
-              </div>
-            )}
+            <TopViewedProducts
+              products={topViewedProducts}
+              boutiqueSlug={boutique.slug}
+              onNavigate={(path) => router.push(path)}
+            />
           </div>
         </div>
       </div>

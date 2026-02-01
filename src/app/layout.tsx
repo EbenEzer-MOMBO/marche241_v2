@@ -22,6 +22,15 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: "/marche241_Web_without_text-01-01.svg",
+    apple: [
+      { url: '/site-logo.png', sizes: '180x180', type: 'image/png' },
+    ],
+  },
+  themeColor: '#ffffff',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Marché241',
   },
   description: "Marché241 est la plateforme de commerce en ligne pour les commerçants gabonais. Créez votre boutique, vendez vos produits et recevez vos paiements via Mobile Money. Simple, rapide et efficace.",
   keywords: [

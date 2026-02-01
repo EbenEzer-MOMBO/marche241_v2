@@ -62,6 +62,7 @@ export interface Boutique {
   description?: string;
   vendeur_id: number;
   logo?: string;
+  banniere?: string;
   couleur_primaire: string;
   couleur_secondaire: string;
   adresse?: string;

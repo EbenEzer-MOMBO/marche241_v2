@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
 import { ToastContainer } from '@/components/ui/Toast';
@@ -18,11 +18,24 @@ export default function AdminLoginPage() {
   const [isCheckingWhatsApp, setIsCheckingWhatsApp] = useState(false);
   const [whatsAppExists, setWhatsAppExists] = useState<boolean | null>(null);
   const [whatsAppError, setWhatsAppError] = useState<string | null>(null);
+  const [sessionExpiredMessage, setSessionExpiredMessage] = useState<string | null>(null);
   const { demanderCode, isLoading, error, toasts, removeToast } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Vérifier si la session a expiré
+  useEffect(() => {
+    const sessionExpired = searchParams.get('session');
+    if (sessionExpired === 'expired') {
+      setSessionExpiredMessage('Votre session a expiré. Veuillez vous reconnecter.');
+    }
+  }, [searchParams]);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Effacer le message d'expiration lors de la soumission
+    setSessionExpiredMessage(null);
 
     const success = await demanderCode({ email });
     
@@ -72,6 +85,9 @@ export default function AdminLoginPage() {
     if (!whatsAppExists) {
       return;
     }
+
+    // Effacer le message d'expiration lors de la soumission
+    setSessionExpiredMessage(null);
 
     const success = await demanderCode({ phone });
     
@@ -142,6 +158,20 @@ export default function AdminLoginPage() {
 
         {/* Formulaires de connexion */}
         <div className="bg-white border border-gray-200 rounded-xl shadow-lg p-8">
+          {/* Message de session expirée */}
+          {sessionExpiredMessage && (
+            <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <svg className="h-5 w-5 text-amber-500 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div>
+                  <p className="text-sm font-medium text-amber-800">{sessionExpiredMessage}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Formulaire Email */}
           {loginMethod === 'email' && (
             <form onSubmit={handleEmailSubmit} className="space-y-6">

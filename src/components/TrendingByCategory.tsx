@@ -79,15 +79,7 @@ export default function TrendingByCategory({ boutiqueName }: TrendingByCategoryP
     <section className="py-16 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* En-tête de section */}
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-black mb-4">
-            Produits Tendance
-          </h2>
-          <p className="text-gray-dark max-w-2xl mx-auto">
-            Découvrez les produits les plus populaires dans chaque catégorie,
-            sélectionnés spécialement pour vous.
-          </p>
-        </div>
+        
 
         {/* Sections par catégorie */}
         <div className="space-y-16">

@@ -73,6 +73,7 @@ export interface BoutiqueData {
   description: string;
   vendeur_id: number;
   logo?: string;
+  banniere?: string;
   couleur_primaire?: string;
   couleur_secondaire?: string;
   adresse?: string;
@@ -117,6 +118,7 @@ export interface ModifierBoutiqueData {
   slug?: string;
   description?: string;
   logo?: string;
+  banniere?: string;
   couleur_primaire?: string;
   couleur_secondaire?: string;
   adresse?: string;

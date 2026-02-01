@@ -4,6 +4,7 @@
 
 import api from '@/lib/api';
 import { getCommandesParBoutique } from './commandes';
+import { getVuesBoutiqueDashboard } from './vues';
 
 interface StatistiqueCA {
   date: string;
@@ -25,6 +26,8 @@ interface StatistiquesDashboard {
   total_commandes: number;
   total_produits: number;
   total_clients: number;
+  vues_mois: number;
+  vues_total: number;
 }
 
 /**
@@ -129,6 +132,19 @@ export async function getStatistiquesDashboard(
     // Note: total_produits devrait venir d'une autre API, pour l'instant on retourne 0
     const total_produits = 0;
 
+    // Récupérer les vues réelles depuis l'API
+    let vues_mois = 0;
+    let vues_total = 0;
+    
+    try {
+      const vuesData = await getVuesBoutiqueDashboard(boutiqueId);
+      vues_mois = vuesData.vues_mois;
+      vues_total = vuesData.vues_total;
+    } catch (error) {
+      console.error('Erreur lors de la récupération des vues:', error);
+      // Garder les valeurs par défaut à 0
+    }
+
     return {
       ca_evolution,
       ca_total,
@@ -137,7 +153,9 @@ export async function getStatistiquesDashboard(
       commandes_par_statut,
       total_commandes,
       total_produits,
-      total_clients
+      total_clients,
+      vues_mois,
+      vues_total,
     };
   } catch (error) {
     console.error('Erreur lors de la récupération des statistiques:', error);

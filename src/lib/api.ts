@@ -35,6 +35,28 @@ function getAuthToken(): string | null {
 }
 
 /**
+ * Déconnecte l'utilisateur et redirige vers la page de connexion
+ */
+function handleUnauthorized(): void {
+  if (typeof window !== 'undefined') {
+    // Nettoyer le localStorage
+    localStorage.removeItem('admin_token');
+    localStorage.removeItem('admin_user');
+    localStorage.removeItem('admin_boutique');
+    
+    // Vérifier si on n'est pas déjà sur la page de login pour éviter une boucle
+    if (!window.location.pathname.includes('/admin/login')) {
+      // Sauvegarder l'URL actuelle pour rediriger après reconnexion
+      const currentPath = window.location.pathname;
+      localStorage.setItem('redirect_after_login', currentPath);
+      
+      // Rediriger vers la page de login
+      window.location.href = '/admin/login?session=expired';
+    }
+  }
+}
+
+/**
  * Wrapper pour les requêtes API avec gestion d'erreurs
  */
 async function apiRequest<T>(
@@ -62,6 +84,18 @@ async function apiRequest<T>(
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
+      
+      // Gérer spécifiquement les erreurs 401 (token expiré ou invalide)
+      if (response.status === 401) {
+        console.error('🔒 Token expiré ou invalide, déconnexion...');
+        handleUnauthorized();
+        throw new ApiError(
+          'Token invalide ou expiré',
+          response.status,
+          errorData
+        );
+      }
+      
       throw new ApiError(
         errorData?.message || `Erreur HTTP ${response.status}`,
         response.status,

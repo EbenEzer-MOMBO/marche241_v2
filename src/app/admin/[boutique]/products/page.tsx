@@ -47,6 +47,7 @@ interface ProduitAffichage {
     note_moyenne: number;
     nombre_avis: number;
     nombre_ventes: number;
+    nombre_vues: number;
     date_creation: string;
     categorie_nom?: string;
     // Ajout des propriétés manquantes
@@ -128,6 +129,7 @@ export default function ProductsPage() {
                 est_featured: produit.est_featured,
                 note_moyenne: produit.note_moyenne,
                 nombre_avis: produit.nombre_avis,
+                nombre_vues: produit.nombre_vues,
                 nombre_ventes: produit.nombre_ventes,
                 date_creation: produit.date_creation.toString(),
                 categorie_nom: produit.categorie?.nom,
@@ -479,6 +481,7 @@ export default function ProductsPage() {
                     est_featured: nouveauProduitDB.est_featured,
                     note_moyenne: 0,
                     nombre_avis: 0,
+                    nombre_vues: 0,
                     nombre_ventes: 0,
                     date_creation: nouveauProduitDB.date_creation.toString(),
                     categorie_nom: categories.find(c => c.id === nouveauProduitDB.categorie_id)?.nom || 'Sans catégorie',
@@ -860,8 +863,8 @@ export default function ProductsPage() {
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap">
                                                         <div className="flex items-center text-sm text-gray-900">
-                                                            <Star className="h-4 w-4 text-yellow-400 mr-1" />
-                                                            {product.note_moyenne} ({product.nombre_avis})
+                                                            <Eye className="h-4 w-4 text-yellow-400 mr-1" />
+                                                            {product.nombre_vues} vues
                                                         </div>
                                                         <div className="text-sm text-gray-500">
                                                             {product.nombre_ventes} ventes

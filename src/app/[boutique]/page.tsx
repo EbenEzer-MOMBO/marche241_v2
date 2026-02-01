@@ -31,17 +31,3 @@ export default async function BoutiquePage({ params }: BoutiquePageProps) {
     </MainLayout>
   );
 }
-
-// Génération statique des routes pour les boutiques connues
-// Note: En production, cette fonction pourrait récupérer la liste depuis l'API
-// Temporairement désactivé pour forcer le mode dynamique
-/* 
-export async function generateStaticParams() {
-  // Pour l'instant, on garde les slugs connus
-  // TODO: Récupérer depuis l'API en production
-  return [
-    { boutique: 'marche_241' },
-    { boutique: 'boutique_de_joline' }
-  ];
-}
-*/
