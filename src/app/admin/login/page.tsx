@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
@@ -10,7 +10,7 @@ import { checkWhatsAppNumber } from '@/lib/services/whatsapp';
 
 type LoginMethod = 'email' | 'whatsapp';
 
-export default function AdminLoginPage() {
+function LoginContent() {
   const [loginMethod, setLoginMethod] = useState<LoginMethod>('whatsapp');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -326,5 +326,17 @@ export default function AdminLoginPage() {
       {/* Toast Container */}
       <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
+  );
+}
+
+export default function AdminLoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }

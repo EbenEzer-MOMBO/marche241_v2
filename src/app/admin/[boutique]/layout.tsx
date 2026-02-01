@@ -1,10 +1,15 @@
-import { Metadata } from 'next';
+import { Metadata, Viewport } from 'next';
+
+export const viewport: Viewport = {
+  themeColor: '#ffffff',
+  width: 'device-width',
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
   manifest: '/admin/manifest.json',
   title: 'Ma Boutique',
   description: 'Gérez votre boutique en ligne',
-  themeColor: '#ffffff',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',

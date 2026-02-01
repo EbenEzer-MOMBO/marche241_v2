@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import StructuredData from "@/components/StructuredData";
@@ -14,6 +14,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  themeColor: '#ffffff',
+  width: 'device-width',
+  initialScale: 1,
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL('https://marche241.ga'),
   title: {
@@ -26,7 +32,6 @@ export const metadata: Metadata = {
       { url: '/site-logo.png', sizes: '180x180', type: 'image/png' },
     ],
   },
-  themeColor: '#ffffff',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
