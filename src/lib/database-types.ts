@@ -67,6 +67,7 @@ export interface Boutique {
   couleur_secondaire: string;
   adresse?: string;
   telephone?: string;
+  is_full_payment_activated: boolean; // Si true, paiement à la livraison désactivé
   statut: StatutBoutique;
   date_creation: Date;
   date_modification: Date;

@@ -12,6 +12,7 @@ import { ProfilSection } from '@/components/admin/settings/ProfilSection';
 import { ImageUploadSection } from '@/components/admin/settings/ImageUploadSection';
 import { BoutiqueInfoSection } from '@/components/admin/settings/BoutiqueInfoSection';
 import { ApparenceSection } from '@/components/admin/settings/ApparenceSection';
+import { PaymentModeSection } from '@/components/admin/settings/PaymentModeSection';
 import { User, Store, Menu, Save } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -47,7 +48,8 @@ export default function SettingsPage() {
     logo: '',
     banniere: '',
     couleur_primaire: '#000000',
-    couleur_secondaire: '#ffffff'
+    couleur_secondaire: '#ffffff',
+    is_full_payment_activated: true
   });
 
   // États pour la sécurité
@@ -107,7 +109,8 @@ export default function SettingsPage() {
           logo: boutiqueData.logo || '',
           banniere: boutiqueData.banniere || '',
           couleur_primaire: boutiqueData.couleur_primaire || '#000000',
-          couleur_secondaire: boutiqueData.couleur_secondaire || '#ffffff'
+          couleur_secondaire: boutiqueData.couleur_secondaire || '#ffffff',
+          is_full_payment_activated: boutiqueData.is_full_payment_activated ?? true
         });
       } catch (err) {
         console.error('Erreur lors du chargement de la boutique:', err);
@@ -238,7 +241,8 @@ export default function SettingsPage() {
         couleur_primaire: boutiqueData.couleur_primaire,
         couleur_secondaire: boutiqueData.couleur_secondaire,
         adresse: boutiqueData.adresse,
-        telephone: boutiqueData.telephone
+        telephone: boutiqueData.telephone,
+        is_full_payment_activated: boutiqueData.is_full_payment_activated
       });
 
       if (response.success && response.boutique) {
@@ -360,6 +364,11 @@ export default function SettingsPage() {
                       <BoutiqueInfoSection
                         boutiqueData={boutiqueData}
                         setBoutiqueData={setBoutiqueData}
+                      />
+
+                      <PaymentModeSection
+                        isFullPaymentActivated={boutiqueData.is_full_payment_activated ?? true}
+                        onChange={(value) => setBoutiqueData({ ...boutiqueData, is_full_payment_activated: value })}
                       />
 
                       <ApparenceSection

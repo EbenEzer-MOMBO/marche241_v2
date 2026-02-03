@@ -78,6 +78,7 @@ export interface BoutiqueData {
   couleur_secondaire?: string;
   adresse?: string;
   telephone?: string;
+  is_full_payment_activated?: boolean; // Si true, paiement à la livraison désactivé
   statut: 'active' | 'inactive' | 'suspended';
   date_creation: string;
   date_modification: string;
@@ -123,6 +124,7 @@ export interface ModifierBoutiqueData {
   couleur_secondaire?: string;
   adresse?: string;
   telephone?: string;
+  is_full_payment_activated?: boolean;
 }
 
 export interface ModifierBoutiqueResponse {

@@ -22,6 +22,7 @@ interface OrderSummaryProps {
   boutiqueConfig: BoutiqueConfig;
   boutiqueId: number;
   boutiqueTelephone?: string;
+  boutiqueData: any; // Données complètes de la boutique
 }
 
 type PaymentMethod = 'moov' | 'airtel' | null;
@@ -48,14 +49,18 @@ interface Commune {
   date_modification: string;
 }
 
-export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: OrderSummaryProps) {
+export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, boutiqueData }: OrderSummaryProps) {
   const params = useParams();
   const boutiqueSlug = params.boutique as string;
 
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>(null);
   const [paymentPhone, setPaymentPhone] = useState('');
   const [paymentPhoneError, setPaymentPhoneError] = useState('');
-  const [payOnDelivery, setPayOnDelivery] = useState(false);
+  
+  // Si is_full_payment_activated est false, forcer le paiement à la livraison uniquement (checkbox cochée et non modifiable)
+  // Si is_full_payment_activated est true, l'utilisateur peut choisir librement
+  const isFullPaymentActivated = boutiqueData?.is_full_payment_activated === true;
+  const [payOnDelivery, setPayOnDelivery] = useState(!isFullPaymentActivated); // Inversé : true si mode restreint
   const [communes, setCommunes] = useState<Commune[]>([]);
   const [communesLoading, setCommunesLoading] = useState(true);
   const [deliveryAddress, setDeliveryAddress] = useState<DeliveryAddress>({
@@ -232,9 +237,14 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
     // Si on change de commune, vérifier si les frais sont gratuits
     if (field === 'city') {
       const selectedCommune = communes.find(commune => commune.nom_commune === value);
-      if (selectedCommune && selectedCommune.tarif_livraison === 0) {
-        // Désactiver le paiement à la livraison si la livraison est gratuite
-        setPayOnDelivery(false);
+      if (selectedCommune) {
+        if (selectedCommune.tarif_livraison === 0) {
+          // Désactiver le paiement à la livraison si la livraison est gratuite
+          setPayOnDelivery(false);
+        } else if (!isFullPaymentActivated) {
+          // Si mode restreint (is_full_payment_activated = false), forcer le paiement à la livraison
+          setPayOnDelivery(true);
+        }
       }
     }
   };
@@ -1094,24 +1104,33 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone }: 
 
               {/* Option paiement à la livraison */}
               <div className="border-t border-b py-4 border-gray-200">
-                <label className={`flex items-center ${deliveryFee > 0 ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
+                <label className={`flex items-center ${
+                  !isFullPaymentActivated || deliveryFee === 0 
+                    ? 'cursor-not-allowed opacity-50' 
+                    : 'cursor-pointer'
+                }`}>
                   <input
                     type="checkbox"
                     checked={payOnDelivery}
-                    onChange={(e) => setPayOnDelivery(e.target.checked)}
-                    disabled={deliveryFee === 0}
+                    onChange={(e) => isFullPaymentActivated && setPayOnDelivery(e.target.checked)}
+                    disabled={!isFullPaymentActivated || deliveryFee === 0}
                     className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:cursor-not-allowed"
                   />
                   <span className="ml-3 text-sm font-medium text-gray-700">
                     Je paie à la livraison
                   </span>
                 </label>
-                {deliveryFee === 0 && deliveryAddress.city && (
+                {!isFullPaymentActivated && (
+                  <p className="text-xs text-amber-600 mt-2 ml-7 font-medium">
+                    Seul le paiement des frais de livraison est disponible pour cette boutique
+                  </p>
+                )}
+                {isFullPaymentActivated && deliveryFee === 0 && deliveryAddress.city && (
                   <p className="text-xs text-gray-500 mt-2 ml-7">
                     Non disponible pour les livraisons gratuites
                   </p>
                 )}
-                {payOnDelivery && deliveryFee > 0 && (
+                {isFullPaymentActivated && payOnDelivery && deliveryFee > 0 && (
                   <p className="text-xs text-gray-500 mt-2 ml-7">
                     Vous payez les frais de livraison + frais de transaction maintenant. Le reste sera payé à la réception.
                   </p>

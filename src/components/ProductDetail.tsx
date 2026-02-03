@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { formatPrice } from '@/lib/utils';
@@ -37,6 +37,9 @@ export default function ProductDetail({
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
   const [fullscreenImageIndex, setFullscreenImageIndex] = useState(0);
   const [isCopied, setIsCopied] = useState(false);
+
+  // Référence pour la galerie d'images
+  const imageGalleryRef = useRef<HTMLDivElement>(null);
 
   // Hook pour l'ajout au panier
   const { ajouterProduit, loading: panierLoading, error: panierError } = useAjoutPanier();
@@ -237,6 +240,14 @@ export default function ProductDetail({
         const imageIndex = productImages.indexOf(variantImageUrl);
         if (imageIndex !== -1) {
           setSelectedImageIndex(imageIndex);
+          
+          // Défilement fluide vers la galerie d'images
+          if (imageGalleryRef.current) {
+            imageGalleryRef.current.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'start' 
+            });
+          }
         }
       }
     }
@@ -483,7 +494,7 @@ export default function ProductDetail({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Galerie d'images */}
-            <div className="space-y-4">
+            <div ref={imageGalleryRef} className="space-y-4">
               {/* Image principale */}
               <div
                 className="aspect-square bg-gray-100 rounded-2xl overflow-hidden relative group cursor-zoom-in"
@@ -663,19 +674,41 @@ export default function ProductDetail({
                     {product.variants.variants.map((variant: any, idx: number) => {
                       const isSelected = selectedVariants['variant'] === variant.nom;
                       const isAvailable = variant.quantite > 0;
+                      const hasImage = variant.image && variant.image.trim() !== '';
 
                       return (
                         <button
                           key={idx}
                           onClick={() => isAvailable && handleVariantChange('variant', variant.nom)}
                           disabled={!isAvailable}
-                          className={`p-3 border-2 rounded-lg transition-all duration-200 ${isSelected
+                          className={`relative p-3 border-2 rounded-lg transition-all duration-200 ${isSelected
                             ? 'border-primary bg-primary text-white'
                             : isAvailable
                               ? 'border-gray-300 bg-white text-gray-700 hover:border-primary'
                               : 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
                             }`}
                         >
+                          {/* Badge Image */}
+                          {hasImage && (
+                            <div className={`absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs ${
+                              isSelected 
+                                ? 'bg-white text-primary' 
+                                : 'bg-blue-500 text-white'
+                            }`}>
+                              <svg 
+                                className="w-3 h-3" 
+                                fill="currentColor" 
+                                viewBox="0 0 20 20"
+                              >
+                                <path 
+                                  fillRule="evenodd" 
+                                  d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" 
+                                  clipRule="evenodd" 
+                                />
+                              </svg>
+                            </div>
+                          )}
+
                           <div className="text-center">
                             <div className="font-medium">{variant.nom}</div>
                             {(variant.prix || variant.prix_promo) && (
