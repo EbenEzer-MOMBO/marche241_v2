@@ -125,8 +125,8 @@ export default function PaymentsPage() {
     const totalRevenue = paidTransactions.reduce((sum, t) => sum + t.montant, 0);
     
     // Calculer le montant HT et la taxe
-    // Le montant de transaction est TTC, donc : Montant HT = TTC / 1.045
-    const totalNetRevenue = Math.round(totalRevenue / 1.045);
+    // Le montant de transaction est TTC, donc : Montant HT = TTC / 1.10
+    const totalNetRevenue = Math.round(totalRevenue / 1.10);
     const totalTax = totalRevenue - totalNetRevenue;
 
     // Revenu mensuel (mois en cours)
@@ -135,7 +135,7 @@ export default function PaymentsPage() {
       return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
     });
     const monthlyRevenue = monthlyTransactions.reduce((sum, t) => sum + t.montant, 0);
-    const monthlyNetRevenue = Math.round(monthlyRevenue / 1.045);
+    const monthlyNetRevenue = Math.round(monthlyRevenue / 1.10);
     const monthlyTax = monthlyRevenue - monthlyNetRevenue;
 
     // Revenu annuel (année en cours)
@@ -144,7 +144,7 @@ export default function PaymentsPage() {
       return date.getFullYear() === currentYear;
     });
     const yearlyRevenue = yearlyTransactions.reduce((sum, t) => sum + t.montant, 0);
-    const yearlyNetRevenue = Math.round(yearlyRevenue / 1.045);
+    const yearlyNetRevenue = Math.round(yearlyRevenue / 1.10);
     const yearlyTax = yearlyRevenue - yearlyNetRevenue;
 
     // Nombre de transactions payées
@@ -604,9 +604,9 @@ export default function PaymentsPage() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {paginatedTransactions.map((transaction) => {
-                  // Le montant de la transaction est TTC (inclut déjà la taxe de 4.5%)
-                  // Pour retrouver le montant HT : Montant TTC / 1.045
-                  const netAmount = Math.round(transaction.montant / 1.045);
+                  // Le montant de la transaction est TTC (inclut déjà la taxe de 10%)
+                  // Pour retrouver le montant HT : Montant TTC / 1.10
+                  const netAmount = Math.round(transaction.montant / 1.10);
                   const taxAmount = transaction.montant - netAmount;
                   
                   return (
@@ -678,9 +678,9 @@ export default function PaymentsPage() {
           {/* Transactions Cards - Mobile */}
           <div className="lg:hidden space-y-3">
             {paginatedTransactions.map((transaction) => {
-              // Le montant de la transaction est TTC (inclut déjà la taxe de 4.5%)
-              // Pour retrouver le montant HT : Montant TTC / 1.045
-              const netAmount = Math.round(transaction.montant / 1.045);
+              // Le montant de la transaction est TTC (inclut déjà la taxe de 10%)
+              // Pour retrouver le montant HT : Montant TTC / 1.10
+              const netAmount = Math.round(transaction.montant / 1.10);
               const taxAmount = transaction.montant - netAmount;
               
               return (
@@ -723,7 +723,7 @@ export default function PaymentsPage() {
                     <span className="font-bold text-gray-900">{formatPrice(transaction.montant)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Taxe (4.5%):</span>
+                    <span className="text-gray-600">Taxe:</span>
                     <span className="font-medium text-red-600">{formatPrice(taxAmount)}</span>
                   </div>
                   <div className="flex justify-between text-sm">

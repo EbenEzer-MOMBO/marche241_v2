@@ -22,6 +22,7 @@ export interface WebhookPaiementData {
     nom: string;
     slug: string;
     telephone?: string;
+    whatsapp?: string;
   };
   commande: {
     id: number;

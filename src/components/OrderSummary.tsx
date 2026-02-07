@@ -56,7 +56,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>(null);
   const [paymentPhone, setPaymentPhone] = useState('');
   const [paymentPhoneError, setPaymentPhoneError] = useState('');
-  
+
   // Si is_full_payment_activated est false, forcer le paiement à la livraison uniquement (checkbox cochée et non modifiable)
   // Si is_full_payment_activated est true, l'utilisateur peut choisir librement
   const isFullPaymentActivated = boutiqueData?.is_full_payment_activated === true;
@@ -152,15 +152,15 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
 
   const deliveryFee = getDeliveryFee();
 
-  // Calcul des frais de transaction (4.5%)
+  // Calcul des frais de transaction (10%)
   const getTransactionFee = () => {
-    const transactionRate = 0.045; // 4.5%
+    const transactionRate = 0.10; // 10%
 
     if (payOnDelivery) {
-      // Pour paiement à la livraison : 4.5% seulement sur les frais de livraison
+      // Pour paiement à la livraison : 10% seulement sur les frais de livraison
       return Math.round(deliveryFee * transactionRate);
     } else {
-      // Pour paiement normal : 4.5% sur le total (sous-total + livraison)
+      // Pour paiement normal : 10% sur le total (sous-total + livraison)
       const baseAmount = subtotal + deliveryFee;
       return Math.round(baseAmount * transactionRate);
     }
@@ -387,7 +387,8 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
             id: boutiqueId,
             nom: boutiqueConfig.name,
             slug: boutiqueSlug as string,
-            telephone: boutiqueTelephone
+            telephone: boutiqueTelephone,
+            whatsapp: formatWhatsAppNumber(boutiqueTelephone || '')
           },
           commande: {
             id: commande.commande.id,
@@ -552,7 +553,8 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
             id: boutiqueId,
             nom: boutiqueConfig.name,
             slug: boutiqueSlug as string,
-            telephone: boutiqueTelephone
+            telephone: boutiqueTelephone,
+            whatsapp: formatWhatsAppNumber(boutiqueTelephone || '')
           },
           commande: {
             id: commande.commande.id,
@@ -1091,10 +1093,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
                     <span className="text-gray-600">
                       Frais de commodité
                       <span className="text-xs text-gray-500 block">
-                        {payOnDelivery
-                          ? '(4.5% sur frais de livraison)'
-                          : '(4.5% sur total commande)'
-                        }
+                        (Frais de service non remboursable)
                       </span>
                     </span>
                     <span className="font-medium">{formatPrice(getTransactionFee())}</span>
@@ -1104,11 +1103,10 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
 
               {/* Option paiement à la livraison */}
               <div className="border-t border-b py-4 border-gray-200">
-                <label className={`flex items-center ${
-                  !isFullPaymentActivated || deliveryFee === 0 
-                    ? 'cursor-not-allowed opacity-50' 
-                    : 'cursor-pointer'
-                }`}>
+                <label className={`flex items-center ${!isFullPaymentActivated || deliveryFee === 0
+                  ? 'cursor-not-allowed opacity-50'
+                  : 'cursor-pointer'
+                  }`}>
                   <input
                     type="checkbox"
                     checked={payOnDelivery}
