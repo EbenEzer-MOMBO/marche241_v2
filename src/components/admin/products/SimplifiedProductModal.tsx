@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { X, Upload, Plus, Trash2, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 import { ProductCategory, getCategoryInfo } from '@/lib/constants/product-categories';
+import { ClothingProductForm } from './ClothingProductForm';
+import { ShoesProductForm } from './ShoesProductForm';
 
 interface SimplifiedProductModalProps {
   isOpen: boolean;
@@ -11,6 +13,10 @@ interface SimplifiedProductModalProps {
   category: ProductCategory | null;
   onBack: () => void;
   onSave: (productData: any) => void;
+  categories?: any[];
+  boutiqueId?: number;
+  boutiqueSlug?: string;
+  productToEdit?: any; // Produit à éditer
 }
 
 export function SimplifiedProductModal({
@@ -18,8 +24,45 @@ export function SimplifiedProductModal({
   onClose,
   category,
   onBack,
-  onSave
+  onSave,
+  categories = [],
+  boutiqueId,
+  boutiqueSlug,
+  productToEdit
 }: SimplifiedProductModalProps) {
+  // Si c'est un vêtement, utiliser le formulaire spécialisé
+  if (category === 'vetements') {
+    return (
+      <ClothingProductForm
+        isOpen={isOpen}
+        onClose={onClose}
+        category={category}
+        onBack={onBack}
+        onSave={onSave}
+        categories={categories}
+        boutiqueId={boutiqueId}
+        boutiqueSlug={boutiqueSlug}
+        productToEdit={productToEdit}
+      />
+    );
+  }
+
+  // Si ce sont des chaussures, utiliser le formulaire spécialisé
+  if (category === 'chaussures') {
+    return (
+      <ShoesProductForm
+        isOpen={isOpen}
+        onClose={onClose}
+        category={category}
+        onBack={onBack}
+        onSave={onSave}
+        categories={categories}
+        boutiqueId={boutiqueId}
+        boutiqueSlug={boutiqueSlug}
+        productToEdit={productToEdit}
+      />
+    );
+  }
   const [formData, setFormData] = useState<any>({
     nom: '',
     prix: '',
@@ -120,7 +163,7 @@ export function SimplifiedProductModal({
     };
 
     // Construire les variants selon la catégorie
-    if (category === 'vetements') {
+    if (category === 'vetements' as ProductCategory) {
       const tailles = specificFields.tailles || [];
       const couleurs = specificFields.couleurs || [];
       

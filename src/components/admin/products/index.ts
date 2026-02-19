@@ -5,3 +5,5 @@ export { ProductsGrid } from './ProductsGrid';
 export { ProductsPagination } from './ProductsPagination';
 export { CategorySelectionModal } from './CategorySelectionModal';
 export { SimplifiedProductModal } from './SimplifiedProductModal';
+export { ClothingProductForm } from './ClothingProductForm';
+export { ShoesProductForm } from './ShoesProductForm';

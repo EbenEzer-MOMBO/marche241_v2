@@ -105,6 +105,7 @@ export async function creerProduit(produitData: {
   description?: string;
   prix: number;
   prix_promo?: number;
+  prix_original?: number;
   en_stock: number;
   boutique_id: number;
   categorie_id: number;

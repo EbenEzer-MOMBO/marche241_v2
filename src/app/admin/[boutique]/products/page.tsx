@@ -359,12 +359,234 @@ export default function ProductsPage() {
         setShowCategoryModal(true);
     };
 
-    const handleSaveSimplifiedProduct = (productData: any) => {
-        console.log('💾 Nouveau produit à sauvegarder:', productData);
-        // TODO: Connecter avec le backend
-        success('Produit ajouté avec succès! (En développement)', 'Succès');
-        setShowSimplifiedModal(false);
-        setSelectedCategory(null);
+    const handleSaveSimplifiedProduct = async (productData: any) => {
+        console.log('💾 Produit à sauvegarder:', productData);
+        
+        try {
+            if (!boutique) {
+                showError('Boutique non trouvée', 'Erreur');
+                return;
+            }
+
+            // Détecter si c'est une modification (présence de l'id)
+            const isEdit = productData.id && productToEdit;
+
+            // Préparer les données pour l'API
+            let variantsFormatted: any = {
+                type: productData.category || 'generic',
+                variants: [],
+                options: []
+            };
+
+            // Si c'est un produit vêtement avec la nouvelle structure
+            if (productData.category === 'vetements' && productData.variants && Array.isArray(productData.variants)) {
+                variantsFormatted = {
+                    type: 'vetements',
+                    variants: productData.variants.map((v: any) => ({
+                        id: v.id,
+                        image: v.image,
+                        couleur: v.couleur,
+                        tailles: v.tailles || [],
+                        prix: v.prix,
+                        prix_promo: v.prix_promo
+                    })),
+                    personnalisations: productData.personnalisations || []
+                };
+            } 
+            // Si c'est un produit chaussures avec la nouvelle structure
+            else if (productData.category === 'chaussures' && productData.variants && Array.isArray(productData.variants)) {
+                variantsFormatted = {
+                    type: 'chaussures',
+                    variants: productData.variants.map((v: any) => ({
+                        id: v.id,
+                        image: v.image,
+                        couleur: v.couleur,
+                        pointures: v.pointures || [],
+                        prix: v.prix,
+                        prix_promo: v.prix_promo
+                    })),
+                    personnalisations: productData.personnalisations || []
+                };
+            } 
+            else if (productData.variants && typeof productData.variants === 'object') {
+                variantsFormatted = {
+                    type: productData.category || 'generic',
+                    ...productData.variants
+                };
+            }
+
+            // Calculer le stock total
+            let stockTotal = 0;
+            if (productData.category === 'vetements' && productData.variants && Array.isArray(productData.variants)) {
+                stockTotal = productData.variants.reduce((sum: number, v: any) => {
+                    const variantStock = v.tailles?.reduce((tailleSum: number, t: any) => tailleSum + (t.stock || 0), 0) || 0;
+                    return sum + variantStock;
+                }, 0);
+            } else if (productData.category === 'chaussures' && productData.variants && Array.isArray(productData.variants)) {
+                stockTotal = productData.variants.reduce((sum: number, v: any) => {
+                    const variantStock = v.pointures?.reduce((pointureSum: number, p: any) => pointureSum + (p.stock || 0), 0) || 0;
+                    return sum + variantStock;
+                }, 0);
+            } else {
+                stockTotal = parseInt(productData.quantite_stock) || 0;
+            }
+
+            // Calculer le prix minimum pour l'affichage
+            let prixPrincipal = 0;
+            let prixOriginal = undefined;
+            
+            if ((productData.category === 'vetements' || productData.category === 'chaussures') && productData.variants && Array.isArray(productData.variants)) {
+                const variantsAvecPrix = productData.variants.filter((v: any) => v.prix > 0);
+                if (variantsAvecPrix.length > 0) {
+                    const prixMin = Math.min(...variantsAvecPrix.map((v: any) => v.prix));
+                    const variantAvecPrixMin = variantsAvecPrix.find((v: any) => v.prix === prixMin);
+                    
+                    prixPrincipal = variantAvecPrixMin.prix_promo || variantAvecPrixMin.prix;
+                    if (variantAvecPrixMin.prix_promo) {
+                        prixOriginal = variantAvecPrixMin.prix;
+                    }
+                }
+            } else {
+                prixPrincipal = parseInt(productData.prix) || 0;
+            }
+
+            // Les images sont déjà des URLs après l'upload
+            const images = productData.images || [];
+            const imagePrincipale = productData.image_principale || images[0] || undefined;
+
+            console.log('📦 Données formatées pour l\'API:', {
+                nom: productData.nom,
+                prix: prixPrincipal,
+                prix_original: prixOriginal,
+                en_stock: stockTotal,
+                images,
+                image_principale: imagePrincipale,
+                variants: variantsFormatted
+            });
+
+            if (isEdit) {
+                // MODIFICATION
+                console.log('✏️ Mode modification pour le produit ID:', productData.id);
+                
+                const produitModifie = await modifierProduit(productData.id, {
+                    nom: productData.nom,
+                    slug: genererSlugProduit(productData.nom),
+                    description: productData.description || '',
+                    prix: prixPrincipal,
+                    prix_promo: prixOriginal ? prixPrincipal : undefined,
+                    en_stock: stockTotal,
+                    categorie_id: productData.categorie_id,
+                    images: images,
+                    image_principale: imagePrincipale,
+                    variants: variantsFormatted,
+                    statut: productData.statut || 'actif'
+                });
+
+                // Mettre à jour l'interface utilisateur
+                const produitMisAJour: ProduitAffichage = {
+                    id: produitModifie.id,
+                    nom: produitModifie.nom,
+                    slug: produitModifie.slug,
+                    description: produitModifie.description,
+                    prix: produitModifie.prix,
+                    prix_original: produitModifie.prix_original,
+                    image_principale: produitModifie.image_principale,
+                    images: produitModifie.images || [],
+                    variants: produitModifie.variants || [],
+                    en_stock: produitModifie.en_stock,
+                    quantite_stock: stockTotal,
+                    actif: produitModifie.actif || produitModifie.statut === 'actif',
+                    est_nouveau: produitModifie.est_nouveau,
+                    est_en_promotion: produitModifie.est_en_promotion,
+                    est_featured: produitModifie.est_featured,
+                    note_moyenne: produitModifie.note_moyenne || 0,
+                    nombre_avis: produitModifie.nombre_avis || 0,
+                    nombre_vues: produitModifie.nombre_vues || 0,
+                    nombre_ventes: produitModifie.nombre_ventes || 0,
+                    date_creation: produitModifie.date_creation.toString(),
+                    categorie_nom: categories.find(c => c.id === produitModifie.categorie_id)?.nom || 'Sans catégorie',
+                    boutique: {
+                        id: boutique.id,
+                        nom: boutique.nom,
+                        logo: boutique.logo,
+                        slug: boutique.slug
+                    },
+                    categorie: {
+                        id: produitModifie.categorie_id,
+                        nom: categories.find(c => c.id === produitModifie.categorie_id)?.nom || 'Sans catégorie',
+                        slug: categories.find(c => c.id === produitModifie.categorie_id)?.slug || 'sans-categorie'
+                    }
+                };
+
+                setProducts(prev => prev.map(p => p.id === productData.id ? produitMisAJour : p));
+                success('Produit modifié avec succès!', 'Succès');
+            } else {
+                // CRÉATION
+                console.log('➕ Mode création de nouveau produit');
+                
+                const nouveauProduitDB = await creerProduit({
+                    nom: productData.nom,
+                    slug: genererSlugProduit(productData.nom),
+                    description: productData.description || '',
+                    prix: prixPrincipal,
+                    prix_original: prixOriginal,
+                    en_stock: stockTotal,
+                    boutique_id: boutique.id,
+                    categorie_id: productData.categorie_id,
+                    images: images,
+                    image_principale: imagePrincipale,
+                    variants: variantsFormatted,
+                    statut: productData.statut || 'actif'
+                });
+
+                // Convertir en ProduitAffichage pour l'interface
+                const nouveauProduit: ProduitAffichage = {
+                    id: nouveauProduitDB.id,
+                    nom: nouveauProduitDB.nom,
+                    slug: nouveauProduitDB.slug,
+                    description: nouveauProduitDB.description,
+                    prix: nouveauProduitDB.prix,
+                    prix_original: nouveauProduitDB.prix_original,
+                    image_principale: nouveauProduitDB.image_principale,
+                    images: nouveauProduitDB.images || [],
+                    variants: nouveauProduitDB.variants || [],
+                    en_stock: nouveauProduitDB.en_stock,
+                    quantite_stock: stockTotal,
+                    actif: nouveauProduitDB.actif || nouveauProduitDB.statut === 'actif',
+                    est_nouveau: nouveauProduitDB.est_nouveau,
+                    est_en_promotion: nouveauProduitDB.est_en_promotion,
+                    est_featured: nouveauProduitDB.est_featured,
+                    note_moyenne: 0,
+                    nombre_avis: 0,
+                    nombre_vues: 0,
+                    nombre_ventes: 0,
+                    date_creation: nouveauProduitDB.date_creation.toString(),
+                    categorie_nom: categories.find(c => c.id === nouveauProduitDB.categorie_id)?.nom || 'Sans catégorie',
+                    boutique: {
+                        id: boutique.id,
+                        nom: boutique.nom,
+                        logo: boutique.logo,
+                        slug: boutique.slug
+                    },
+                    categorie: {
+                        id: nouveauProduitDB.categorie_id,
+                        nom: categories.find(c => c.id === nouveauProduitDB.categorie_id)?.nom || 'Sans catégorie',
+                        slug: categories.find(c => c.id === nouveauProduitDB.categorie_id)?.slug || 'sans-categorie'
+                    }
+                };
+
+                console.log('✅ Produit créé:', nouveauProduit);
+                setProducts(prev => [...prev, nouveauProduit]);
+                success('Produit ajouté avec succès!', 'Succès');
+            }
+
+            setShowSimplifiedModal(false);
+            setSelectedCategory(null);
+            setProductToEdit(null);
+        } catch (error: any) {
+            console.error('❌ Erreur lors de la sauvegarde:', error);
+            showError(error.message || 'Erreur lors de la sauvegarde du produit', 'Erreur');
+        }
     };
 
     const handleCloseSimplifiedModals = () => {
@@ -376,6 +598,68 @@ export default function ProductsPage() {
     const handleEditProduct = (product: ProduitAffichage) => {
         console.log('[handleEditProduct] Produit à éditer:', product);
 
+        // Détecter le type de produit depuis les variants
+        const productType = product.variants && typeof product.variants === 'object' && 'type' in product.variants
+            ? product.variants.type
+            : null;
+
+        console.log('[handleEditProduct] Type de produit détecté:', productType);
+
+        // Si c'est un produit vêtement, ouvrir le formulaire simplifié
+        if (productType === 'vetements') {
+            // Extraire les données des variants vêtements
+            const variantsData = product.variants?.variants || [];
+            const personnalisationsData = product.variants?.personnalisations || [];
+
+            // Préparer les données pour le formulaire vêtements
+            const productData = {
+                id: product.id,
+                nom: product.nom,
+                description: product.description,
+                categorie_id: product.categorie?.id || 0,
+                statut: product.actif ? 'actif' as const : 'inactif' as const,
+                images: product.images || [],
+                variants: variantsData,
+                personnalisations: personnalisationsData
+            };
+
+            console.log('[handleEditProduct] Données pour formulaire vêtements:', productData);
+            
+            // Ouvrir le modal simplifié en mode édition
+            setProductToEdit(productData as any);
+            setSelectedCategory('vetements');
+            setShowSimplifiedModal(true);
+            return;
+        }
+
+        // Si c'est un produit chaussures, ouvrir le formulaire simplifié
+        if (productType === 'chaussures') {
+            // Extraire les données des variants chaussures
+            const variantsData = product.variants?.variants || [];
+            const personnalisationsData = product.variants?.personnalisations || [];
+
+            // Préparer les données pour le formulaire chaussures
+            const productData = {
+                id: product.id,
+                nom: product.nom,
+                description: product.description,
+                categorie_id: product.categorie?.id || 0,
+                statut: product.actif ? 'actif' as const : 'inactif' as const,
+                images: product.images || [],
+                variants: variantsData,
+                personnalisations: personnalisationsData
+            };
+
+            console.log('[handleEditProduct] Données pour formulaire chaussures:', productData);
+            
+            // Ouvrir le modal simplifié en mode édition
+            setProductToEdit(productData as any);
+            setSelectedCategory('chaussures');
+            setShowSimplifiedModal(true);
+            return;
+        }
+
+        // Sinon, utiliser l'ancien modal pour les autres types de produits
         // Extraire les variantes et options depuis le JSON
         let variantsData: any[] = [];
         let optionsData: any[] = [];
@@ -1235,6 +1519,10 @@ export default function ProductsPage() {
                 category={selectedCategory}
                 onBack={handleBackToCategories}
                 onSave={handleSaveSimplifiedProduct}
+                categories={categories}
+                boutiqueId={boutique?.id}
+                boutiqueSlug={boutique?.slug}
+                productToEdit={productToEdit}
             />
         </div>
     );
