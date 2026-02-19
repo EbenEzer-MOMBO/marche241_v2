@@ -26,6 +26,8 @@ import {
 } from 'lucide-react';
 import ConfirmationModal from '@/components/ui/ConfirmationModal';
 import ProduitModal from '@/components/admin/ProduitModal';
+import { CategorySelectionModal, SimplifiedProductModal } from '@/components/admin/products';
+import { ProductCategory } from '@/lib/constants/product-categories';
 
 // Interface locale pour l'affichage des produits
 interface ProduitAffichage {
@@ -84,6 +86,11 @@ export default function ProductsPage() {
     const [showProductModal, setShowProductModal] = useState(false);
     const [productToEdit, setProductToEdit] = useState<ProduitDB | null>(null);
     const [categories, setCategories] = useState<any[]>([]);
+
+    // États pour les nouveaux modals
+    const [showCategoryModal, setShowCategoryModal] = useState(false);
+    const [showSimplifiedModal, setShowSimplifiedModal] = useState(false);
+    const [selectedCategory, setSelectedCategory] = useState<ProductCategory | null>(null);
 
     // États pour la pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -337,6 +344,35 @@ export default function ProductsPage() {
         setShowProductModal(true);
     };
 
+    const handleCreateSimplifiedProduct = () => {
+        setShowCategoryModal(true);
+    };
+
+    const handleSelectCategory = (category: ProductCategory) => {
+        setSelectedCategory(category);
+        setShowCategoryModal(false);
+        setShowSimplifiedModal(true);
+    };
+
+    const handleBackToCategories = () => {
+        setShowSimplifiedModal(false);
+        setShowCategoryModal(true);
+    };
+
+    const handleSaveSimplifiedProduct = (productData: any) => {
+        console.log('💾 Nouveau produit à sauvegarder:', productData);
+        // TODO: Connecter avec le backend
+        success('Produit ajouté avec succès! (En développement)', 'Succès');
+        setShowSimplifiedModal(false);
+        setSelectedCategory(null);
+    };
+
+    const handleCloseSimplifiedModals = () => {
+        setShowCategoryModal(false);
+        setShowSimplifiedModal(false);
+        setSelectedCategory(null);
+    };
+
     const handleEditProduct = (product: ProduitAffichage) => {
         console.log('[handleEditProduct] Produit à éditer:', product);
 
@@ -588,8 +624,17 @@ export default function ProductsPage() {
                             className="flex items-center px-3 lg:px-4 py-1.5 lg:py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm lg:text-base flex-shrink-0 ml-2"
                         >
                             <Plus className="h-3 w-3 lg:h-4 lg:w-4 mr-1 lg:mr-2" />
-                            <span className="hidden sm:inline">Nouveau produit</span>
+                            <span className="hidden sm:inline">Ancien modal</span>
                             <span className="sm:hidden">Créer</span>
+                        </button>
+                        
+                        <button
+                            onClick={handleCreateSimplifiedProduct}
+                            className="flex items-center px-3 lg:px-4 py-1.5 lg:py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all text-sm lg:text-base flex-shrink-0 ml-2 shadow-lg"
+                        >
+                            <Plus className="h-3 w-3 lg:h-4 lg:w-4 mr-1 lg:mr-2" />
+                            <span className="hidden sm:inline">✨ Nouveau</span>
+                            <span className="sm:hidden">✨</span>
                         </button>
                     </div>
                 </div>
@@ -1175,6 +1220,21 @@ export default function ProductsPage() {
                 categories={categories}
                 boutiqueId={boutique?.id || 0}
                 boutiqueSlug={boutique?.slug || ''}
+            />
+
+            {/* Nouveaux modals simplifiés */}
+            <CategorySelectionModal
+                isOpen={showCategoryModal}
+                onClose={handleCloseSimplifiedModals}
+                onSelectCategory={handleSelectCategory}
+            />
+
+            <SimplifiedProductModal
+                isOpen={showSimplifiedModal}
+                onClose={handleCloseSimplifiedModals}
+                category={selectedCategory}
+                onBack={handleBackToCategories}
+                onSave={handleSaveSimplifiedProduct}
             />
         </div>
     );

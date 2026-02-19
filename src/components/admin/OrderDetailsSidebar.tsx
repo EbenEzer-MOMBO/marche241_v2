@@ -1,27 +1,36 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, Package, User, MapPin, Phone, Calendar, CreditCard, Truck, Receipt, CheckCircle2, XCircle } from 'lucide-react';
+import { X, Package, User, MapPin, Phone, Calendar, CreditCard, Truck, Receipt, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import Image from 'next/image';
 import {
   getCommandeAvecArticles,
   getCommandeById,
+  modifierStatutCommande,
   type CommandeDetailsResponse,
   type Commande,
   type Transaction
 } from '@/lib/services/commandes';
+import { getStatusBadgeClasses, getStatusLabel } from '@/lib/constants/order-status';
 
 interface OrderDetailsSidebarProps {
   commandeId: number | null;
   isOpen: boolean;
   onClose: () => void;
+  onStatusUpdate?: (commandeId: number, newStatus: string) => void;
 }
 
-const OrderDetailsSidebar = ({ commandeId, isOpen, onClose }: OrderDetailsSidebarProps) => {
+const OrderDetailsSidebar = ({ commandeId, isOpen, onClose, onStatusUpdate }: OrderDetailsSidebarProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [details, setDetails] = useState<CommandeDetailsResponse | null>(null);
   const [commandeInfo, setCommandeInfo] = useState<Commande | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingStatusUpdate, setPendingStatusUpdate] = useState<{
+    newStatus: string;
+    statusLabel: string;
+  } | null>(null);
 
   useEffect(() => {
     const loadOrderDetails = async () => {
@@ -71,41 +80,11 @@ const OrderDetailsSidebar = ({ commandeId, isOpen, onClose }: OrderDetailsSideba
   };
 
   const getStatusColor = (statut: string) => {
-    switch (statut.toLowerCase()) {
-      case 'en_attente':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'confirmee':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'en_preparation':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'expediee':
-        return 'bg-indigo-100 text-indigo-800 border-indigo-200';
-      case 'livree':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'annulee':
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
+    return getStatusBadgeClasses(statut);
   };
 
-  const getStatusLabel = (statut: string) => {
-    switch (statut.toLowerCase()) {
-      case 'en_attente':
-        return 'En attente';
-      case 'confirmee':
-        return 'Confirmée';
-      case 'en_preparation':
-        return 'En préparation';
-      case 'expediee':
-        return 'Expédiée';
-      case 'livree':
-        return 'Livrée';
-      case 'annulee':
-        return 'Annulée';
-      default:
-        return statut;
-    }
+  const getStatusLabelLocal = (statut: string) => {
+    return getStatusLabel(statut);
   };
 
   const getPaymentStatusLabel = (statut: string) => {
@@ -121,6 +100,72 @@ const OrderDetailsSidebar = ({ commandeId, isOpen, onClose }: OrderDetailsSideba
       default:
         return statut;
     }
+  };
+
+  const handleUpdateStatus = async (newStatus: string, statusLabel: string) => {
+    if (!commandeId || !commandeInfo) return;
+
+    setIsUpdatingStatus(true);
+    try {
+      await modifierStatutCommande(commandeId, newStatus);
+      
+      // Mettre à jour l'état local
+      setCommandeInfo(prev => prev ? { ...prev, statut: newStatus } : null);
+      
+      // Notifier le parent
+      if (onStatusUpdate) {
+        onStatusUpdate(commandeId, newStatus);
+      }
+      
+      setShowConfirmModal(false);
+      setPendingStatusUpdate(null);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut:', error);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  const openConfirmModal = (newStatus: string, statusLabel: string) => {
+    setPendingStatusUpdate({ newStatus, statusLabel });
+    setShowConfirmModal(true);
+  };
+
+  const closeConfirmModal = () => {
+    setShowConfirmModal(false);
+    setPendingStatusUpdate(null);
+  };
+
+  const getActionButton = () => {
+    if (!commandeInfo) return null;
+
+    if (commandeInfo.statut.toLowerCase() === 'confirmee') {
+      return (
+        <button
+          onClick={() => openConfirmModal('expedie', 'expédiée')}
+          disabled={isUpdatingStatus}
+          className="w-full flex items-center justify-center px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Truck className="h-4 w-4 mr-2" />
+          {isUpdatingStatus ? 'Mise à jour...' : 'Marquer comme expédiée'}
+        </button>
+      );
+    }
+    
+    if (commandeInfo.statut.toLowerCase() === 'expedie') {
+      return (
+        <button
+          onClick={() => openConfirmModal('livree', 'livrée')}
+          disabled={isUpdatingStatus}
+          className="w-full flex items-center justify-center px-4 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <CheckCircle2 className="h-4 w-4 mr-2" />
+          {isUpdatingStatus ? 'Mise à jour...' : 'Marquer comme livrée'}
+        </button>
+      );
+    }
+    
+    return null;
   };
 
   if (!isOpen) return null;
@@ -174,7 +219,7 @@ const OrderDetailsSidebar = ({ commandeId, isOpen, onClose }: OrderDetailsSideba
                       commandeInfo.statut
                     )}`}
                   >
-                    {getStatusLabel(commandeInfo.statut)}
+                    {getStatusLabelLocal(commandeInfo.statut)}
                   </span>
                 </div>
 
@@ -216,6 +261,13 @@ const OrderDetailsSidebar = ({ commandeId, isOpen, onClose }: OrderDetailsSideba
                         </span>
                       )}
                     </div>
+                  </div>
+                )}
+
+                {/* Bouton d'action pour changer le statut */}
+                {getActionButton() && (
+                  <div className="pt-3 border-t border-gray-200">
+                    {getActionButton()}
                   </div>
                 )}
               </div>
@@ -530,6 +582,124 @@ const OrderDetailsSidebar = ({ commandeId, isOpen, onClose }: OrderDetailsSideba
           )}
         </div>
       </div>
+
+      {/* Modal de confirmation */}
+      {showConfirmModal && pendingStatusUpdate && commandeInfo && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4"
+          style={{ animation: 'fadeIn 0.2s ease-out' }}
+        >
+          <div 
+            className="bg-white rounded-lg shadow-xl max-w-md w-full p-6"
+            style={{ animation: 'slideUp 0.3s ease-out' }}
+          >
+            {/* En-tête du modal */}
+            <div className="flex items-start mb-4">
+              <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${
+                pendingStatusUpdate.newStatus === 'expedie' 
+                  ? 'bg-indigo-100' 
+                  : 'bg-emerald-100'
+              }`}>
+                {pendingStatusUpdate.newStatus === 'expedie' ? (
+                  <Truck className={`h-6 w-6 text-indigo-600`} />
+                ) : (
+                  <CheckCircle2 className={`h-6 w-6 text-emerald-600`} />
+                )}
+              </div>
+              <div className="ml-4 flex-1">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Confirmer le changement de statut
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  {pendingStatusUpdate.newStatus === 'expedie' 
+                    ? 'La commande sera marquée comme expédiée'
+                    : 'La commande sera marquée comme livrée'}
+                </p>
+              </div>
+            </div>
+
+            {/* Contenu du modal */}
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Statut actuel</p>
+                  <p className="text-base font-semibold text-gray-900 mt-1">
+                    {getStatusLabelLocal(commandeInfo.statut)}
+                  </p>
+                </div>
+                <div className="mx-4">
+                  <svg className="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Nouveau statut</p>
+                  <p className={`text-base font-semibold mt-1 ${
+                    pendingStatusUpdate.newStatus === 'expedie' 
+                      ? 'text-indigo-600' 
+                      : 'text-emerald-600'
+                  }`}>
+                    {getStatusLabelLocal(pendingStatusUpdate.newStatus)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Message d'information */}
+            <div className="flex items-start mb-6">
+              <AlertCircle className="h-5 w-5 text-yellow-500 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-gray-600 ml-2">
+                {pendingStatusUpdate.newStatus === 'expedie' 
+                  ? 'Le client sera informé que sa commande a été expédiée.'
+                  : 'Cette action marquera la commande comme terminée.'}
+              </p>
+            </div>
+
+            {/* Boutons d'action */}
+            <div className="flex space-x-3">
+              <button
+                onClick={closeConfirmModal}
+                disabled={isUpdatingStatus}
+                className="flex-1 px-4 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={() => handleUpdateStatus(pendingStatusUpdate.newStatus, pendingStatusUpdate.statusLabel)}
+                disabled={isUpdatingStatus}
+                className={`flex-1 px-4 py-2.5 text-white rounded-lg transition-colors font-medium text-sm disabled:opacity-50 ${
+                  pendingStatusUpdate.newStatus === 'expedie'
+                    ? 'bg-indigo-600 hover:bg-indigo-700'
+                    : 'bg-emerald-600 hover:bg-emerald-700'
+                }`}
+              >
+                {isUpdatingStatus ? 'Mise à jour...' : (pendingStatusUpdate.newStatus === 'expedie' ? 'Expédier' : 'Livrer')}
+              </button>
+            </div>
+          </div>
+
+          <style jsx>{`
+            @keyframes fadeIn {
+              from {
+                opacity: 0;
+              }
+              to {
+                opacity: 1;
+              }
+            }
+            @keyframes slideUp {
+              from {
+                opacity: 0;
+                transform: translateY(20px);
+              }
+              to {
+                opacity: 1;
+                transform: translateY(0);
+              }
+            }
+          `}</style>
+        </div>
+      )}
     </>
   );
 };

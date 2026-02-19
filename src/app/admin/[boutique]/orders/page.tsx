@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import {
   getCommandesParBoutique,
-  modifierCommande,
+  modifierStatutCommande,
   type Commande,
   type CommandesParams
 } from '@/lib/services/commandes';
@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/useToast';
 import Sidebar from '@/components/admin/Sidebar';
 import OrderDetailsSidebar from '@/components/admin/OrderDetailsSidebar';
 import { BoutiqueData } from '@/lib/services/auth';
+import { ORDER_STATUS_CONFIG, getStatusBadgeClasses, getStatusLabel } from '@/lib/constants/order-status';
 import {
   Package,
   Search,
@@ -44,6 +45,15 @@ export default function OrdersPage() {
   // États pour le sidebar de détails
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // États pour le modal de confirmation
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [pendingStatusUpdate, setPendingStatusUpdate] = useState<{
+    orderId: number;
+    currentStatus: string;
+    newStatus: string;
+    statusLabel: string;
+  } | null>(null);
 
   // États pour la pagination côté client
   const [currentPage, setCurrentPage] = useState(1);
@@ -136,22 +146,7 @@ export default function OrdersPage() {
   const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
 
   const getStatusColor = (statut: string) => {
-    switch (statut.toLowerCase()) {
-      case 'en_attente':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'confirmee':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'en_preparation':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'expediee':
-        return 'bg-indigo-100 text-indigo-800 border-indigo-200';
-      case 'livree':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'annulee':
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
+    return getStatusBadgeClasses(statut);
   };
 
   const getStatusIcon = (statut: string) => {
@@ -162,34 +157,42 @@ export default function OrdersPage() {
         return <CheckCircle className="h-4 w-4" />;
       case 'en_preparation':
         return <Package className="h-4 w-4" />;
-      case 'expediee':
+      case 'expedie':
         return <Truck className="h-4 w-4" />;
       case 'livree':
         return <CheckCircle className="h-4 w-4" />;
       case 'annulee':
+        return <XCircle className="h-4 w-4" />;
+      case 'remboursee':
         return <XCircle className="h-4 w-4" />;
       default:
         return <AlertCircle className="h-4 w-4" />;
     }
   };
 
-  const getStatusLabel = (statut: string) => {
-    switch (statut.toLowerCase()) {
-      case 'en_attente':
-        return 'En attente';
-      case 'confirmee':
-        return 'Confirmée';
-      case 'en_preparation':
-        return 'En préparation';
-      case 'expediee':
-        return 'Expédiée';
-      case 'livree':
-        return 'Livrée';
-      case 'annulee':
-        return 'Annulée';
-      default:
-        return statut;
+  const getStatusLabelLocal = (statut: string) => {
+    return getStatusLabel(statut);
+  };
+
+  const getFilterButtonClasses = (status: string) => {
+    if (filterStatus === status) {
+      const config = ORDER_STATUS_CONFIG[status as keyof typeof ORDER_STATUS_CONFIG];
+      if (config) {
+        // Utiliser la couleur primaire pour le bouton actif
+        const colorMap: Record<string, string> = {
+          en_attente: 'bg-amber-500 hover:bg-amber-600',
+          confirmee: 'bg-blue-500 hover:bg-blue-600',
+          en_preparation: 'bg-violet-500 hover:bg-violet-600',
+          expedie: 'bg-indigo-500 hover:bg-indigo-600',
+          livree: 'bg-emerald-500 hover:bg-emerald-600',
+          annulee: 'bg-red-500 hover:bg-red-600',
+          remboursee: 'bg-orange-500 hover:bg-orange-600'
+        };
+        return `${colorMap[status]} text-white`;
+      }
+      return 'bg-black text-white';
     }
+    return 'bg-gray-100 text-gray-700 hover:bg-gray-200';
   };
 
   const formatPrice = (price: number) => {
@@ -220,6 +223,16 @@ export default function OrdersPage() {
     setSelectedOrderId(null);
   };
 
+  const handleStatusUpdateFromSidebar = (commandeId: number, newStatus: string) => {
+    // Mettre à jour l'état local
+    setOrders(prevOrders =>
+      prevOrders.map(order =>
+        order.id === commandeId ? { ...order, statut: newStatus } : order
+      )
+    );
+    success('Commande mise à jour avec succès');
+  };
+
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
     setCurrentPage(1); // Réinitialiser à la page 1 lors d'une recherche
@@ -234,6 +247,87 @@ export default function OrdersPage() {
     setCurrentPage(newPage);
     // Scroll vers le haut lors du changement de page
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleUpdateStatus = async (orderId: number, currentStatus: string, newStatus: string, statusLabel: string) => {
+    try {
+      await modifierStatutCommande(orderId, newStatus);
+      
+      // Mettre à jour l'état local
+      setOrders(prevOrders =>
+        prevOrders.map(order =>
+          order.id === orderId ? { ...order, statut: newStatus } : order
+        )
+      );
+      
+      success(`Commande ${statusLabel} avec succès`);
+      setIsConfirmModalOpen(false);
+      setPendingStatusUpdate(null);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut:', error);
+      showError('Erreur lors de la mise à jour du statut');
+    }
+  };
+
+  const openConfirmModal = (orderId: number, currentStatus: string, newStatus: string, statusLabel: string) => {
+    setPendingStatusUpdate({ orderId, currentStatus, newStatus, statusLabel });
+    setIsConfirmModalOpen(true);
+  };
+
+  const closeConfirmModal = () => {
+    setIsConfirmModalOpen(false);
+    setPendingStatusUpdate(null);
+  };
+
+  const confirmStatusUpdate = () => {
+    if (pendingStatusUpdate) {
+      handleUpdateStatus(
+        pendingStatusUpdate.orderId,
+        pendingStatusUpdate.currentStatus,
+        pendingStatusUpdate.newStatus,
+        pendingStatusUpdate.statusLabel
+      );
+    }
+  };
+
+  const getActionButton = (order: Commande, isMobile: boolean = false) => {
+    const baseClasses = isMobile 
+      ? "w-full flex items-center justify-center px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors"
+      : "inline-flex items-center px-3 py-1.5 text-white text-xs font-medium rounded-lg transition-colors";
+    
+    if (order.statut.toLowerCase() === 'confirmee') {
+      return (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            openConfirmModal(order.id, order.statut, 'expedie', 'expédiée');
+          }}
+          className={`${baseClasses} bg-indigo-600 hover:bg-indigo-700`}
+          title="Marquer comme expédiée"
+        >
+          <Truck className={`${isMobile ? 'h-4 w-4' : 'h-3.5 w-3.5'} mr-${isMobile ? '2' : '1.5'}`} />
+          Expédier
+        </button>
+      );
+    }
+    
+    if (order.statut.toLowerCase() === 'expedie') {
+      return (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            openConfirmModal(order.id, order.statut, 'livree', 'livrée');
+          }}
+          className={`${baseClasses} bg-emerald-600 hover:bg-emerald-700`}
+          title="Marquer comme livrée"
+        >
+          <CheckCircle className={`${isMobile ? 'h-4 w-4' : 'h-3.5 w-3.5'} mr-${isMobile ? '2' : '1.5'}`} />
+          Livrer
+        </button>
+      );
+    }
+    
+    return null;
   };
 
   if (isLoading) {
@@ -313,46 +407,31 @@ export default function OrdersPage() {
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => handleFilterChange('all')}
-                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${filterStatus === 'all'
-                      ? 'bg-black text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
+                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${getFilterButtonClasses('all')}`}
                 >
                   Toutes
                 </button>
                 <button
                   onClick={() => handleFilterChange('en_attente')}
-                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${filterStatus === 'en_attente'
-                      ? 'bg-yellow-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
+                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${getFilterButtonClasses('en_attente')}`}
                 >
                   En attente
                 </button>
                 <button
                   onClick={() => handleFilterChange('confirmee')}
-                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${filterStatus === 'confirmee'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
+                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${getFilterButtonClasses('confirmee')}`}
                 >
                   Confirmées
                 </button>
                 <button
-                  onClick={() => handleFilterChange('expediee')}
-                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${filterStatus === 'expediee'
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
+                  onClick={() => handleFilterChange('expedie')}
+                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${getFilterButtonClasses('expedie')}`}
                 >
                   Expédiées
                 </button>
                 <button
                   onClick={() => handleFilterChange('livree')}
-                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${filterStatus === 'livree'
-                      ? 'bg-green-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
+                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${getFilterButtonClasses('livree')}`}
                 >
                   Livrées
                 </button>
@@ -421,17 +500,20 @@ export default function OrdersPage() {
                         )}`}
                       >
                         {getStatusIcon(order.statut)}
-                        <span className="ml-1">{getStatusLabel(order.statut)}</span>
+                        <span className="ml-1">{getStatusLabelLocal(order.statut)}</span>
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => handleViewDetails(order.id)}
-                        className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"
-                        title="Voir détails"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </button>
+                      <div className="flex items-center justify-end space-x-2">
+                        {getActionButton(order)}
+                        <button
+                          onClick={() => handleViewDetails(order.id)}
+                          className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"
+                          title="Voir détails"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -480,13 +562,16 @@ export default function OrdersPage() {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => handleViewDetails(order.id)}
-                  className="w-full flex items-center justify-center px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm"
-                >
-                  <Eye className="h-4 w-4 mr-2" />
-                  Voir détails
-                </button>
+                <div className="space-y-2">
+                  {getActionButton(order, true)}
+                  <button
+                    onClick={() => handleViewDetails(order.id)}
+                    className="w-full flex items-center justify-center px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Voir détails
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -605,7 +690,124 @@ export default function OrdersPage() {
         commandeId={selectedOrderId}
         isOpen={isSidebarOpen}
         onClose={handleCloseSidebar}
+        onStatusUpdate={handleStatusUpdateFromSidebar}
       />
+
+      {/* Modal de confirmation de mise à jour de statut */}
+      {isConfirmModalOpen && pendingStatusUpdate && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          style={{ animation: 'fadeIn 0.2s ease-out' }}
+        >
+          <div 
+            className="bg-white rounded-lg shadow-xl max-w-md w-full p-6"
+            style={{ animation: 'slideUp 0.3s ease-out' }}
+          >
+            {/* En-tête du modal */}
+            <div className="flex items-start mb-4">
+              <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${
+                pendingStatusUpdate.newStatus === 'expedie' 
+                  ? 'bg-indigo-100' 
+                  : 'bg-green-100'
+              }`}>
+                {pendingStatusUpdate.newStatus === 'expedie' ? (
+                  <Truck className={`h-6 w-6 text-indigo-600`} />
+                ) : (
+                  <CheckCircle className={`h-6 w-6 text-green-600`} />
+                )}
+              </div>
+              <div className="ml-4 flex-1">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Confirmer le changement de statut
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  {pendingStatusUpdate.newStatus === 'expedie' 
+                    ? 'La commande sera marquée comme expédiée'
+                    : 'La commande sera marquée comme livrée'}
+                </p>
+              </div>
+            </div>
+
+            {/* Contenu du modal */}
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Statut actuel</p>
+                  <p className="text-base font-semibold text-gray-900 mt-1">
+                    {getStatusLabel(pendingStatusUpdate.currentStatus)}
+                  </p>
+                </div>
+                <div className="mx-4">
+                  <svg className="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Nouveau statut</p>
+                  <p className={`text-base font-semibold mt-1 ${
+                    pendingStatusUpdate.newStatus === 'expedie' 
+                      ? 'text-indigo-600' 
+                      : 'text-green-600'
+                  }`}>
+                    {getStatusLabel(pendingStatusUpdate.newStatus)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Message d'information */}
+            <div className="flex items-start mb-6">
+              <AlertCircle className="h-5 w-5 text-yellow-500 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-gray-600 ml-2">
+                {pendingStatusUpdate.newStatus === 'expedie' 
+                  ? 'Le client sera informé que sa commande a été expédiée.'
+                  : 'Cette action marquera la commande comme terminée.'}
+              </p>
+            </div>
+
+            {/* Boutons d'action */}
+            <div className="flex space-x-3">
+              <button
+                onClick={closeConfirmModal}
+                className="flex-1 px-4 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={confirmStatusUpdate}
+                className={`flex-1 px-4 py-2.5 text-white rounded-lg transition-colors font-medium text-sm ${
+                  pendingStatusUpdate.newStatus === 'expedie'
+                    ? 'bg-indigo-600 hover:bg-indigo-700'
+                    : 'bg-green-600 hover:bg-green-700'
+                }`}
+              >
+                {pendingStatusUpdate.newStatus === 'expedie' ? 'Expédier' : 'Livrer'}
+              </button>
+            </div>
+          </div>
+
+          <style jsx>{`
+            @keyframes fadeIn {
+              from {
+                opacity: 0;
+              }
+              to {
+                opacity: 1;
+              }
+            }
+            @keyframes slideUp {
+              from {
+                opacity: 0;
+                transform: translateY(20px);
+              }
+              to {
+                opacity: 1;
+                transform: translateY(0);
+              }
+            }
+          `}</style>
+        </div>
+      )}
     </div>
   );
 }

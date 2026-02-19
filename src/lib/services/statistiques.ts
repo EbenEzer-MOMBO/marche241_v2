@@ -63,7 +63,7 @@ export async function getStatistiquesDashboard(
     const caParJour = new Map<string, number>();
     
     // Statuts considérés comme "confirmés" pour le CA
-    const statutsConfirmes = ['confirmee', 'en_preparation', 'expediee', 'livree'];
+    const statutsConfirmes = ['confirmee', 'en_preparation', 'expedie', 'livree'];
     
     commandesPeriode.forEach(cmd => {
       // Ne compter que les commandes confirmées (pas en attente ni annulées)

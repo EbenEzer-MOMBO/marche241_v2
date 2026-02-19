@@ -201,13 +201,34 @@ export async function modifierCommande(
 }
 
 /**
+ * Mettre à jour le statut d'une commande
+ * @param commandeId - ID de la commande
+ * @param statut - Nouveau statut de la commande
+ * @returns Promise<Commande>
+ */
+export async function modifierStatutCommande(
+  commandeId: number,
+  statut: string
+): Promise<Commande> {
+  try {
+    const response = await api.patch<CommandeResponse>(`/commandes/${commandeId}/status`, {
+      statut
+    });
+    return response.commande;
+  } catch (error) {
+    console.error('Erreur lors de la modification du statut de la commande:', error);
+    throw new Error('Impossible de modifier le statut de la commande. Veuillez réessayer.');
+  }
+}
+
+/**
  * Annuler une commande
  * @param commandeId - ID de la commande
  * @returns Promise<Commande>
  */
 export async function annulerCommande(commandeId: number): Promise<Commande> {
   try {
-    const response = await api.put<CommandeResponse>(`/commandes/${commandeId}`, {
+    const response = await api.put<CommandeResponse>(`/commandes/${commandeId}/status`, {
       statut: 'annulee'
     });
     return response.commande;

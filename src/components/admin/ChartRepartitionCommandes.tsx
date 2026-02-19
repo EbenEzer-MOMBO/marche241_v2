@@ -2,28 +2,19 @@
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { StatistiqueCommandes } from '@/lib/services/statistiques';
+import { ORDER_STATUS_CONFIG, getStatusColor, getStatusLabel } from '@/lib/constants/order-status';
 
 interface ChartRepartitionCommandesProps {
   data: StatistiqueCommandes[];
 }
 
-// Couleurs et labels pour chaque statut
-const STATUT_CONFIG: Record<string, { label: string; color: string }> = {
-  'en_attente': { label: 'En attente', color: '#fbbf24' },
-  'confirmee': { label: 'Confirmée', color: '#3b82f6' },
-  'en_preparation': { label: 'En préparation', color: '#8b5cf6' },
-  'expediee': { label: 'Expédiée', color: '#f97316' },
-  'livree': { label: 'Livrée', color: '#10b981' },
-  'annulee': { label: 'Annulée', color: '#ef4444' }
-};
-
 export function ChartRepartitionCommandes({ data }: ChartRepartitionCommandesProps) {
   // Formater les données pour le graphique
   const chartData = data.map(item => ({
-    name: STATUT_CONFIG[item.statut]?.label || item.statut,
+    name: getStatusLabel(item.statut),
     value: item.nombre,
     pourcentage: item.pourcentage,
-    color: STATUT_CONFIG[item.statut]?.color || '#6b7280'
+    color: getStatusColor(item.statut)
   }));
 
   // Trier par nombre décroissant
