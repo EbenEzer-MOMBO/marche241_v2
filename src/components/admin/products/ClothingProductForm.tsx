@@ -164,6 +164,7 @@ export function ClothingProductForm({
       });
       setErrors({});
       setIsDirty(false);
+      setUploadedImageUrls([]);
     } else {
       // Pré-sélectionner une catégorie vêtements si elle existe
       const clothingCategory = categories.find(cat => 
@@ -171,11 +172,11 @@ export function ClothingProductForm({
         cat.nom.toLowerCase().includes('vetement') ||
         cat.nom.toLowerCase().includes('mode')
       );
-      if (clothingCategory && formData.categorie_id === 0) {
+      if (clothingCategory && formData.categorie_id === 0 && !productToEdit) {
         setFormData(prev => ({ ...prev, categorie_id: clothingCategory.id }));
       }
     }
-  }, [isOpen, categories]);
+  }, [isOpen, categories, productToEdit]);
 
   if (!isOpen || !category) return null;
 
@@ -432,8 +433,8 @@ export function ClothingProductForm({
                   </div>
                   <span className={`text-sm font-medium hidden sm:inline ${
                     currentSection === section.id
-                      ? 'text-white'
-                      : 'text-purple-100'
+                      ? 'text-purple-800'
+                      : 'text-purple-300'
                   }`}>
                     {section.label}
                   </span>

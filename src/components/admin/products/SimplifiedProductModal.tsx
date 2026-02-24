@@ -30,10 +30,15 @@ export function SimplifiedProductModal({
   boutiqueSlug,
   productToEdit
 }: SimplifiedProductModalProps) {
+  // Créer une clé unique qui change quand la catégorie change
+  // Cela forcera React à réinitialiser complètement les composants
+  const modalKey = `${category}-${isOpen ? 'open' : 'closed'}-${productToEdit?.id || 'new'}`;
+
   // Si c'est un vêtement, utiliser le formulaire spécialisé
   if (category === 'vetements') {
     return (
       <ClothingProductForm
+        key={modalKey}
         isOpen={isOpen}
         onClose={onClose}
         category={category}
@@ -51,6 +56,7 @@ export function SimplifiedProductModal({
   if (category === 'chaussures') {
     return (
       <ShoesProductForm
+        key={modalKey}
         isOpen={isOpen}
         onClose={onClose}
         category={category}
@@ -163,33 +169,9 @@ export function SimplifiedProductModal({
     };
 
     // Construire les variants selon la catégorie
-    if (category === 'vetements' as ProductCategory) {
-      const tailles = specificFields.tailles || [];
-      const couleurs = specificFields.couleurs || [];
-      
-      tailles.forEach((taille: string) => {
-        couleurs.forEach((couleur: string) => {
-          variants.variants.push({
-            nom: `${taille} - ${couleur}`,
-            prix: formData.prix,
-            stock: Math.floor(parseInt(formData.quantite_stock) / (tailles.length * couleurs.length))
-          });
-        });
-      });
-    } else if (category === 'chaussures') {
-      const pointures = specificFields.pointures || [];
-      const couleurs = specificFields.couleurs || [];
-      
-      pointures.forEach((pointure: string) => {
-        couleurs.forEach((couleur: string) => {
-          variants.variants.push({
-            nom: `${pointure} - ${couleur}`,
-            prix: formData.prix,
-            stock: Math.floor(parseInt(formData.quantite_stock) / (pointures.length * couleurs.length))
-          });
-        });
-      });
-    } else if (category === 'electronique' && specificFields.couleurs) {
+    // Note: vetements et chaussures ont leurs propres formulaires (ClothingProductForm, ShoesProductForm)
+    // donc cette fonction ne gère que les autres catégories
+    if (category === 'electronique' && specificFields.couleurs) {
       const couleurs = specificFields.couleurs || [];
       couleurs.forEach((couleur: string) => {
         variants.variants.push({

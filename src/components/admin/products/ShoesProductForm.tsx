@@ -151,16 +151,17 @@ export function ShoesProductForm({
       });
       setErrors({});
       setIsDirty(false);
+      setUploadedImageUrls([]);
     } else {
       const shoesCategory = categories.find(cat => 
         cat.nom.toLowerCase().includes('chaussure') || 
         cat.nom.toLowerCase().includes('shoe')
       );
-      if (shoesCategory && formData.categorie_id === 0) {
+      if (shoesCategory && formData.categorie_id === 0 && !productToEdit) {
         setFormData(prev => ({ ...prev, categorie_id: shoesCategory.id }));
       }
     }
-  }, [isOpen, categories]);
+  }, [isOpen, categories, productToEdit]);
 
   if (!isOpen || !category) return null;
 
@@ -467,30 +468,23 @@ export function ShoesProductForm({
   };
 
   const renderSection1 = () => (
-    <div className="space-y-6">
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex items-start space-x-3">
-          <div className={`${categoryInfo.bgColor} ${categoryInfo.color} p-2 rounded-lg`}>
-            {categoryInfo.icon}
-          </div>
-          <div>
-            <h3 className="font-semibold text-gray-900">Informations de base</h3>
-            <p className="text-sm text-gray-600 mt-1">
-              Renseignez les informations principales de votre paire de chaussures
-            </p>
-          </div>
-        </div>
-      </div>
+    <div className="space-y-4">
+      <h3 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
+        <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 font-bold text-sm">1</span>
+        Informations de base
+      </h3>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Nom du produit *
+          Nom du produit <span className="text-red-500">*</span>
         </label>
         <input
           type="text"
           value={formData.nom}
           onChange={(e) => handleInputChange('nom', e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+            errors.nom ? 'border-red-500' : 'border-gray-300'
+          }`}
           placeholder="Ex: Nike Air Max 2024"
         />
         {errors.nom && <p className="mt-1 text-sm text-red-600">{errors.nom}</p>}
@@ -504,437 +498,497 @@ export function ShoesProductForm({
           value={formData.description}
           onChange={(e) => handleInputChange('description', e.target.value)}
           rows={4}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
           placeholder="Décrivez les caractéristiques et avantages de vos chaussures..."
         />
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Catégorie *
-        </label>
-        <select
-          value={formData.categorie_id}
-          onChange={(e) => handleInputChange('categorie_id', parseInt(e.target.value))}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        >
-          <option value={0}>Sélectionner une catégorie</option>
-          {categories.map(cat => (
-            <option key={cat.id} value={cat.id}>{cat.nom}</option>
-          ))}
-        </select>
-        {errors.categorie_id && <p className="mt-1 text-sm text-red-600">{errors.categorie_id}</p>}
-      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Catégorie <span className="text-red-500">*</span>
+          </label>
+          <select
+            value={formData.categorie_id}
+            onChange={(e) => handleInputChange('categorie_id', parseInt(e.target.value))}
+            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+              errors.categorie_id ? 'border-red-500' : 'border-gray-300'
+            }`}
+          >
+            <option value={0}>Sélectionner une catégorie</option>
+            {categories.map(cat => (
+              <option key={cat.id} value={cat.id}>{cat.nom}</option>
+            ))}
+          </select>
+          {errors.categorie_id && <p className="mt-1 text-sm text-red-600">{errors.categorie_id}</p>}
+        </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Statut
-        </label>
-        <select
-          value={formData.statut}
-          onChange={(e) => handleInputChange('statut', e.target.value as 'actif' | 'inactif' | 'brouillon')}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        >
-          <option value="actif">Actif</option>
-          <option value="inactif">Inactif</option>
-          <option value="brouillon">Brouillon</option>
-        </select>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Statut <span className="text-red-500">*</span>
+          </label>
+          <select
+            value={formData.statut}
+            onChange={(e) => handleInputChange('statut', e.target.value as 'actif' | 'inactif' | 'brouillon')}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="actif">Actif</option>
+            <option value="inactif">Inactif</option>
+            <option value="brouillon">Brouillon</option>
+          </select>
+        </div>
       </div>
     </div>
   );
 
   const renderSection2 = () => (
-    <div className="space-y-6">
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex items-start space-x-3">
-          <ImageIcon className="h-6 w-6 text-blue-600 flex-shrink-0 mt-0.5" />
-          <div>
-            <h3 className="font-semibold text-gray-900">Images du produit</h3>
-            <p className="text-sm text-gray-600 mt-1">
-              Ajoutez des photos de vos chaussures (la première sera l&apos;image principale)
-            </p>
-          </div>
-        </div>
+    <div className="space-y-4">
+      <h3 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
+        <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 font-bold text-sm">2</span>
+        Images du produit
+      </h3>
+
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <p className="text-sm text-blue-800">
+          <span className="font-semibold">Important :</span> Au moins une image est requise. La première image sera l'image principale.
+        </p>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-3">
-          Images * {isUploadingImages && <span className="text-blue-600">(Upload en cours...)</span>}
-        </label>
-        
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
+      {errors.images && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          {errors.images}
+        </div>
+      )}
+
+      {formData.images.length > 0 && (
+        <div className="grid grid-cols-3 gap-3">
           {formData.images.map((image, index) => (
-            <div key={index} className="relative group aspect-square">
+            <div key={index} className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden">
               <Image
                 src={image}
                 alt={`Image ${index + 1}`}
                 fill
-                className="object-cover rounded-lg"
+                className="object-cover"
               />
-              
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity rounded-lg">
-                <div className="absolute bottom-2 right-2 flex gap-1">
+              {index === 0 && (
+                <div className="absolute top-2 left-2 px-2 py-1 bg-blue-600 text-white text-xs rounded-md font-medium">
+                  Principale
+                </div>
+              )}
+              {/* Boutons toujours visibles sur mobile, hover sur desktop */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent sm:bg-black/0 sm:hover:bg-black/50 transition-all flex items-end sm:items-center justify-center gap-2 pb-2 sm:pb-0">
+                <div className="flex items-center gap-2">
                   {index > 0 && (
                     <button
                       type="button"
                       onClick={() => moveImage(index, 'up')}
-                      className="p-1.5 bg-white/90 hover:bg-white rounded shadow-lg transition-colors"
+                      className="p-2 bg-white text-gray-700 rounded-lg hover:bg-gray-100 shadow-lg"
+                      title="Déplacer à gauche"
                     >
-                      <ArrowLeft className="h-3 w-3 text-gray-700" />
-                    </button>
-                  )}
-                  {index < formData.images.length - 1 && (
-                    <button
-                      type="button"
-                      onClick={() => moveImage(index, 'down')}
-                      className="p-1.5 bg-white/90 hover:bg-white rounded shadow-lg transition-colors"
-                    >
-                      <ArrowRight className="h-3 w-3 text-gray-700" />
+                      ←
                     </button>
                   )}
                   <button
                     type="button"
                     onClick={() => removeImage(index)}
-                    className="p-1.5 bg-red-500/90 hover:bg-red-600 rounded shadow-lg transition-colors"
+                    className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 shadow-lg"
                   >
-                    <Trash2 className="h-3 w-3 text-white" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
+                  {index < formData.images.length - 1 && (
+                    <button
+                      type="button"
+                      onClick={() => moveImage(index, 'down')}
+                      className="p-2 bg-white text-gray-700 rounded-lg hover:bg-gray-100 shadow-lg"
+                      title="Déplacer à droite"
+                    >
+                      →
+                    </button>
+                  )}
                 </div>
               </div>
-              
-              {index === 0 && (
-                <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">
-                  Principale
-                </div>
-              )}
             </div>
           ))}
         </div>
+      )}
 
-        <label className="flex items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 transition-colors">
-          <div className="flex flex-col items-center">
-            <Upload className="h-8 w-8 text-gray-400 mb-2" />
-            <span className="text-sm text-gray-600">Cliquer pour ajouter des images</span>
-          </div>
-          <input
-            type="file"
-            multiple
-            accept="image/*"
-            onChange={handleImageUpload}
-            className="hidden"
-          />
-        </label>
-        {errors.images && <p className="mt-1 text-sm text-red-600">{errors.images}</p>}
-      </div>
+      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400 transition-colors bg-gray-50">
+        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+          <Upload className="h-8 w-8 text-gray-400 mb-2" />
+          <p className="text-sm text-gray-600">
+            <span className="font-semibold">Cliquez pour ajouter</span> ou glissez-déposez
+          </p>
+          <p className="text-xs text-gray-500 mt-1">PNG, JPG, WEBP jusqu'à 5MB</p>
+        </div>
+        <input
+          type="file"
+          multiple
+          accept="image/*"
+          onChange={handleImageUpload}
+          className="hidden"
+        />
+      </label>
     </div>
   );
 
   const renderSection3 = () => (
-    <div className="space-y-6">
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex items-start space-x-3">
-          <Plus className="h-6 w-6 text-blue-600 flex-shrink-0 mt-0.5" />
-          <div>
-            <h3 className="font-semibold text-gray-900">Variants de chaussures</h3>
-            <p className="text-sm text-gray-600 mt-1">
-              Définissez les différentes couleurs, pointures et prix de vos chaussures
-            </p>
-          </div>
-        </div>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
+          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 font-bold text-sm">3</span>
+          Variants de chaussures
+        </h3>
+        <button
+          type="button"
+          onClick={addVariant}
+          className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-medium"
+        >
+          <Plus className="h-4 w-4" />
+          <span className="hidden sm:inline">Ajouter un variant</span>
+          <span className="sm:hidden">Ajouter</span>
+        </button>
       </div>
 
-      <div className="space-y-4">
-        {formData.variants.map((variant, index) => {
-          const usedImages = formData.variants
-            .filter((_, i) => i !== index)
-            .map(v => v.image)
-            .filter(Boolean);
+      {errors.variants && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          {errors.variants}
+        </div>
+      )}
 
-          const stockTotal = variant.pointures?.reduce((sum: number, p: { pointure: string; stock: number }) => sum + p.stock, 0) || 0;
+      {formData.variants.length === 0 ? (
+        <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+          <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+          <p className="text-gray-600 mb-4">Aucun variant ajouté</p>
+          <button
+            type="button"
+            onClick={addVariant}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Ajouter votre premier variant
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {formData.variants.map((variant, index) => {
+            const usedImages = formData.variants
+              .filter((_, i) => i !== index)
+              .map(v => v.image)
+              .filter(Boolean);
 
-          return (
-            <div key={variant.id} className="border border-gray-200 rounded-lg p-4 space-y-4">
-              <div className="flex justify-between items-center">
-                <h4 className="font-medium text-gray-900">Variant {index + 1}</h4>
-                <button
-                  type="button"
-                  onClick={() => removeVariant(index)}
-                  className="text-red-600 hover:text-red-700 p-1"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
+            const stockTotal = variant.pointures?.reduce((sum: number, p: { pointure: string; stock: number }) => sum + p.stock, 0) || 0;
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Image du variant
-                </label>
-                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                  {uploadedImageUrls.map((url, imgIndex) => {
-                    const isSelected = variant.image === url;
-                    const isUsed = usedImages.includes(url);
-                    
-                    return (
-                      <button
-                        key={imgIndex}
-                        type="button"
-                        onClick={() => !isUsed && updateVariant(index, 'image', url)}
-                        disabled={isUsed}
-                        className={`relative aspect-square rounded-lg overflow-hidden transition-all ${
-                          isSelected 
-                            ? 'ring-4 ring-blue-600 ring-offset-2' 
-                            : isUsed 
-                            ? 'opacity-40 cursor-not-allowed' 
-                            : 'hover:ring-2 hover:ring-blue-300'
-                        }`}
-                      >
-                        <Image
-                          src={url}
-                          alt={`Image ${imgIndex + 1}`}
-                          fill
-                          className="object-cover"
-                        />
-                        {isSelected && (
-                          <div className="absolute inset-0 bg-blue-600/30 flex items-center justify-center">
-                            <Check className="h-6 w-6 text-white drop-shadow-lg" strokeWidth={3} />
-                          </div>
-                        )}
-                        {isUsed && (
-                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                            <X className="h-6 w-6 text-white" strokeWidth={3} />
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Couleur *
-                  </label>
-                  <select
-                    value={variant.couleur}
-                    onChange={(e) => updateVariant(index, 'couleur', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            return (
+              <div key={variant.id} className="p-4 border border-gray-200 rounded-lg bg-white shadow-sm">
+                <div className="flex items-start justify-between mb-4">
+                  <h4 className="font-medium text-gray-900">Variant {index + 1}</h4>
+                  <button
+                    type="button"
+                    onClick={() => removeVariant(index)}
+                    className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
                   >
-                    <option value="">Sélectionner</option>
-                    {COULEURS.map(couleur => (
-                      <option key={couleur} value={couleur}>{couleur}</option>
-                    ))}
-                  </select>
-                  {errors[`variant_${index}_couleur`] && (
-                    <p className="mt-1 text-sm text-red-600">{errors[`variant_${index}_couleur`]}</p>
-                  )}
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Pointures disponibles *
-                </label>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {POINTURES.map(pointure => {
-                    const isSelected = variant.pointures?.some((p: { pointure: string; stock: number }) => p.pointure === pointure);
-                    return (
-                      <button
-                        key={pointure}
-                        type="button"
-                        onClick={() => togglePointure(index, pointure)}
-                        className={`px-3 py-1.5 rounded-lg border-2 font-medium transition-all ${
-                          isSelected
-                            ? 'border-blue-600 bg-blue-50 text-blue-700'
-                            : 'border-gray-300 hover:border-blue-300'
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Image du variant (optionnel)
+                    </label>
+                    {uploadedImageUrls.length > 0 ? (
+                      <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                        {uploadedImageUrls.map((url, imgIndex) => {
+                          const isSelected = variant.image === url;
+                          const isUsed = usedImages.includes(url);
+                          
+                          return (
+                            <button
+                              key={imgIndex}
+                              type="button"
+                              onClick={() => !isUsed && updateVariant(index, 'image', url)}
+                              disabled={isUsed}
+                              className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                                isSelected 
+                                  ? 'border-blue-600 ring-4 ring-blue-200' 
+                                  : isUsed 
+                                  ? 'border-gray-300 opacity-40 cursor-not-allowed' 
+                                  : 'border-gray-200 hover:border-gray-400 cursor-pointer'
+                              }`}
+                            >
+                              <Image
+                                src={url}
+                                alt={`Image ${imgIndex + 1}`}
+                                fill
+                                className="object-cover"
+                              />
+                              {isSelected && (
+                                <div className="absolute inset-0 bg-blue-600/20 flex items-center justify-center">
+                                  <div className="bg-blue-600 rounded-full p-1">
+                                    <Check className="h-6 w-6 text-white stroke-[3]" />
+                                  </div>
+                                </div>
+                              )}
+                              {isUsed && (
+                                <div className="absolute inset-0 bg-gray-900/60 flex items-center justify-center">
+                                  <div className="bg-gray-700 rounded-full p-1">
+                                    <X className="h-5 w-5 text-white stroke-[2.5]" />
+                                  </div>
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-gray-500 p-3 bg-gray-50 rounded-lg">
+                        Aucune image disponible. Les images uploadées à l'étape précédente apparaîtront ici.
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Couleur <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={variant.couleur}
+                        onChange={(e) => updateVariant(index, 'couleur', e.target.value)}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                          errors[`variant_${index}_couleur`] ? 'border-red-500' : 'border-gray-300'
                         }`}
                       >
-                        {pointure}
-                      </button>
-                    );
-                  })}
-                </div>
-                {errors[`variant_${index}_pointures`] && (
-                  <p className="mt-1 text-sm text-red-600">{errors[`variant_${index}_pointures`]}</p>
-                )}
-
-                {variant.pointures && variant.pointures.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    <p className="text-sm font-medium text-gray-700">Stock par pointure:</p>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {variant.pointures.map((p: { pointure: string; stock: number }, pIdx: number) => (
-                        <div key={pIdx} className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-600 w-8">{p.pointure}:</span>
-                          <input
-                            type="number"
-                            min="0"
-                            value={p.stock}
-                            onChange={(e) => updatePointureStock(index, p.pointure, parseInt(e.target.value) || 0)}
-                            className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-2 p-2 bg-blue-50 rounded">
-                      <span className="text-sm font-medium text-blue-900">
-                        Stock total: {stockTotal} paires
-                      </span>
+                        <option value="">Sélectionner</option>
+                        {COULEURS.map(couleur => (
+                          <option key={couleur} value={couleur}>{couleur}</option>
+                        ))}
+                      </select>
+                      {errors[`variant_${index}_couleur`] && (
+                        <p className="mt-1 text-sm text-red-600">{errors[`variant_${index}_couleur`]}</p>
+                      )}
                     </div>
                   </div>
-                )}
-              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Prix (FCFA) *
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={variant.prix || ''}
-                    onChange={(e) => updateVariant(index, 'prix', parseFloat(e.target.value) || 0)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="25000"
-                  />
-                  {errors[`variant_${index}_prix`] && (
-                    <p className="mt-1 text-sm text-red-600">{errors[`variant_${index}_prix`]}</p>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Pointures disponibles <span className="text-red-500">*</span>
+                    </label>
+                    <div className="flex flex-wrap gap-2 p-3 border border-gray-300 rounded-lg bg-gray-50 min-h-[60px]">
+                      {POINTURES.map(pointure => {
+                        const isSelected = variant.pointures?.some((p: { pointure: string; stock: number }) => p.pointure === pointure);
+                        return (
+                          <button
+                            key={pointure}
+                            type="button"
+                            onClick={() => togglePointure(index, pointure)}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                              isSelected
+                                ? 'bg-blue-600 text-white border-2 border-blue-600'
+                                : 'bg-white text-gray-700 border-2 border-gray-300 hover:border-blue-400'
+                            }`}
+                          >
+                            {pointure}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {errors[`variant_${index}_pointures`] && (
+                      <p className="mt-1 text-sm text-red-600">{errors[`variant_${index}_pointures`]}</p>
+                    )}
+                  </div>
+
+                  {variant.pointures && variant.pointures.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Quantité en stock par pointure <span className="text-red-500">*</span>
+                      </label>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 border border-gray-300 rounded-lg bg-white">
+                        {variant.pointures.map((p: { pointure: string; stock: number }, pIdx: number) => (
+                          <div key={pIdx} className="flex flex-col">
+                            <label className="text-xs font-medium text-gray-600 mb-1">
+                              {p.pointure}
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={p.stock}
+                              onChange={(e) => updatePointureStock(index, p.pointure, parseInt(e.target.value) || 0)}
+                              className="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Stock total: {stockTotal} paires
+                      </p>
+                    </div>
                   )}
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Prix promo (FCFA)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={variant.prix_promo || ''}
-                    onChange={(e) => updateVariant(index, 'prix_promo', parseFloat(e.target.value) || undefined)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="20000"
-                  />
-                  {errors[`variant_${index}_prix_promo`] && (
-                    <p className="mt-1 text-sm text-red-600">{errors[`variant_${index}_prix_promo`]}</p>
-                  )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Prix (FCFA) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={variant.prix || ''}
+                        onChange={(e) => updateVariant(index, 'prix', parseFloat(e.target.value) || 0)}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                          errors[`variant_${index}_prix`] ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        placeholder="25000"
+                      />
+                      {errors[`variant_${index}_prix`] && (
+                        <p className="mt-1 text-sm text-red-600">{errors[`variant_${index}_prix`]}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Prix promotionnel (FCFA) - Optionnel
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={variant.prix_promo || ''}
+                        onChange={(e) => updateVariant(index, 'prix_promo', parseFloat(e.target.value) || undefined)}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                          errors[`variant_${index}_prix_promo`] ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        placeholder="20000"
+                      />
+                      {errors[`variant_${index}_prix_promo`] && (
+                        <p className="mt-1 text-sm text-red-600">{errors[`variant_${index}_prix_promo`]}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <button
-        type="button"
-        onClick={addVariant}
-        className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-colors flex items-center justify-center gap-2"
-      >
-        <Plus className="h-5 w-5" />
-        <span className="hidden sm:inline">Ajouter un variant</span>
-        <span className="sm:hidden">Ajouter</span>
-      </button>
-      {errors.variants && <p className="text-sm text-red-600">{errors.variants}</p>}
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 
   const renderSection4 = () => (
-    <div className="space-y-6">
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex items-start space-x-3">
-          <Plus className="h-6 w-6 text-blue-600 flex-shrink-0 mt-0.5" />
-          <div>
-            <h3 className="font-semibold text-gray-900">Personnalisations (optionnel)</h3>
-            <p className="text-sm text-gray-600 mt-1">
-              Proposez des options de personnalisation à vos clients
-            </p>
-          </div>
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h3 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
+            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 font-bold text-sm">4</span>
+            Personnalisations (optionnel)
+          </h3>
+          <p className="text-sm text-gray-600 mt-1">
+            Options que vos clients pourront demander
+          </p>
         </div>
+        <button
+          type="button"
+          onClick={addCustomization}
+          className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-medium self-start sm:self-auto"
+        >
+          <Plus className="h-4 w-4" />
+          Ajouter
+        </button>
       </div>
 
-      <div className="space-y-4">
-        {formData.personnalisations.map((custom, index) => (
-          <div key={custom.id} className="border border-gray-200 rounded-lg p-4 space-y-4">
-            <div className="flex justify-between items-center">
-              <h4 className="font-medium text-gray-900">Personnalisation {index + 1}</h4>
-              <button
-                type="button"
-                onClick={() => removeCustomization(index)}
-                className="text-red-600 hover:text-red-700 p-1"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
+      {formData.personnalisations.length === 0 ? (
+        <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+          <p className="text-gray-600 mb-4 text-sm sm:text-base">Aucune personnalisation ajoutée</p>
+          <button
+            type="button"
+            onClick={addCustomization}
+            className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-2 text-sm"
+          >
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Ajouter une personnalisation</span>
+            <span className="sm:hidden">Ajouter</span>
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {formData.personnalisations.map((custom, index) => (
+            <div key={custom.id} className="p-4 border border-gray-200 rounded-lg bg-white">
+              <div className="flex items-start gap-4">
+                <div className="flex-1 space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Libellé <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={custom.libelle}
+                        onChange={(e) => updateCustomization(index, 'libelle', e.target.value)}
+                        placeholder="Ex: Broderie, Gravure..."
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                          errors[`custom_${index}_libelle`] ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                      />
+                      {errors[`custom_${index}_libelle`] && (
+                        <p className="text-red-500 text-xs mt-1">{errors[`custom_${index}_libelle`]}</p>
+                      )}
+                    </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Libellé *
-                </label>
-                <input
-                  type="text"
-                  value={custom.libelle}
-                  onChange={(e) => updateCustomization(index, 'libelle', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  placeholder="Ex: Gravure du nom"
-                />
-                {errors[`custom_${index}_libelle`] && (
-                  <p className="mt-1 text-sm text-red-600">{errors[`custom_${index}_libelle`]}</p>
-                )}
-              </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Type
+                      </label>
+                      <select
+                        value={custom.type}
+                        onChange={(e) => updateCustomization(index, 'type', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="text">Texte</option>
+                        <option value="number">Nombre</option>
+                      </select>
+                    </div>
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Type
-                </label>
-                <select
-                  value={custom.type}
-                  onChange={(e) => updateCustomization(index, 'type', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Prix supplémentaire (FCFA)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={custom.prix_supplementaire || ''}
+                        onChange={(e) => updateCustomization(index, 'prix_supplementaire', parseFloat(e.target.value) || 0)}
+                        placeholder="0"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div className="flex items-end">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={custom.obligatoire}
+                          onChange={(e) => updateCustomization(index, 'obligatoire', e.target.checked)}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <span className="text-sm font-medium text-gray-700">Obligatoire</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => removeCustomization(index)}
+                  className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
                 >
-                  <option value="text">Texte</option>
-                  <option value="number">Nombre</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Prix supplémentaire (FCFA)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={custom.prix_supplementaire || ''}
-                  onChange={(e) => updateCustomization(index, 'prix_supplementaire', parseFloat(e.target.value) || 0)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  placeholder="0"
-                />
-              </div>
-
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={custom.obligatoire}
-                  onChange={(e) => updateCustomization(index, 'obligatoire', e.target.checked)}
-                  className="h-4 w-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-                />
-                <label className="ml-2 text-sm text-gray-700">
-                  Personnalisation obligatoire
-                </label>
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
-
-      <button
-        type="button"
-        onClick={addCustomization}
-        className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-colors flex items-center justify-center gap-2"
-      >
-        <Plus className="h-5 w-5" />
-        <span className="hidden sm:inline">Ajouter une personnalisation</span>
-        <span className="sm:hidden">Ajouter</span>
-      </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 
@@ -949,93 +1003,125 @@ export function ShoesProductForm({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-        <div className={`${categoryInfo.bgColor} ${categoryInfo.color} px-6 py-4 flex justify-between items-center rounded-t-xl`}>
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={onBack}
-              className="p-1 hover:bg-white/20 rounded transition-colors"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">
-                {productToEdit ? 'Modifier' : 'Ajouter'} des chaussures
-              </h2>
-              <p className="text-sm opacity-90 mt-1">
-                Étape {currentSection} sur {SECTIONS.length}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-          >
-            <X className="h-6 w-6" />
-          </button>
-        </div>
-
-        <div className="px-6 py-4 border-b border-gray-200">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full my-8">
+        {/* En-tête */}
+        <div className={`${categoryInfo.bgColor} ${categoryInfo.color} p-6 border-b border-gray-200`}>
           <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={onBack}
+                className="p-2 hover:bg-white/50 rounded-lg transition-colors"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+              <div>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    {productToEdit ? 'Modifier' : 'Ajouter'} des chaussures
+                  </h2>
+                </div>
+                <p className="text-sm text-gray-600 mt-1 ml-12">
+                  {SECTIONS[currentSection - 1].label}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 hover:bg-white/50 rounded-lg transition-colors"
+            >
+              <X className="h-5 w-5 text-gray-600" />
+            </button>
+          </div>
+
+          {/* Indicateur de progression */}
+          <div className="mt-6 flex items-center justify-between">
             {SECTIONS.map((section, index) => (
-              <div key={section.id} className="flex items-center">
-                <div className={`flex items-center ${index > 0 ? 'ml-2' : ''}`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${
-                    currentSection === section.id
-                      ? `${categoryInfo.bgColor} ${categoryInfo.color}`
-                      : currentSection > section.id
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-gray-100 text-gray-400'
-                  }`}>
-                    {section.id}
+              <div key={section.id} className="flex items-center flex-1">
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`flex items-center justify-center w-8 h-8 rounded-full font-bold transition-all ${
+                      currentSection === section.id
+                        ? 'bg-white text-blue-600 shadow-sm ring-2 ring-white'
+                        : currentSection > section.id
+                        ? 'bg-white/70 text-blue-800'
+                        : 'bg-white/30 text-blue-200'
+                    }`}
+                  >
+                    {currentSection > section.id ? (
+                      <Check className="h-5 w-5" />
+                    ) : (
+                      section.id
+                    )}
                   </div>
-                  <span className={`ml-2 text-sm font-medium hidden sm:inline ${
-                    currentSection === section.id ? 'text-gray-900' : 'text-gray-500'
+                  <span className={`text-sm font-medium hidden sm:inline ${
+                    currentSection === section.id
+                      ? 'text-blue-800'
+                      : 'text-blue-300'
                   }`}>
                     {section.label}
                   </span>
                 </div>
                 {index < SECTIONS.length - 1 && (
-                  <div className="w-8 sm:w-16 h-0.5 bg-gray-200 mx-2" />
+                  <div className={`h-0.5 flex-1 mx-2 ${
+                    currentSection > section.id ? 'bg-white' : 'bg-white/30'
+                  }`} />
                 )}
               </div>
             ))}
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-6">
+        {/* Contenu de la section */}
+        <div className="p-6 max-h-[60vh] overflow-y-auto">
           {renderCurrentSection()}
         </div>
 
-        <div className={`px-6 py-4 border-t border-gray-200 flex justify-between items-center ${categoryInfo.bgColor} bg-opacity-10`}>
+        {/* Footer avec navigation */}
+        <div className="p-6 border-t border-gray-200 bg-gray-50 flex gap-3">
+          {currentSection > 1 && (
+            <button
+              type="button"
+              onClick={handlePrevious}
+              className="px-3 sm:px-4 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium flex items-center gap-2"
+            >
+              <ArrowLeft className="h-4 w-4 hidden sm:block" />
+              <span className="hidden sm:inline">Précédent</span>
+              <span className="sm:hidden">←</span>
+            </button>
+          )}
+          
           <button
             type="button"
-            onClick={handlePrevious}
-            disabled={currentSection === 1}
-            className={`px-4 sm:px-6 py-2.5 border-2 rounded-lg font-medium flex items-center gap-2 ${
-              currentSection === 1
-                ? 'border-gray-200 text-gray-400 cursor-not-allowed'
-                : `border-current ${categoryInfo.color} hover:bg-white/50 transition-colors`
-            }`}
+            onClick={onClose}
+            className="px-4 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
           >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">Précédent</span>
-            <span className="sm:hidden">Préc.</span>
+            Annuler
           </button>
-
+          
+          <div className="flex-1" />
+          
           {currentSection < SECTIONS.length ? (
             <button
               type="button"
               onClick={handleNext}
               disabled={isUploadingImages}
-              className={`px-4 sm:px-6 py-2.5 ${categoryInfo.bgColor} ${categoryInfo.color} border-2 border-current rounded-lg hover:opacity-90 transition-opacity font-medium flex items-center gap-2 ${
-                isUploadingImages ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
+              className={`px-3 sm:px-4 py-2.5 ${categoryInfo.bgColor} ${categoryInfo.color} border-2 border-current rounded-lg hover:opacity-90 transition-opacity font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              <span className="hidden sm:inline">Suivant</span>
-              <span className="sm:hidden">Suiv.</span>
-              <ArrowRight className="h-4 w-4" />
+              {isUploadingImages ? (
+                <>
+                  <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+                  <span className="hidden sm:inline">Upload...</span>
+                </>
+              ) : (
+                <>
+                  <span className="hidden sm:inline">Suivant</span>
+                  <span className="sm:hidden">→</span>
+                  <ArrowRight className="h-4 w-4 hidden sm:block" />
+                </>
+              )}
             </button>
           ) : (
             <button
