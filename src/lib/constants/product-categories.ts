@@ -6,6 +6,7 @@
 export type ProductCategory = 
   | 'vetements'
   | 'chaussures'
+  | 'autres'
   | 'electronique'
   | 'beaute'
   | 'bijoux'
@@ -117,6 +118,19 @@ export const PRODUCT_CATEGORIES: Record<ProductCategory, ProductCategoryInfo> = 
           options: ['Homme', 'Femme', 'Unisexe', 'Enfant']
         }
       ]
+    }
+  },
+
+  autres: {
+    id: 'autres',
+    nom: 'Autres',
+    description: 'Produits avec attributs personnalisables',
+    icon: '📦',
+    color: 'text-green-600',
+    bgColor: 'bg-green-50',
+    fields: {
+      base: ['nom', 'prix', 'description', 'images'],
+      specific: []
     }
   },
 

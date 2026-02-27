@@ -80,8 +80,8 @@ export default function ProductDetail({
           // Structure combinée: { variants: ProductVariant[], options: ProductOption[] }
           const variantsList = product.variants.variants;
           if (variantsList.length > 0) {
-            // Sélectionner le premier variant par défaut
-            initialVariants['variant'] = variantsList[0].nom;
+            // Sélectionner le premier variant par défaut (utiliser l'ID)
+            initialVariants['variant'] = variantsList[0].id;
           }
         }
       }
@@ -156,18 +156,22 @@ export default function ProductDetail({
 
   // Préparer les images (produit + variants)
   const prepareProductImages = () => {
-    const baseImages = product.images && product.images.length > 0
-      ? product.images.map(img => getProduitImageUrl(img))
-      : [getProduitImageUrl(product.image_principale)];
-
-    // Ajouter les images des variants
+    // Si le produit a des variants avec images, utiliser uniquement celles-ci
     if (product.variants && typeof product.variants === 'object' && 'variants' in product.variants) {
       const variantImages = product.variants.variants
         .filter((v: any) => v.image)
         .map((v: any) => getProduitImageUrl(v.image));
-
-      return [...baseImages, ...variantImages];
+      
+      // Si des images de variants existent, les utiliser en priorité
+      if (variantImages.length > 0) {
+        return variantImages;
+      }
     }
+
+    // Sinon, utiliser les images du produit
+    const baseImages = product.images && product.images.length > 0
+      ? product.images.map(img => getProduitImageUrl(img))
+      : [getProduitImageUrl(product.image_principale)];
 
     return baseImages;
   };
@@ -177,13 +181,21 @@ export default function ProductDetail({
   // Obtenir le variant sélectionné
   const getSelectedVariant = () => {
     if (product?.variants && typeof product.variants === 'object' && 'variants' in product.variants) {
-      const selectedVariantName = selectedVariants['variant'];
-      if (selectedVariantName) {
-        return product.variants.variants.find((v: any) => v.nom === selectedVariantName);
+      const selectedVariantId = selectedVariants['variant'];
+      if (selectedVariantId) {
+        return product.variants.variants.find((v: any) => v.id === selectedVariantId);
       }
       return product.variants.variants[0]; // Premier variant par défaut
     }
     return null;
+  };
+
+  // Formater le nom d'un variant à partir de ses attributs
+  const getVariantDisplayName = (variant: any) => {
+    if (variant.attributes && Array.isArray(variant.attributes)) {
+      return variant.attributes.map((attr: any) => attr.value).join(' - ');
+    }
+    return variant.nom || 'Variant';
   };
 
   // Obtenir le prix à afficher (prix promo si existe, sinon prix normal)
@@ -226,15 +238,15 @@ export default function ProductDetail({
     return null;
   };
 
-  const handleVariantChange = (variantLabel: string, option: string) => {
+  const handleVariantChange = (variantLabel: string, variantId: string) => {
     setSelectedVariants(prev => ({
       ...prev,
-      [variantLabel]: option
+      [variantLabel]: variantId
     }));
 
     // Sélectionner l'image du variant si elle existe
     if (product?.variants && typeof product.variants === 'object' && 'variants' in product.variants) {
-      const variant = product.variants.variants.find((v: any) => v.nom === option);
+      const variant = product.variants.variants.find((v: any) => v.id === variantId);
       if (variant && variant.image) {
         const variantImageUrl = getProduitImageUrl(variant.image);
         const imageIndex = productImages.indexOf(variantImageUrl);
@@ -307,19 +319,22 @@ export default function ProductDetail({
     if (product?.variants && typeof product.variants === 'object') {
       if ('variants' in product.variants && Array.isArray(product.variants.variants)) {
         const variantsList = product.variants.variants;
-        const selectedVariantName = selectedVariants['variant'];
+        const selectedVariantId = selectedVariants['variant'];
 
-        if (selectedVariantName) {
-          // Trouver le variant sélectionné
-          const selectedVariant = variantsList.find(v => v.nom === selectedVariantName);
+        if (selectedVariantId) {
+          // Trouver le variant sélectionné par ID
+          const selectedVariant = variantsList.find(v => v.id === selectedVariantId);
+          if (selectedVariant && selectedVariant.stock !== undefined) {
+            return selectedVariant.stock;
+          }
           if (selectedVariant && selectedVariant.quantite !== undefined) {
             return selectedVariant.quantite;
           }
         }
 
         // Par défaut, retourner la quantité du premier variant
-        if (variantsList.length > 0 && variantsList[0].quantite !== undefined) {
-          return variantsList[0].quantite;
+        if (variantsList.length > 0) {
+          return variantsList[0].stock || variantsList[0].quantite || 1;
         }
       }
     }
@@ -359,11 +374,14 @@ export default function ProductDetail({
 
       // Ajouter les données du variant si présent
       if (selectedVariant) {
+        const variantName = getVariantDisplayName(selectedVariant);
         cartData.variant = {
-          nom: selectedVariant.nom,
+          id: selectedVariant.id,
+          nom: variantName,
           prix: selectedVariant.prix_promo || selectedVariant.prix,
           prix_original: selectedVariant.prix_promo ? selectedVariant.prix : null,
-          image: selectedVariant.image
+          image: selectedVariant.image,
+          attributes: selectedVariant.attributes
         };
       }
 
@@ -375,7 +393,8 @@ export default function ProductDetail({
       // Construire le message
       let message = `${product.nom} ajouté au panier`;
       if (selectedVariant) {
-        message = `${product.nom} (${selectedVariant.nom}) ajouté au panier`;
+        const variantName = getVariantDisplayName(selectedVariant);
+        message = `${product.nom} (${variantName}) ajouté au panier`;
       }
 
       const isSuccess = await ajouterProduit(
@@ -672,14 +691,15 @@ export default function ProductDetail({
                   <h3 className="text-lg font-semibold text-gray-900 mb-3">Variantes</h3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {product.variants.variants.map((variant: any, idx: number) => {
-                      const isSelected = selectedVariants['variant'] === variant.nom;
-                      const isAvailable = variant.quantite > 0;
+                      const isSelected = selectedVariants['variant'] === variant.id;
+                      const isAvailable = (variant.stock || variant.quantite || 0) > 0;
                       const hasImage = variant.image && variant.image.trim() !== '';
+                      const variantName = getVariantDisplayName(variant);
 
                       return (
                         <button
                           key={idx}
-                          onClick={() => isAvailable && handleVariantChange('variant', variant.nom)}
+                          onClick={() => isAvailable && handleVariantChange('variant', variant.id)}
                           disabled={!isAvailable}
                           className={`relative p-3 border-2 rounded-lg transition-all duration-200 ${isSelected
                             ? 'border-primary bg-primary text-white'
@@ -710,11 +730,10 @@ export default function ProductDetail({
                           )}
 
                           <div className="text-center">
-                            <div className="font-medium">{variant.nom}</div>
+                            <div className="font-medium">{variantName}</div>
                             {(variant.prix || variant.prix_promo) && (
                               <div className="mt-1">
                                 {variant.prix_promo ? (
-                                  // Afficher prix promo + prix normal barré
                                   <div className="space-y-0.5">
                                     <div className={`text-sm font-semibold ${isSelected ? 'text-white' : 'text-primary'}`}>
                                       {formatPrice(variant.prix_promo)}
@@ -726,7 +745,6 @@ export default function ProductDetail({
                                     )}
                                   </div>
                                 ) : (
-                                  // Afficher prix normal uniquement
                                   <div className={`text-sm ${isSelected ? 'text-white/90' : 'text-gray-600'}`}>
                                     {formatPrice(variant.prix)}
                                   </div>
@@ -734,7 +752,7 @@ export default function ProductDetail({
                               </div>
                             )}
                             <div className={`text-xs mt-1 ${isSelected ? 'text-white/80' : isAvailable ? 'text-gray-500' : 'text-gray-400'}`}>
-                              {isAvailable ? `${variant.quantite} disp.` : 'Épuisé'}
+                              {isAvailable ? `${variant.stock || variant.quantite} disp.` : 'Épuisé'}
                             </div>
                           </div>
                         </button>

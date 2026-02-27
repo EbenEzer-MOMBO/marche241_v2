@@ -139,6 +139,7 @@ export function ShoesProductForm({
 
   useEffect(() => {
     if (!isOpen) {
+      // Réinitialiser le formulaire quand on ferme
       setCurrentSection(1);
       setFormData({
         nom: '',
@@ -152,12 +153,27 @@ export function ShoesProductForm({
       setErrors({});
       setIsDirty(false);
       setUploadedImageUrls([]);
-    } else {
+    } else if (isOpen && !productToEdit) {
+      // Mode création : réinitialiser le formulaire et pré-sélectionner la catégorie
+      setCurrentSection(1);
+      setFormData({
+        nom: '',
+        description: '',
+        categorie_id: 0,
+        statut: 'actif',
+        images: [],
+        variants: [],
+        personnalisations: []
+      });
+      setErrors({});
+      setUploadedImageUrls([]);
+      
+      // Pré-sélectionner une catégorie chaussures si elle existe
       const shoesCategory = categories.find(cat => 
         cat.nom.toLowerCase().includes('chaussure') || 
         cat.nom.toLowerCase().includes('shoe')
       );
-      if (shoesCategory && formData.categorie_id === 0 && !productToEdit) {
+      if (shoesCategory) {
         setFormData(prev => ({ ...prev, categorie_id: shoesCategory.id }));
       }
     }
@@ -534,7 +550,6 @@ export function ShoesProductForm({
           >
             <option value="actif">Actif</option>
             <option value="inactif">Inactif</option>
-            <option value="brouillon">Brouillon</option>
           </select>
         </div>
       </div>

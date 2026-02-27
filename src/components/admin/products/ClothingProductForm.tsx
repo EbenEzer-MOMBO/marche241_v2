@@ -59,7 +59,37 @@ const SECTIONS = [
 ];
 
 const TAILLES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', '5XL'];
-const COULEURS = ['Noir', 'Blanc', 'Gris', 'Bleu', 'Rouge', 'Vert', 'Jaune', 'Rose', 'Marron', 'Beige'];
+const COULEURS = [
+  'Noir',
+  'Blanc',
+  'Gris',
+  'Gris sidéral',
+  'Gris anthracite',
+  'Bleu',
+  'Bleu ciel',
+  'Bleu marine',
+  'Bleu nuit',
+  'Rouge',
+  'Rouge carmin',
+  'Vert',
+  'Vert olive',
+  'Jaune',
+  'Rose',
+  'Rose gold',
+  'Marron',
+  'Beige',
+  'Violet',
+  'Orange',
+  'Argent',
+  'Or',
+  'Bronze',
+  'Noir/Blanc',
+  'Blanc/Noir',
+  'Noir/Rouge',
+  'Bleu/Blanc',
+  'Vert/Blanc',
+  'Gris/Noir'
+];
 
 export function ClothingProductForm({
   isOpen,
@@ -151,7 +181,7 @@ export function ClothingProductForm({
 
   useEffect(() => {
     if (!isOpen) {
-      // Réinitialiser le formulaire
+      // Réinitialiser le formulaire quand on ferme
       setCurrentSection(1);
       setFormData({
         nom: '',
@@ -165,14 +195,28 @@ export function ClothingProductForm({
       setErrors({});
       setIsDirty(false);
       setUploadedImageUrls([]);
-    } else {
+    } else if (isOpen && !productToEdit) {
+      // Mode création : réinitialiser le formulaire et pré-sélectionner la catégorie
+      setCurrentSection(1);
+      setFormData({
+        nom: '',
+        description: '',
+        categorie_id: 0,
+        statut: 'actif',
+        images: [],
+        variants: [],
+        personnalisations: []
+      });
+      setErrors({});
+      setUploadedImageUrls([]);
+      
       // Pré-sélectionner une catégorie vêtements si elle existe
       const clothingCategory = categories.find(cat => 
         cat.nom.toLowerCase().includes('vêtement') || 
         cat.nom.toLowerCase().includes('vetement') ||
         cat.nom.toLowerCase().includes('mode')
       );
-      if (clothingCategory && formData.categorie_id === 0 && !productToEdit) {
+      if (clothingCategory) {
         setFormData(prev => ({ ...prev, categorie_id: clothingCategory.id }));
       }
     }
@@ -590,7 +634,6 @@ function Section1BasicInfo({ formData, setFormData, errors, categories }: any) {
           >
             <option value="actif">Actif</option>
             <option value="inactif">Inactif</option>
-            <option value="brouillon">Brouillon</option>
           </select>
         </div>
       </div>

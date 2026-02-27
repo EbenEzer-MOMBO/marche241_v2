@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { ProductCategory, getCategoryInfo } from '@/lib/constants/product-categories';
 import { ClothingProductForm } from './ClothingProductForm';
 import { ShoesProductForm } from './ShoesProductForm';
+import { GenericProductForm } from './GenericProductForm';
 
 interface SimplifiedProductModalProps {
   isOpen: boolean;
@@ -69,6 +70,25 @@ export function SimplifiedProductModal({
       />
     );
   }
+
+  // Pour tous les autres types de produits, utiliser le formulaire générique
+  if (category === 'autres') {
+    return (
+      <GenericProductForm
+        key={modalKey}
+        isOpen={isOpen}
+        onClose={onClose}
+        category={category}
+        onBack={onBack}
+        onSave={onSave}
+        categories={categories}
+        boutiqueId={boutiqueId}
+        boutiqueSlug={boutiqueSlug}
+        productToEdit={productToEdit}
+      />
+    );
+  }
+
   const [formData, setFormData] = useState<any>({
     nom: '',
     prix: '',

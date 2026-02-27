@@ -7,3 +7,4 @@ export { CategorySelectionModal } from './CategorySelectionModal';
 export { SimplifiedProductModal } from './SimplifiedProductModal';
 export { ClothingProductForm } from './ClothingProductForm';
 export { ShoesProductForm } from './ShoesProductForm';
+export { GenericProductForm } from './GenericProductForm';

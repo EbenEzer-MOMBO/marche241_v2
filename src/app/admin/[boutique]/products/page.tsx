@@ -345,6 +345,8 @@ export default function ProductsPage() {
     };
 
     const handleCreateSimplifiedProduct = () => {
+        setProductToEdit(null); // Réinitialiser le produit en cours d'édition
+        setSelectedCategory(null); // Réinitialiser la catégorie
         setShowCategoryModal(true);
     };
 
@@ -356,6 +358,8 @@ export default function ProductsPage() {
 
     const handleBackToCategories = () => {
         setShowSimplifiedModal(false);
+        setProductToEdit(null); // Réinitialiser le produit en cours d'édition
+        setSelectedCategory(null); // Réinitialiser la catégorie
         setShowCategoryModal(true);
     };
 
@@ -408,6 +412,21 @@ export default function ProductsPage() {
                     personnalisations: productData.personnalisations || []
                 };
             } 
+            // Si c'est un produit "autres" (générique) avec la nouvelle structure
+            else if (productData.category === 'autres' && productData.variants && Array.isArray(productData.variants)) {
+                variantsFormatted = {
+                    type: 'autres',
+                    variants: productData.variants.map((v: any) => ({
+                        id: v.id,
+                        image: v.image,
+                        attributes: v.attributes || [],
+                        stock: v.stock || 0,
+                        prix: v.prix,
+                        prix_promo: v.prix_promo
+                    })),
+                    personnalisations: productData.personnalisations || []
+                };
+            } 
             else if (productData.variants && typeof productData.variants === 'object') {
                 variantsFormatted = {
                     type: productData.category || 'generic',
@@ -427,6 +446,8 @@ export default function ProductsPage() {
                     const variantStock = v.pointures?.reduce((pointureSum: number, p: any) => pointureSum + (p.stock || 0), 0) || 0;
                     return sum + variantStock;
                 }, 0);
+            } else if (productData.category === 'autres' && productData.variants && Array.isArray(productData.variants)) {
+                stockTotal = productData.variants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0);
             } else {
                 stockTotal = parseInt(productData.quantite_stock) || 0;
             }
@@ -435,7 +456,7 @@ export default function ProductsPage() {
             let prixPrincipal = 0;
             let prixOriginal = undefined;
             
-            if ((productData.category === 'vetements' || productData.category === 'chaussures') && productData.variants && Array.isArray(productData.variants)) {
+            if ((productData.category === 'vetements' || productData.category === 'chaussures' || productData.category === 'autres') && productData.variants && Array.isArray(productData.variants)) {
                 const variantsAvecPrix = productData.variants.filter((v: any) => v.prix > 0);
                 if (variantsAvecPrix.length > 0) {
                     const prixMin = Math.min(...variantsAvecPrix.map((v: any) => v.prix));
@@ -593,6 +614,7 @@ export default function ProductsPage() {
         setShowCategoryModal(false);
         setShowSimplifiedModal(false);
         setSelectedCategory(null);
+        setProductToEdit(null); // Réinitialiser le produit en cours d'édition
     };
 
     const handleEditProduct = (product: ProduitAffichage) => {
@@ -655,6 +677,33 @@ export default function ProductsPage() {
             // Ouvrir le modal simplifié en mode édition
             setProductToEdit(productData as any);
             setSelectedCategory('chaussures');
+            setShowSimplifiedModal(true);
+            return;
+        }
+
+        // Si c'est un produit "autres" (générique), ouvrir le formulaire simplifié
+        if (productType === 'autres') {
+            // Extraire les données des variants génériques
+            const variantsData = product.variants?.variants || [];
+            const personnalisationsData = product.variants?.personnalisations || [];
+
+            // Préparer les données pour le formulaire générique
+            const productData = {
+                id: product.id,
+                nom: product.nom,
+                description: product.description,
+                categorie_id: product.categorie?.id || 0,
+                statut: product.actif ? 'actif' as const : 'inactif' as const,
+                images: product.images || [],
+                variants: variantsData,
+                personnalisations: personnalisationsData
+            };
+
+            console.log('[handleEditProduct] Données pour formulaire générique:', productData);
+            
+            // Ouvrir le modal simplifié en mode édition
+            setProductToEdit(productData as any);
+            setSelectedCategory('autres');
             setShowSimplifiedModal(true);
             return;
         }
