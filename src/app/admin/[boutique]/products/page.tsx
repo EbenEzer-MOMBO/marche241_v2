@@ -1189,8 +1189,10 @@ export default function ProductsPage() {
                                                             </div>
                                                             <div className="ml-4">
                                                                 <div className="flex items-center">
-                                                                    <div className="text-sm font-medium text-gray-900">{product.nom}</div>
-                                                                    <div className="flex ml-2 space-x-1">
+                                                                    <div className="text-sm font-medium text-gray-900 max-w-[150px] truncate" title={product.nom}>
+                                                                        {product.nom}
+                                                                    </div>
+                                                                    <div className="flex ml-2 space-x-1 flex-shrink-0">
                                                                         {product.est_nouveau && (
                                                                             <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                                                                 Nouveau
@@ -1206,7 +1208,9 @@ export default function ProductsPage() {
                                                                         )}
                                                                     </div>
                                                                 </div>
-                                                                <div className="text-sm text-gray-500">{product.description}</div>
+                                                                <div className="text-sm text-gray-500 max-w-[200px] truncate" title={product.description}>
+                                                                    {product.description}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </td>
@@ -1347,9 +1351,13 @@ export default function ProductsPage() {
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-start justify-between">
-                                                        <div>
-                                                            <h3 className="text-sm font-medium text-gray-900 truncate">{product.nom}</h3>
-                                                            <p className="text-xs text-gray-500 mt-1 line-clamp-2">{product.description}</p>
+                                                        <div className="flex-1 min-w-0 mr-2">
+                                                            <h3 className="text-sm font-medium text-gray-900 truncate" title={product.nom}>
+                                                                {product.nom}
+                                                            </h3>
+                                                            <p className="text-xs text-gray-500 mt-1 line-clamp-2" title={product.description}>
+                                                                {product.description}
+                                                            </p>
                                                             <div className="flex items-center mt-1 space-x-2">
                                                                 <span className="text-sm font-semibold text-gray-900">{formatPrice(product.prix)}</span>
                                                                 {product.prix_original && (

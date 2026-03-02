@@ -139,12 +139,7 @@ export function GenericProductDisplay({
 
   return (
     <div className="space-y-6">
-      {/* En-tête avec icône */}
-      <div className="flex items-center gap-2 text-gray-600">
-        <Package className="h-5 w-5" />
-        <span className="text-sm font-medium">Produit</span>
-      </div>
-
+      
       {/* Sélection des attributs */}
       {attributeTypesArray.map((type) => {
         const values = getAttributeValues(type);

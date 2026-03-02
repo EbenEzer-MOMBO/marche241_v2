@@ -117,11 +117,6 @@ export function ClothingProductDisplay({
 
   return (
     <div className="space-y-6">
-      {/* En-tête avec icône */}
-      <div className="flex items-center gap-2 text-gray-700">
-        <Shirt className="h-5 w-5" />
-        <span className="text-sm font-medium">Vêtement</span>
-      </div>
 
       {/* Sélection de la couleur (PREMIÈRE ÉTAPE) */}
       <div>

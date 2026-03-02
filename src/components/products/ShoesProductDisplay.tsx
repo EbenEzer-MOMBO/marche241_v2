@@ -114,12 +114,7 @@ export function ShoesProductDisplay({
 
   return (
     <div className="space-y-6">
-      {/* En-tête avec icône */}
-      <div className="flex items-center gap-2 text-blue-600">
-        <ShoppingBag className="h-5 w-5" />
-        <span className="text-sm font-medium">Chaussures</span>
-      </div>
-
+      
       {/* Sélection de la couleur */}
       <div>
         <label className="block text-sm font-medium text-gray-900 mb-3">
