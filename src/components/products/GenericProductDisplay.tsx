@@ -90,26 +90,43 @@ export function GenericProductDisplay({
   };
 
   const handleAttributeChange = (type: string, value: string) => {
-    const newAttrs = { ...selectedAttributes, [type]: value };
-    setSelectedAttributes(newAttrs);
+    // Nouvelle sélection pour cet attribut
+    const newAttrs = { [type]: value };
     
-    const matchingVariant = findMatchingVariant(newAttrs);
-    if (matchingVariant) {
-      setSelectedVariant(matchingVariant);
-      setMaxQuantity(matchingVariant.stock);
-      onVariantChange(matchingVariant.id);
+    // Trouver tous les variants qui correspondent à cette nouvelle valeur
+    const matchingVariants = variants.filter(v => {
+      return v.attributes?.some(attr => attr.type === type && attr.value === value);
+    });
+    
+    if (matchingVariants.length > 0) {
+      // Prendre le premier variant correspondant
+      const selectedVar = matchingVariants[0];
+      
+      // Mettre à jour selectedAttributes avec tous les attributs de ce variant
+      const newSelectedAttrs: Record<string, string> = {};
+      selectedVar.attributes?.forEach(attr => {
+        newSelectedAttrs[attr.type] = attr.value;
+      });
+      
+      setSelectedAttributes(newSelectedAttrs);
+      setSelectedVariant(selectedVar);
+      setMaxQuantity(selectedVar.stock);
+      onVariantChange(selectedVar.id);
     }
   };
 
   // Obtenir les valeurs possibles pour un type d'attribut
   const getAttributeValues = (type: string): string[] => {
     const values = new Set<string>();
+    
+    // Collecter toutes les valeurs possibles pour ce type d'attribut
     variants.forEach(v => {
       const attr = v.attributes?.find(a => a.type === type);
       if (attr) {
         values.add(attr.value);
       }
     });
+    
     return Array.from(values);
   };
 
@@ -143,6 +160,10 @@ export function GenericProductDisplay({
       {/* Sélection des attributs */}
       {attributeTypesArray.map((type) => {
         const values = getAttributeValues(type);
+        
+        // Ne pas afficher la section si aucune valeur n'est disponible
+        if (values.length === 0) return null;
+        
         const label = getAttributeLabel(type);
 
         return (
@@ -152,10 +173,12 @@ export function GenericProductDisplay({
             </label>
             <div className="flex flex-wrap gap-2">
               {values.map((value) => {
-                // Vérifier si cette combinaison existe
-                const testAttrs = { ...selectedAttributes, [type]: value };
-                const matchingVariant = findMatchingVariant(testAttrs);
-                const isAvailable = matchingVariant && matchingVariant.stock > 0;
+                // Trouver un variant avec cette valeur
+                const variantWithValue = variants.find(v => 
+                  v.attributes?.some(attr => attr.type === type && attr.value === value)
+                );
+                
+                const isAvailable = variantWithValue && variantWithValue.stock > 0;
                 const isSelected = selectedAttributes[type] === value;
 
                 return (
@@ -167,14 +190,14 @@ export function GenericProductDisplay({
                       !isAvailable
                         ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed line-through'
                         : isSelected
-                        ? 'border-gray-900 bg-gray-900 text-white'
+                        ? 'border-gray-900 bg-gray-900 text-white shadow-md'
                         : 'border-gray-300 bg-white text-gray-700 hover:border-gray-500'
                     }`}
                   >
                     {value}
-                    {isAvailable && matchingVariant && (
+                    {isAvailable && variantWithValue && (
                       <span className="ml-1 text-xs opacity-70">
-                        ({matchingVariant.stock})
+                        ({variantWithValue.stock})
                       </span>
                     )}
                   </button>
@@ -187,11 +210,9 @@ export function GenericProductDisplay({
 
       {/* Stock disponible */}
       {selectedVariant && (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-          <p className="text-sm text-gray-600">
-            Stock disponible : <span className="font-medium text-gray-900">{maxQuantity} unité(s)</span>
-          </p>
-        </div>
+        <p className="text-sm text-gray-600">
+          Stock disponible : <span className="font-medium text-gray-900">{maxQuantity} unité(s)</span>
+        </p>
       )}
 
       {/* Prix */}

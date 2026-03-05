@@ -216,12 +216,42 @@ export default function ProductDetail({
     return null;
   };
 
-  // Formater le nom d'un variant à partir de ses attributs
+  // Formater le nom d'un variant à partir de ses attributs ou propriétés
   const getVariantDisplayName = (variant: any) => {
+    // Pour les produits génériques avec attributs
     if (variant.attributes && Array.isArray(variant.attributes)) {
       return variant.attributes.map((attr: any) => attr.value).join(' - ');
     }
+    
+    // Pour les produits vêtements
+    if (variant.couleur && selectedTaille) {
+      return `${variant.couleur} - Taille ${selectedTaille}`;
+    }
+    
+    // Pour les produits chaussures
+    if (variant.couleur && selectedTaille && productType === 'chaussures') {
+      return `${variant.couleur} - Pointure ${selectedTaille}`;
+    }
+    
+    // Pour les vêtements/chaussures sans taille sélectionnée
+    if (variant.couleur) {
+      return variant.couleur;
+    }
+    
     return variant.nom || 'Variant';
+  };
+
+  // Obtenir l'image du variant sélectionné ou l'image principale du produit
+  const getDisplayImage = () => {
+    const selectedVariant = getSelectedVariant();
+    
+    // Si variant avec image, utiliser celle-ci
+    if (selectedVariant && selectedVariant.image) {
+      return getProduitImageUrl(selectedVariant.image);
+    }
+    
+    // Sinon, utiliser l'image principale du produit
+    return getProduitImageUrl(product.image_principale);
   };
 
   // Obtenir le prix à afficher (prix promo si existe, sinon prix normal)
@@ -508,14 +538,15 @@ export default function ProductDetail({
 
       <FloatingAddToCartButton
         productName={product.nom}
-        price={product.prix}
+        productImage={getDisplayImage()}
+        price={getDisplayPrice()}
         quantity={quantity}
         onAddToCart={handleAddToCart}
         disabled={!product.en_stock}
         loading={isAddingToCart || panierLoading}
       />
 
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-white mb-16">
         {/* Navigation breadcrumb */}
         <div className="bg-gray-50 py-4">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

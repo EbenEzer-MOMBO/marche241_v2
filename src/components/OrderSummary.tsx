@@ -782,7 +782,10 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
                 </div>
               ) : (
                 panier.map((item, index) => {
-                  const imageUrl = item.produit.image_principale || '/article1.webp';
+                  // Utiliser l'image du variant si disponible, sinon l'image du produit
+                  const imageUrl = item.variants_selectionnes?.variant?.image 
+                    || item.produit.image_principale 
+                    || '/article1.webp';
 
                   return (
                     <div key={item.id} className={`flex items-start py-4 ${index < panier.length - 1 ? 'border-b border-gray-200' : ''}`}>
@@ -800,7 +803,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
                         {/* Affichage du variant */}
                         {item.variants_selectionnes?.variant && (
                           <div className="text-sm text-gray-600 mb-1">
-                            Variant: {item.variants_selectionnes.variant.nom}
+                            {item.variants_selectionnes.variant.nom}
                           </div>
                         )}
 
