@@ -49,6 +49,31 @@ interface Commune {
   date_modification: string;
 }
 
+// Fonction utilitaire pour formater les variants en string lisible
+const formatVariantsString = (variants_selectionnes: any): string | undefined => {
+  if (!variants_selectionnes) return undefined;
+  
+  // Si on a un objet variant avec un nom, l'utiliser directement
+  if (variants_selectionnes.variant?.nom) {
+    return variants_selectionnes.variant.nom;
+  }
+  
+  // Sinon, construire à partir des autres propriétés (exclure 'variant')
+  const entries = Object.entries(variants_selectionnes)
+    .filter(([key]) => key !== 'variant')
+    .map(([key, value]) => {
+      // Ne pas afficher les objets complexes
+      if (typeof value === 'object' && value !== null) {
+        return null;
+      }
+      return `${key}: ${value}`;
+    })
+    .filter(Boolean);
+  
+  return entries.length > 0 ? entries.join(', ') : undefined;
+};
+
+
 export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, boutiqueData }: OrderSummaryProps) {
   const params = useParams();
   const boutiqueSlug = params.boutique as string;
@@ -399,11 +424,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
             taxes: commande.commande.taxes
           },
           produits: panier.reduce((acc, item, index) => {
-            const variantsString = item.variants_selectionnes
-              ? Object.entries(item.variants_selectionnes)
-                .map(([key, value]) => `${key}: ${value}`)
-                .join(', ')
-              : undefined;
+            const variantsString = formatVariantsString(item.variants_selectionnes);
 
             acc[index + 1] = {
               id: item.produit_id,
@@ -413,7 +434,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
               sous_total: (item.variants_selectionnes?.variant?.prix || item.produit.prix) * item.quantite,
               variants: item.variants_selectionnes || undefined,
               variants_string: variantsString,
-              image_url: item.produit.image_principale || undefined
+              image_url: item.variants_selectionnes?.variant?.image || item.produit.image_principale || undefined
             };
 
             return acc;
@@ -565,11 +586,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
             taxes: commande.commande.taxes
           },
           produits: panier.reduce((acc, item, index) => {
-            const variantsString = item.variants_selectionnes
-              ? Object.entries(item.variants_selectionnes)
-                .map(([key, value]) => `${key}: ${value}`)
-                .join(', ')
-              : undefined;
+            const variantsString = formatVariantsString(item.variants_selectionnes);
 
             acc[index + 1] = {
               id: item.produit_id,
@@ -579,7 +596,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
               sous_total: (item.variants_selectionnes?.variant?.prix || item.produit.prix) * item.quantite,
               variants: item.variants_selectionnes || undefined,
               variants_string: variantsString,
-              image_url: item.produit.image_principale || undefined
+              image_url: item.variants_selectionnes?.variant?.image || item.produit.image_principale || undefined
             };
 
             return acc;

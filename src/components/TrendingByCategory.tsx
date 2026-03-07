@@ -178,7 +178,7 @@ export default function TrendingByCategory({ boutiqueName }: TrendingByCategoryP
                   href={`/${boutiqueName}/produits?categorie=${categorieData.categorie.slug}`}
                   className="inline-flex items-center border border-primary text-primary px-6 py-3 rounded-lg font-medium hover:bg-primary/90 hover:text-white transition-colors duration-200"
                 >
-                  Afficher tout ({categorieData.produits.length})
+                  Afficher tout
                   <svg
                     className="ml-2 h-4 w-4"
                     fill="none"

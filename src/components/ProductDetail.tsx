@@ -182,24 +182,43 @@ export default function ProductDetail({
 
   // Préparer les images (produit + variants)
   const prepareProductImages = () => {
-    // Si le produit a des variants avec images, utiliser uniquement celles-ci
-    if (product.variants && typeof product.variants === 'object' && 'variants' in product.variants) {
-      const variantImages = product.variants.variants
-        .filter((v: any) => v.image)
-        .map((v: any) => getProduitImageUrl(v.image));
-      
-      // Si des images de variants existent, les utiliser en priorité
-      if (variantImages.length > 0) {
-        return variantImages;
-      }
+    const allImages: string[] = [];
+    
+    // 1. Ajouter l'image principale
+    if (product.image_principale) {
+      allImages.push(getProduitImageUrl(product.image_principale));
     }
-
-    // Sinon, utiliser les images du produit
-    const baseImages = product.images && product.images.length > 0
-      ? product.images.map(img => getProduitImageUrl(img))
-      : [getProduitImageUrl(product.image_principale)];
-
-    return baseImages;
+    
+    // 2. Ajouter toutes les images du tableau images
+    if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+      product.images.forEach(img => {
+        const imageUrl = getProduitImageUrl(img);
+        // Éviter les doublons avec l'image principale
+        if (!allImages.includes(imageUrl)) {
+          allImages.push(imageUrl);
+        }
+      });
+    }
+    
+    // 3. Ajouter les images des variants
+    if (product.variants && typeof product.variants === 'object' && 'variants' in product.variants) {
+      product.variants.variants
+        .filter((v: any) => v.image)
+        .forEach((v: any) => {
+          const variantImageUrl = getProduitImageUrl(v.image);
+          // Éviter les doublons
+          if (!allImages.includes(variantImageUrl)) {
+            allImages.push(variantImageUrl);
+          }
+        });
+    }
+    
+    // Si aucune image n'a été trouvée, utiliser l'image principale comme fallback
+    if (allImages.length === 0 && product.image_principale) {
+      allImages.push(getProduitImageUrl(product.image_principale));
+    }
+    
+    return allImages;
   };
 
   const productImages = prepareProductImages();

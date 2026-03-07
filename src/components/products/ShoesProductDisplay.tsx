@@ -250,7 +250,7 @@ export function ShoesProductDisplay({
       <button
         onClick={onAddToCart}
         disabled={isAddingToCart || !selectedVariant || !selectedSize || maxQuantity === 0}
-        className="hidden lg:block w-full py-4 px-6 bg-blue-600 text-white rounded-lg font-medium text-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+        className="hidden lg:block w-full py-4 px-6 bg-gray-900 text-white rounded-lg font-medium text-lg hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
       >
         {isAddingToCart ? 'Ajout en cours...' : 'Ajouter au panier'}
       </button>

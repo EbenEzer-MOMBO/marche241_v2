@@ -953,22 +953,14 @@ export default function ProductsPage() {
                         </div>
 
                         <button
-                            onClick={handleCreateProduct}
+                            onClick={handleCreateSimplifiedProduct}
                             className="flex items-center px-3 lg:px-4 py-1.5 lg:py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm lg:text-base flex-shrink-0 ml-2"
                         >
                             <Plus className="h-3 w-3 lg:h-4 lg:w-4 mr-1 lg:mr-2" />
-                            <span className="hidden sm:inline">Ancien modal</span>
+                            <span className="hidden sm:inline">Ajouter un produit</span>
                             <span className="sm:hidden">Créer</span>
                         </button>
                         
-                        <button
-                            onClick={handleCreateSimplifiedProduct}
-                            className="flex items-center px-3 lg:px-4 py-1.5 lg:py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all text-sm lg:text-base flex-shrink-0 ml-2 shadow-lg"
-                        >
-                            <Plus className="h-3 w-3 lg:h-4 lg:w-4 mr-1 lg:mr-2" />
-                            <span className="hidden sm:inline">✨ Nouveau</span>
-                            <span className="sm:hidden">✨</span>
-                        </button>
                     </div>
                 </div>
 

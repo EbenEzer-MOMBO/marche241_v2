@@ -78,13 +78,13 @@ export default function HeroSection({ boutiqueName }: HeroSectionProps) {
           
           {/* Logo rond centré sur la bordure inférieure de la bannière */}
           <div className="absolute -bottom-12 sm:-bottom-14 left-1/2 transform -translate-x-1/2 z-10">
-            <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 bg-white rounded-full shadow-xl flex items-center justify-center border-4 border-white">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 bg-white rounded-full shadow-xl flex items-center justify-center border-4 border-white overflow-hidden">
               <SafeImage
                 src={getBoutiqueLogo(boutique?.logo)}
                 alt={`${config.name} Logo`}
                 width={100}
                 height={100}
-                className="rounded-full object-cover"
+                className="w-full h-full rounded-full object-cover aspect-square"
                 priority
               />
             </div>

@@ -883,6 +883,16 @@ export function ShoesProductForm({
               </div>
             );
           })}
+          
+          {/* Bouton Ajouter variant en fin de liste */}
+          <button
+            type="button"
+            onClick={addVariant}
+            className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all flex items-center justify-center gap-2 font-medium"
+          >
+            <Plus className="h-5 w-5" />
+            Ajouter un autre variant
+          </button>
         </div>
       )}
     </div>

@@ -91,14 +91,16 @@ export default function Header({ onMenuClick, onCartClick, boutiqueName, hideCar
 
             {/* Logo fixe desktop - toujours visible */}
             <Link href={`/${boutiqueName}`} className="hidden lg:flex items-center space-x-2">
-              <SafeImage
-                src={getBoutiqueLogo(boutique?.logo)}
-                alt={`${config.name} Logo`}
-                width={40}
-                height={40}
-                className="rounded-lg object-cover"
-                priority
-              />
+              <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
+                <SafeImage
+                  src={getBoutiqueLogo(boutique?.logo)}
+                  alt={`${config.name} Logo`}
+                  width={40}
+                  height={40}
+                  className="w-full h-full object-cover aspect-square"
+                  priority
+                />
+              </div>
               <span className="text-xl font-bold text-primary">
                 {config.name}
               </span>
@@ -115,13 +117,13 @@ export default function Header({ onMenuClick, onCartClick, boutiqueName, hideCar
                   : 'opacity-0 transform -translate-y-2 pointer-events-none'
               }`}
             >
-              <div className="w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center border-2 border-accent">
+              <div className="w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center border-2 border-accent overflow-hidden flex-shrink-0">
                 <SafeImage
                   src={getBoutiqueLogo(boutique?.logo)}
                   alt={`${config.name} Logo`}
-                  width={20}
-                  height={20}
-                  className="rounded-full object-cover"
+                  width={32}
+                  height={32}
+                  className="w-full h-full rounded-full object-cover aspect-square"
                   priority
                 />
               </div>
