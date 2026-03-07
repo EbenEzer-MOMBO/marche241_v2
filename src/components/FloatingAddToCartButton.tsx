@@ -52,7 +52,7 @@ export default function FloatingAddToCartButton({
                 />
               </div>
               <div className="flex flex-col items-start flex-1 min-w-0">
-                <span className="text-sm font-medium truncate w-full text-left">
+                <span className="text-sm font-medium truncate max-w-[100px] w-full text-left">
                   {productName}
                 </span>
                 <span className="text-xs opacity-90">
