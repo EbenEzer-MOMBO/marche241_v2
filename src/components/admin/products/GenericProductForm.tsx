@@ -18,8 +18,9 @@ interface GenericProductFormProps {
 }
 
 interface VariantAttribute {
-  type: 'couleur' | 'taille' | 'contenance' | 'stockage' | 'ram' | 'modele-iphone' | 'modele-samsung' | 'materiau' | 'marque-ordinateur' | 'etat';
+  type: 'couleur' | 'taille' | 'contenance' | 'stockage' | 'ram' | 'modele-iphone' | 'modele-samsung' | 'materiau' | 'marque-ordinateur' | 'etat' | 'poids' | 'saveur' | 'personnalise';
   value: string;
+  customType?: string;
 }
 
 interface GenericVariant {
@@ -66,7 +67,10 @@ const ATTRIBUTE_TYPES = [
   { value: 'modele-samsung', label: 'Modèle Samsung' },
   { value: 'materiau', label: 'Matériau' },
   { value: 'marque-ordinateur', label: 'Marque Ordinateur' },
-  { value: 'etat', label: 'État' }
+  { value: 'etat', label: 'État' },
+  { value: 'poids', label: 'Poids (kg)' },
+  { value: 'saveur', label: 'Saveur' },
+  { value: 'personnalise', label: 'Attribut personnalisé' }
 ];
 
 const COULEURS_PRESETS = [
@@ -250,6 +254,134 @@ const ETAT_PRESETS = [
   'Reconditionné - Grade A',
   'Reconditionné - Grade B',
   'Reconditionné - Grade C'
+];
+
+const POIDS_PRESETS = [
+  '0.1kg',
+  '0.2kg',
+  '0.3kg',
+  '0.5kg',
+  '0.75kg',
+  '1kg',
+  '1.5kg',
+  '2kg',
+  '3kg',
+  '5kg',
+  '10kg',
+  '15kg',
+  '20kg',
+  '25kg',
+  '30kg',
+  '50kg'
+];
+
+const SAVEUR_PRESETS = [
+  // Fruits
+  'Pomme',
+  'Banane',
+  'Fraise',
+  'Framboise',
+  'Myrtille',
+  'Cerise',
+  'Orange',
+  'Citron',
+  'Citron vert',
+  'Pamplemousse',
+  'Mangue',
+  'Ananas',
+  'Pastèque',
+  'Melon',
+  'Pêche',
+  'Abricot',
+  'Poire',
+  'Raisin',
+  'Kiwi',
+  'Fruit de la passion',
+  'Litchi',
+  'Noix de coco',
+  'Papaye',
+  'Grenade',
+  'Cassis',
+  'Fruits rouges',
+  'Fruits des bois',
+  'Fruits tropicaux',
+  // Chocolat & Café
+  'Chocolat',
+  'Chocolat noir',
+  'Chocolat au lait',
+  'Chocolat blanc',
+  'Café',
+  'Moka',
+  'Cappuccino',
+  'Caramel',
+  'Caramel beurre salé',
+  'Noisette',
+  'Praliné',
+  'Amande',
+  'Pistache',
+  // Vanille & Crème
+  'Vanille',
+  'Vanille de Madagascar',
+  'Crème',
+  'Crème brûlée',
+  'Yaourt',
+  'Lait',
+  'Beurre',
+  // Menthe & Herbes
+  'Menthe',
+  'Menthe poivrée',
+  'Menthe chocolat',
+  'Basilic',
+  'Lavande',
+  'Thym',
+  // Épices & Gourmandises
+  'Cannelle',
+  'Gingembre',
+  'Cardamome',
+  'Anis',
+  'Réglisse',
+  'Spéculoos',
+  'Cookie',
+  'Biscuit',
+  'Tarte aux pommes',
+  'Cheesecake',
+  'Tiramisu',
+  // Thé & Infusions
+  'Thé vert',
+  'Thé noir',
+  'Earl Grey',
+  'Jasmin',
+  'Matcha',
+  'Chai',
+  'Rooibos',
+  // Nature & Neutre
+  'Nature',
+  'Sans saveur',
+  'Original',
+  // Salé
+  'Salé',
+  'Fromage',
+  'Bacon',
+  'BBQ',
+  'Poulet',
+  'Tomate',
+  'Oignon',
+  'Ail',
+  // Sucré & Bonbons
+  'Bubble gum',
+  'Barbe à papa',
+  'Marshmallow',
+  'Bonbon acidulé',
+  'Cola',
+  'Soda',
+  // Combinaisons
+  'Fraise-Banane',
+  'Citron-Menthe',
+  'Orange-Mangue',
+  'Chocolat-Noisette',
+  'Vanille-Caramel',
+  'Fruits exotiques',
+  'Multifruits'
 ];
 
 export function GenericProductForm({
@@ -615,7 +747,8 @@ export function GenericProductForm({
     const variant = formData.variants[variantIndex];
     const newAttribute: VariantAttribute = {
       type: 'couleur',
-      value: ''
+      value: '',
+      customType: ''
     };
     updateVariant(variantIndex, 'attributes', [...variant.attributes, newAttribute]);
   };
@@ -627,7 +760,7 @@ export function GenericProductForm({
     );
   };
 
-  const updateAttribute = (variantIndex: number, attributeIndex: number, field: keyof VariantAttribute, value: string) => {
+  const updateAttribute = (variantIndex: number, attributeIndex: number, field: keyof VariantAttribute | 'customType', value: string) => {
     const variant = formData.variants[variantIndex];
     const newAttributes = variant.attributes.map((attr, i) => 
       i === attributeIndex ? { ...attr, [field]: value } : attr
@@ -647,6 +780,8 @@ export function GenericProductForm({
       case 'materiau': return MATERIAU_PRESETS;
       case 'marque-ordinateur': return MARQUE_ORDINATEUR_PRESETS;
       case 'etat': return ETAT_PRESETS;
+      case 'poids': return POIDS_PRESETS;
+      case 'saveur': return SAVEUR_PRESETS;
       default: return [];
     }
   };
@@ -949,47 +1084,98 @@ export function GenericProductForm({
                 <div className="space-y-3">
                   {variant.attributes.map((attr, attrIndex) => {
                     const presets = getPresetsForType(attr.type);
+                    const allowsCustomInput = attr.type === 'poids';
+                    const isPersonnalise = attr.type === 'personnalise';
                     
                     return (
-                      <div key={attrIndex} className="flex gap-2 items-start">
-                        <select
-                          value={attr.type}
-                          onChange={(e) => updateAttribute(variantIndex, attrIndex, 'type', e.target.value)}
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 w-32"
-                        >
-                          {ATTRIBUTE_TYPES.map(type => (
-                            <option key={type.value} value={type.value}>{type.label}</option>
-                          ))}
-                        </select>
-
-                        {presets.length > 0 ? (
+                      <div key={attrIndex} className="space-y-2">
+                        <div className="flex gap-2 items-start">
                           <select
-                            value={attr.value}
-                            onChange={(e) => updateAttribute(variantIndex, attrIndex, 'value', e.target.value)}
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            value={attr.type}
+                            onChange={(e) => updateAttribute(variantIndex, attrIndex, 'type', e.target.value)}
+                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 w-40"
                           >
-                            <option value="">Sélectionner...</option>
-                            {presets.map(preset => (
-                              <option key={preset} value={preset}>{preset}</option>
+                            {ATTRIBUTE_TYPES.map(type => (
+                              <option key={type.value} value={type.value}>{type.label}</option>
                             ))}
                           </select>
-                        ) : (
-                          <input
-                            type="text"
-                            value={attr.value}
-                            onChange={(e) => updateAttribute(variantIndex, attrIndex, 'value', e.target.value)}
-                            placeholder={`${attr.type}...`}
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                          />
-                        )}
 
-                        <button
-                          type="button"
-                          onClick={() => removeAttribute(variantIndex, attrIndex)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                          {isPersonnalise ? (
+                            <div className="flex-1 flex gap-2">
+                              <input
+                                type="text"
+                                value={attr.customType || ''}
+                                onChange={(e) => updateAttribute(variantIndex, attrIndex, 'customType', e.target.value)}
+                                placeholder="Nom de l'attribut (ex: Capacité, Format...)"
+                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                              />
+                              <input
+                                type="text"
+                                value={attr.value}
+                                onChange={(e) => updateAttribute(variantIndex, attrIndex, 'value', e.target.value)}
+                                placeholder="Valeur"
+                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                          ) : presets.length > 0 && !allowsCustomInput ? (
+                            <select
+                              value={attr.value}
+                              onChange={(e) => updateAttribute(variantIndex, attrIndex, 'value', e.target.value)}
+                              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="">Sélectionner...</option>
+                              {presets.map(preset => (
+                                <option key={preset} value={preset}>{preset}</option>
+                              ))}
+                            </select>
+                          ) : presets.length > 0 && allowsCustomInput ? (
+                            <div className="flex-1 flex gap-2">
+                              <select
+                                value={attr.value}
+                                onChange={(e) => {
+                                  if (e.target.value !== 'custom') {
+                                    updateAttribute(variantIndex, attrIndex, 'value', e.target.value);
+                                  }
+                                }}
+                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                              >
+                                <option value="">Sélectionner...</option>
+                                {presets.map(preset => (
+                                  <option key={preset} value={preset}>{preset}</option>
+                                ))}
+                                <option value="custom">Poids personnalisé...</option>
+                              </select>
+                              <input
+                                type="text"
+                                value={attr.value && !presets.includes(attr.value) ? attr.value : ''}
+                                onChange={(e) => updateAttribute(variantIndex, attrIndex, 'value', e.target.value)}
+                                placeholder="Ex: 2.5kg"
+                                className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                          ) : (
+                            <input
+                              type="text"
+                              value={attr.value}
+                              onChange={(e) => updateAttribute(variantIndex, attrIndex, 'value', e.target.value)}
+                              placeholder={`${attr.type}...`}
+                              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            />
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => removeAttribute(variantIndex, attrIndex)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                        {isPersonnalise && (
+                          <p className="text-xs text-gray-500 ml-44">
+                            Exemple: Nom = "Capacité", Valeur = "500ml" ou Nom = "Format", Valeur = "A4"
+                          </p>
+                        )}
                       </div>
                     );
                   })}
