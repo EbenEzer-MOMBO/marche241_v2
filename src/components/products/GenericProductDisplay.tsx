@@ -90,39 +90,56 @@ export function GenericProductDisplay({
   };
 
   const handleAttributeChange = (type: string, value: string) => {
-    // Nouvelle sélection pour cet attribut
-    const newAttrs = { [type]: value };
+    // Créer une nouvelle sélection d'attributs en partant de la sélection actuelle
+    const newSelectedAttrs = { ...selectedAttributes, [type]: value };
     
-    // Trouver tous les variants qui correspondent à cette nouvelle valeur
-    const matchingVariants = variants.filter(v => {
-      return v.attributes?.some(attr => attr.type === type && attr.value === value);
+    // Trouver le variant qui correspond exactement à cette combinaison
+    let matchingVariant = variants.find(v => {
+      return v.attributes?.every(attr => newSelectedAttrs[attr.type] === attr.value) &&
+             Object.keys(newSelectedAttrs).length === v.attributes?.length;
     });
     
-    if (matchingVariants.length > 0) {
-      // Prendre le premier variant correspondant
-      const selectedVar = matchingVariants[0];
-      
+    // Si aucun variant exact n'est trouvé, chercher le premier variant compatible
+    if (!matchingVariant) {
+      matchingVariant = variants.find(v => {
+        return v.attributes?.some(attr => attr.type === type && attr.value === value);
+      });
+    }
+    
+    if (matchingVariant) {
       // Mettre à jour selectedAttributes avec tous les attributs de ce variant
-      const newSelectedAttrs: Record<string, string> = {};
-      selectedVar.attributes?.forEach(attr => {
-        newSelectedAttrs[attr.type] = attr.value;
+      const finalAttrs: Record<string, string> = {};
+      matchingVariant.attributes?.forEach(attr => {
+        finalAttrs[attr.type] = attr.value;
       });
       
-      setSelectedAttributes(newSelectedAttrs);
-      setSelectedVariant(selectedVar);
-      setMaxQuantity(selectedVar.stock);
-      onVariantChange(selectedVar.id);
+      setSelectedAttributes(finalAttrs);
+      setSelectedVariant(matchingVariant);
+      setMaxQuantity(matchingVariant.stock);
+      onVariantChange(matchingVariant.id);
     }
   };
 
-  // Obtenir les valeurs possibles pour un type d'attribut
+  // Obtenir les valeurs possibles pour un type d'attribut en fonction de la sélection actuelle
   const getAttributeValues = (type: string): string[] => {
     const values = new Set<string>();
     
-    // Collecter toutes les valeurs possibles pour ce type d'attribut
+    // Si c'est l'attribut actuellement sélectionné, montrer toutes les valeurs possibles
+    // Sinon, filtrer en fonction des autres attributs déjà sélectionnés
     variants.forEach(v => {
       const attr = v.attributes?.find(a => a.type === type);
-      if (attr) {
+      if (!attr) return;
+      
+      // Vérifier si ce variant est compatible avec les autres attributs sélectionnés
+      const otherAttrsMatch = Object.entries(selectedAttributes).every(([selectedType, selectedValue]) => {
+        // Ignorer l'attribut actuel (celui qu'on est en train de sélectionner)
+        if (selectedType === type) return true;
+        
+        // Vérifier que le variant a cet attribut avec la bonne valeur
+        return v.attributes?.some(a => a.type === selectedType && a.value === selectedValue);
+      });
+      
+      if (otherAttrsMatch) {
         values.add(attr.value);
       }
     });
@@ -149,7 +166,16 @@ export function GenericProductDisplay({
       'contenance': 'Contenance',
       'capacite': 'Capacité',
       'modele': 'Modèle',
-      'version': 'Version'
+      'version': 'Version',
+      'stockage': 'Stockage',
+      'ram': 'Mémoire RAM',
+      'modele-iphone': 'Modèle iPhone',
+      'modele-samsung': 'Modèle Samsung',
+      'materiau': 'Matériau',
+      'marque-ordinateur': 'Marque Ordinateur',
+      'etat': 'État',
+      'poids': 'Poids',
+      'saveur': 'Saveur'
     };
     return labels[type.toLowerCase()] || type.charAt(0).toUpperCase() + type.slice(1);
   };
@@ -173,13 +199,37 @@ export function GenericProductDisplay({
             </label>
             <div className="flex flex-wrap gap-2">
               {values.map((value) => {
-                // Trouver un variant avec cette valeur
-                const variantWithValue = variants.find(v => 
-                  v.attributes?.some(attr => attr.type === type && attr.value === value)
-                );
+                // Vérifier si cette combinaison existe
+                const isCompatible = variants.some(v => {
+                  // Vérifier que le variant a cette valeur pour cet attribut
+                  const hasThisValue = v.attributes?.some(attr => attr.type === type && attr.value === value);
+                  if (!hasThisValue) return false;
+                  
+                  // Vérifier que le variant correspond aux autres attributs déjà sélectionnés
+                  const matchesOtherAttrs = Object.entries(selectedAttributes).every(([selectedType, selectedValue]) => {
+                    if (selectedType === type) return true; // Ignorer l'attribut actuel
+                    return v.attributes?.some(a => a.type === selectedType && a.value === selectedValue);
+                  });
+                  
+                  return matchesOtherAttrs;
+                });
                 
-                const isAvailable = variantWithValue && variantWithValue.stock > 0;
+                // Trouver le variant correspondant pour afficher le stock
+                const matchingVariant = variants.find(v => {
+                  const hasThisValue = v.attributes?.some(attr => attr.type === type && attr.value === value);
+                  if (!hasThisValue) return false;
+                  
+                  return Object.entries(selectedAttributes).every(([selectedType, selectedValue]) => {
+                    if (selectedType === type) return true;
+                    return v.attributes?.some(a => a.type === selectedType && a.value === selectedValue);
+                  });
+                });
+                
+                const isAvailable = isCompatible && matchingVariant && matchingVariant.stock > 0;
                 const isSelected = selectedAttributes[type] === value;
+
+                // Ne pas afficher les options non compatibles
+                if (!isCompatible) return null;
 
                 return (
                   <button
@@ -195,9 +245,9 @@ export function GenericProductDisplay({
                     }`}
                   >
                     {value}
-                    {isAvailable && variantWithValue && (
+                    {isAvailable && matchingVariant && (
                       <span className="ml-1 text-xs opacity-70">
-                        ({variantWithValue.stock})
+                        ({matchingVariant.stock})
                       </span>
                     )}
                   </button>
