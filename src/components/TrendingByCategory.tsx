@@ -66,7 +66,7 @@ export default function TrendingByCategory({ boutiqueName }: TrendingByCategoryP
   // Pas de catégories
   if (Object.keys(categories).length === 0) {
     return (
-      <section className="py-16 bg-white">
+      <section className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl font-bold text-black mb-4">Produits Tendance</h2>
           <p className="text-gray-600">Aucun produit disponible pour le moment.</p>
@@ -76,7 +76,7 @@ export default function TrendingByCategory({ boutiqueName }: TrendingByCategoryP
   }
 
   return (
-    <section className="py-16 bg-white">
+    <section className="py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* En-tête de section */}
         
@@ -84,7 +84,7 @@ export default function TrendingByCategory({ boutiqueName }: TrendingByCategoryP
         {/* Sections par catégorie */}
         <div className="space-y-16">
           {Object.entries(categories).map(([slug, categorieData]) => (
-            <div key={slug} className="shadow-md border border-gray-100 rounded-2xl p-6 lg:p-8">
+            <div key={slug} className="shadow-md border border-gray-100 rounded-2xl p-6 lg:p-8 bg-white">
               {/* En-tête de la catégorie */}
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-4">
@@ -176,7 +176,19 @@ export default function TrendingByCategory({ boutiqueName }: TrendingByCategoryP
               <div className="text-center">
                 <Link
                   href={`/${boutiqueName}/produits?categorie=${categorieData.categorie.slug}`}
-                  className="inline-flex items-center border border-primary text-primary px-6 py-3 rounded-lg font-medium hover:bg-primary/90 hover:text-white transition-colors duration-200"
+                  className="inline-flex items-center px-6 py-3 rounded-lg font-medium transition-all duration-200 border-2"
+                  style={{ 
+                    borderColor: 'var(--primary-color)',
+                    color: 'var(--primary-color)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--primary-color)';
+                    e.currentTarget.style.color = 'white';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = 'var(--primary-color)';
+                  }}
                 >
                   Afficher tout
                   <svg

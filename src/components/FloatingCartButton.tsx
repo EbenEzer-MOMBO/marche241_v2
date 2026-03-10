@@ -48,9 +48,31 @@ export default function FloatingCartButton({ onCartClick }: FloatingCartButtonPr
     <div className="fixed bottom-4 left-4 right-4 z-30 lg:hidden">
       <button
         onClick={onCartClick}
-        className="w-full bg-primary text-white py-4 rounded-2xl font-medium text-lg flex items-center justify-center space-x-4 hover:bg-primary/90 transition-colors duration-200 shadow-lg"
+        className="w-full py-4 rounded-2xl font-medium text-lg flex items-center justify-center space-x-4 transition-all duration-200 shadow-lg border-2 text-white"
+        style={{
+          backgroundColor: 'var(--primary-color)',
+          borderColor: 'var(--primary-color)'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'transparent';
+          e.currentTarget.style.color = 'var(--primary-color)';
+          const badge = e.currentTarget.querySelector('.badge-inner') as HTMLElement;
+          if (badge) {
+            badge.style.backgroundColor = 'var(--primary-color)';
+            badge.style.color = 'white';
+          }
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'var(--primary-color)';
+          e.currentTarget.style.color = 'white';
+          const badge = e.currentTarget.querySelector('.badge-inner') as HTMLElement;
+          if (badge) {
+            badge.style.backgroundColor = 'white';
+            badge.style.color = 'var(--primary-color)';
+          }
+        }}
       >
-        <span className="bg-white text-primary rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
+        <span className="badge-inner rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold transition-all duration-200" style={{ backgroundColor: 'white', color: 'var(--primary-color)' }}>
           {totalItems}
         </span>
         <span>Panier</span>

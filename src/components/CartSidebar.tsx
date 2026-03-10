@@ -340,10 +340,34 @@ export default function CartSidebar({ isOpen, onClose, boutiqueName = 'marche_24
 
                   <Link
                     href={`/${boutiqueName}/commande`}
-                    className="w-full bg-primary text-white py-4 rounded-2xl font-medium text-lg flex items-center justify-center space-x-3 hover:bg-primary/90 transition-colors duration-200 text-decoration-none"
+                    className="w-full py-4 rounded-2xl font-medium text-lg flex items-center justify-center space-x-3 transition-all duration-200 text-decoration-none border-2 text-white"
+                    style={{
+                      backgroundColor: 'var(--primary-color)',
+                      borderColor: 'var(--primary-color)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = 'var(--primary-color)';
+                      // Changer aussi la couleur du badge
+                      const badge = e.currentTarget.querySelector('.badge-inner') as HTMLElement;
+                      if (badge) {
+                        badge.style.backgroundColor = 'var(--primary-color)';
+                        badge.style.color = 'white';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--primary-color)';
+                      e.currentTarget.style.color = 'white';
+                      // Remettre le badge à sa couleur d'origine
+                      const badge = e.currentTarget.querySelector('.badge-inner') as HTMLElement;
+                      if (badge) {
+                        badge.style.backgroundColor = 'white';
+                        badge.style.color = 'var(--primary-color)';
+                      }
+                    }}
                     onClick={onClose}
                   >
-                    <span className="bg-white text-primary rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
+                    <span className="badge-inner rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold transition-all duration-200" style={{ backgroundColor: 'white', color: 'var(--primary-color)' }}>
                       {totalItems}
                     </span>
                     <span>Valider la commande</span>

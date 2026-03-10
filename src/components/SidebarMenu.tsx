@@ -41,10 +41,10 @@ export default function SidebarMenu({ isOpen = true, onClose }: SidebarMenuProps
           <div className="p-4">
             {/* En-tête du menu */}
             <div className="mb-6">
-              <h2 className="text-lg font-semibold text-primary mb-2">
+              <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--primary-color)' }}>
                 Catégories
               </h2>
-              <div className="w-12 h-0.5 bg-secondary"></div>
+              <div className="w-12 h-0.5" style={{ backgroundColor: 'var(--secondary-color)' }}></div>
             </div>
 
             {/* Liste des catégories */}
@@ -64,7 +64,15 @@ export default function SidebarMenu({ isOpen = true, onClose }: SidebarMenuProps
                     <Link
                       key={categorie.id}
                       href={`/${boutiqueName}/produits?categorie=${categorie.slug}`}
-                      className="flex items-center space-x-3 px-3 py-3 rounded-lg text-gray-dark hover:bg-accent/20 hover:text-primary transition-all duration-200 group"
+                      className="flex items-center space-x-3 px-3 py-3 rounded-lg text-gray-dark transition-all duration-200 group"
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--accent-color) 20%, transparent)';
+                        e.currentTarget.style.color = 'var(--primary-color)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = '';
+                      }}
                       onClick={onClose} // Fermer le sidebar sur mobile après clic
                     >
 
@@ -82,7 +90,7 @@ export default function SidebarMenu({ isOpen = true, onClose }: SidebarMenuProps
 
             {/* Section actions rapides */}
             <div className="mt-8 pt-6 border-t border-accent/20">
-              <h3 className="text-sm font-semibold text-primary mb-3">
+              <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--primary-color)' }}>
                 Actions Rapides
               </h3>
               <div className="space-y-2">
@@ -117,7 +125,8 @@ export default function SidebarMenu({ isOpen = true, onClose }: SidebarMenuProps
             <div className="mt-8 pt-6 border-t border-accent/20">
               <Link
                 href="https://api.whatsapp.com/send/?phone=24104694721&text&type=phone_number&app_absent=0"
-                className="flex items-center justify-center space-x-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors duration-200 text-sm"
+                className="flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200 text-sm font-medium text-white"
+                style={{ backgroundColor: 'var(--primary-color)' }}
                 target="_blank"
               >
                 <span>💬</span>

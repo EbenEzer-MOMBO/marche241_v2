@@ -29,7 +29,23 @@ export default function FloatingAddToCartButton({
       <button
         onClick={onAddToCart}
         disabled={disabled || loading}
-        className="w-full bg-primary text-white py-3 px-4 rounded-2xl font-medium flex items-center justify-between hover:bg-primary/90 transition-colors duration-200 shadow-lg disabled:bg-gray-300 disabled:cursor-not-allowed"
+        className="w-full py-3 px-4 rounded-2xl font-medium flex items-center justify-between transition-all duration-200 shadow-lg border-2 text-white disabled:bg-gray-300 disabled:border-gray-300 disabled:cursor-not-allowed"
+        style={{
+          backgroundColor: disabled ? undefined : 'var(--primary-color)',
+          borderColor: disabled ? undefined : 'var(--primary-color)'
+        }}
+        onMouseEnter={(e) => {
+          if (!disabled && !loading) {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = 'var(--primary-color)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!disabled && !loading) {
+            e.currentTarget.style.backgroundColor = 'var(--primary-color)';
+            e.currentTarget.style.color = 'white';
+          }
+        }}
       >
         {loading ? (
           <div className="flex items-center justify-center w-full space-x-2">

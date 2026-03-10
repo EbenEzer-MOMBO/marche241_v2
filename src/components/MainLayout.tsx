@@ -25,7 +25,12 @@ export default function MainLayout({ children, boutiqueName }: MainLayoutProps) 
   const closeCart = () => setCartOpen(false);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div 
+      className="min-h-screen"
+      style={{ 
+        backgroundColor: 'color-mix(in srgb, var(--secondary-color) 30%, white)' 
+      }}
+    >
       <Header 
         onMenuClick={toggleSidebar} 
         onCartClick={toggleCart} 

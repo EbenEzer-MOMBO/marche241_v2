@@ -117,7 +117,7 @@ export default function Header({ onMenuClick, onCartClick, boutiqueName, hideCar
                   : 'opacity-0 transform -translate-y-2 pointer-events-none'
               }`}
             >
-              <div className="w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center border-2 border-accent overflow-hidden flex-shrink-0">
+              <div className="w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center border-2 overflow-hidden flex-shrink-0" style={{ borderColor: 'var(--primary-color)' }}>
                 <SafeImage
                   src={getBoutiqueLogo(boutique?.logo)}
                   alt={`${config.name} Logo`}
@@ -153,7 +153,7 @@ export default function Header({ onMenuClick, onCartClick, boutiqueName, hideCar
               >
                 <ShoppingCart size={20} />
                 {totalItems > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-black text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  <span className="absolute -top-2 -right-2 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center" style={{ backgroundColor: 'var(--primary-color)' }}>
                     {totalItems > 99 ? '99+' : totalItems}
                   </span>
                 )}
