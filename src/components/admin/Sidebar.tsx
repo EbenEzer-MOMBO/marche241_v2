@@ -191,7 +191,7 @@ export default function Sidebar({ boutique, isMobileMenuOpen = false, onToggleMo
         />
       )}
       
-      <div className={`bg-white shadow-sm border-r border-gray-200 h-screen flex flex-col transition-all duration-300 ${
+      <div className={`bg-white shadow-sm border-r border-gray-200 h-screen min-h-0 flex flex-col transition-all duration-300 ${
         isCollapsed ? 'w-16' : 'w-64'
       } fixed left-0 top-0 z-50 lg:relative lg:z-auto transform lg:transform-none ${
         isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
@@ -259,8 +259,10 @@ export default function Sidebar({ boutique, isMobileMenuOpen = false, onToggleMo
         </button>
       </div>
 
+      {/* Zone scrollable : tout le corps sous l'en-tête sur mobile ; à partir de lg, scroll uniquement sur la nav */}
+      <div className="flex-1 min-h-0 flex flex-col overflow-y-auto overscroll-contain lg:overflow-hidden">
       {/* Navigation */}
-      <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
+      <nav className="flex-shrink-0 px-2 py-4 space-y-1 lg:flex-1 lg:min-h-0 lg:overflow-y-auto">
         {navigation.map((item) => {
           const Icon = item.icon;
           return (
@@ -291,7 +293,7 @@ export default function Sidebar({ boutique, isMobileMenuOpen = false, onToggleMo
       </nav>
 
       {/* Share section */}
-      <div className="border-t border-gray-200 p-2">
+      <div className="shrink-0 border-t border-gray-200 p-2">
         {!isCollapsed && (
           <p className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
             Partager ma boutique via
@@ -330,7 +332,7 @@ export default function Sidebar({ boutique, isMobileMenuOpen = false, onToggleMo
       </div>
 
       {/* User section */}
-      <div className="border-t border-gray-200 p-2">
+      <div className="shrink-0 border-t border-gray-200 p-2">
         {/* User info */}
         <div className={`flex items-center px-3 py-2 mb-2 ${isCollapsed ? 'justify-center' : ''}`}>
           <div className="flex-shrink-0">
@@ -372,6 +374,7 @@ export default function Sidebar({ boutique, isMobileMenuOpen = false, onToggleMo
             {!isCollapsed && <span>Déconnexion</span>}
           </button>
         </div>
+      </div>
       </div>
     </div>
     </>
