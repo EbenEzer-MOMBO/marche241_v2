@@ -25,8 +25,9 @@ import {
     List
 } from 'lucide-react';
 import ConfirmationModal from '@/components/ui/ConfirmationModal';
-import ProduitModal from '@/components/admin/ProduitModal';
 import { CategorySelectionModal, SimplifiedProductModal } from '@/components/admin/products';
+import { legacyProductToAutresEditPayload } from '@/lib/utils/legacy-product-to-autres-edit';
+import { ProductValidationError } from '@/lib/errors/product-validation-error';
 import { ProductCategory } from '@/lib/constants/product-categories';
 
 // Interface locale pour l'affichage des produits
@@ -83,8 +84,7 @@ export default function ProductsPage() {
     const [productToDelete, setProductToDelete] = useState<ProduitAffichage | null>(null);
     const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
     const [groupByCategory, setGroupByCategory] = useState(true);
-    const [showProductModal, setShowProductModal] = useState(false);
-    const [productToEdit, setProductToEdit] = useState<ProduitDB | null>(null);
+    const [productToEdit, setProductToEdit] = useState<unknown | null>(null);
     const [categories, setCategories] = useState<any[]>([]);
 
     // États pour les nouveaux modals
@@ -337,11 +337,6 @@ export default function ProductsPage() {
             setProductToDelete(null);
             setShowDeleteModal(false);
         }
-    };
-
-    const handleCreateProduct = () => {
-        setProductToEdit(null);
-        setShowProductModal(true);
     };
 
     const handleCreateSimplifiedProduct = () => {
@@ -604,9 +599,24 @@ export default function ProductsPage() {
             setShowSimplifiedModal(false);
             setSelectedCategory(null);
             setProductToEdit(null);
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('❌ Erreur lors de la sauvegarde:', error);
-            showError(error.message || 'Erreur lors de la sauvegarde du produit', 'Erreur');
+            if (error instanceof ProductValidationError) {
+                if (process.env.NODE_ENV === 'development' && error.errors?.length) {
+                    console.warn('[Validation API]', error.code, error.errors);
+                }
+                showError(
+                    error.message,
+                    'Erreur de validation',
+                    12000
+                );
+                return;
+            }
+            const msg =
+                error instanceof Error
+                    ? error.message
+                    : 'Erreur lors de la sauvegarde du produit';
+            showError(msg, 'Erreur');
         }
     };
 
@@ -708,173 +718,25 @@ export default function ProductsPage() {
             return;
         }
 
-        // Sinon, utiliser l'ancien modal pour les autres types de produits
-        // Extraire les variantes et options depuis le JSON
-        let variantsData: any[] = [];
-        let optionsData: any[] = [];
-
-        if (product.variants) {
-            // Si variants est un objet avec variants et options séparés
-            if (typeof product.variants === 'object' && 'variants' in product.variants) {
-                variantsData = product.variants.variants || [];
-                optionsData = product.variants.options || [];
-                console.log('[handleEditProduct] Variants extraits:', variantsData);
-                console.log('[handleEditProduct] Options extraites:', optionsData);
-            } else if (Array.isArray(product.variants)) {
-                // Si c'est un tableau de variants
-                variantsData = product.variants;
-                console.log('[handleEditProduct] Variants (tableau):', variantsData);
-            }
-        }
-
-        // Convertir ProduitAffichage en ProduitDB pour le modal
-        // IMPORTANT: En BDD, prix = prix actuel, prix_original = ancien prix si promo
-        // Mais dans le formulaire, prix = prix de base, prix_promo = prix promotionnel
-        // Il faut donc inverser si prix_original existe
-        const produitDB: ProduitDB = {
+        // Formats legacy (ex. generic, sans type, ancien modal) → formulaire « Autres »
+        const productData = legacyProductToAutresEditPayload({
             id: product.id,
             nom: product.nom,
-            slug: product.slug,
             description: product.description,
-            prix: product.prix_original || product.prix, // Si promo, prendre prix_original comme base
-            prix_promo: product.prix_original ? product.prix : undefined, // Si promo, prix actuel devient promo
+            prix: product.prix,
             prix_original: product.prix_original,
             image_principale: product.image_principale,
-            images: product.images || [],
-            variants: {
-                variants: variantsData,
-                options: optionsData
-            },
-            en_stock: product.en_stock,
-            quantite_stock: product.quantite_stock || 0,
+            images: product.images,
+            variants: product.variants,
             actif: product.actif,
-            boutique_id: boutique?.id || 0,
-            categorie_id: product.categorie?.id || 0,
-            statut: product.actif ? 'actif' : 'inactif',
-            est_nouveau: product.est_nouveau,
-            est_en_promotion: product.est_en_promotion,
-            est_featured: product.est_featured,
-            note_moyenne: product.note_moyenne,
-            nombre_avis: product.nombre_avis,
-            nombre_ventes: product.nombre_ventes,
-            nombre_vues: 0,
-            date_creation: new Date(product.date_creation),
-            date_modification: new Date()
-        };
+            categorie: product.categorie
+        });
 
-        console.log('[handleEditProduct] ProduitDB préparé pour le modal:', produitDB);
-        setProductToEdit(produitDB);
-        setShowProductModal(true);
-    };
+        console.log('[handleEditProduct] Données legacy → formulaire Autres:', productData);
 
-    const handleSaveProduct = async (produitData: any) => {
-        try {
-            if (productToEdit) {
-                // Modification
-                const produitModifie = await modifierProduit(productToEdit.id, {
-                    nom: produitData.nom,
-                    slug: produitData.slug || genererSlugProduit(produitData.nom),
-                    description: produitData.description,
-                    prix: produitData.prix,
-                    prix_promo: produitData.prix_promo,
-                    en_stock: produitData.en_stock,
-                    categorie_id: produitData.categorie_id,
-                    images: produitData.images,
-                    image_principale: produitData.image_principale,
-                    variants: produitData.variants,
-                    statut: produitData.statut
-                });
-
-                // Mettre à jour l'interface utilisateur
-                const produitAffichage: ProduitAffichage = {
-                    ...products.find(p => p.id === productToEdit.id)!,
-                    nom: produitModifie.nom,
-                    slug: produitModifie.slug,
-                    description: produitModifie.description,
-                    prix: produitModifie.prix,
-                    prix_original: produitModifie.prix_original,
-                    image_principale: produitModifie.image_principale,
-                    images: produitModifie.images || [],
-                    variants: produitModifie.variants || [],
-                    en_stock: produitModifie.en_stock,
-                    quantite_stock: produitModifie.quantite_stock || produitModifie.stock || 0,
-                    actif: produitModifie.actif || produitModifie.statut === 'actif',
-                    est_nouveau: produitModifie.est_nouveau,
-                    est_en_promotion: produitModifie.est_en_promotion,
-                    est_featured: produitModifie.est_featured,
-                    categorie_nom: categories.find(c => c.id === produitModifie.categorie_id)?.nom || 'Sans catégorie',
-                    categorie: {
-                        id: produitModifie.categorie_id,
-                        nom: categories.find(c => c.id === produitModifie.categorie_id)?.nom || 'Sans catégorie',
-                        slug: categories.find(c => c.id === produitModifie.categorie_id)?.slug || 'sans-categorie'
-                    }
-                };
-
-                console.log('Produit modifié:', produitAffichage);
-
-                setProducts(prev => prev.map(p => p.id === productToEdit.id ? produitAffichage : p));
-                success('Produit modifié avec succès', 'Succès');
-            } else {
-                // Création
-                const nouveauProduitDB = await creerProduit({
-                    nom: produitData.nom,
-                    slug: produitData.slug || genererSlugProduit(produitData.nom),
-                    description: produitData.description,
-                    prix: produitData.prix,
-                    prix_promo: produitData.prix_promo,
-                    en_stock: produitData.quantite_stock,
-                    boutique_id: boutique!.id,
-                    categorie_id: produitData.categorie_id,
-                    images: produitData.images,
-                    image_principale: produitData.image_principale,
-                    variants: produitData.variants,
-                    statut: produitData.statut
-                });
-
-                // Convertir en ProduitAffichage pour l'interface
-                const nouveauProduit: ProduitAffichage = {
-                    id: nouveauProduitDB.id,
-                    nom: nouveauProduitDB.nom,
-                    slug: nouveauProduitDB.slug,
-                    description: nouveauProduitDB.description,
-                    prix: nouveauProduitDB.prix,
-                    prix_original: nouveauProduitDB.prix_original,
-                    image_principale: nouveauProduitDB.image_principale,
-                    images: nouveauProduitDB.images || [],
-                    variants: nouveauProduitDB.variants || [],
-                    en_stock: nouveauProduitDB.en_stock,
-                    quantite_stock: nouveauProduitDB.quantite_stock || nouveauProduitDB.stock || 0,
-                    actif: nouveauProduitDB.actif || nouveauProduitDB.statut === 'actif',
-                    est_nouveau: nouveauProduitDB.est_nouveau,
-                    est_en_promotion: nouveauProduitDB.est_en_promotion,
-                    est_featured: nouveauProduitDB.est_featured,
-                    note_moyenne: 0,
-                    nombre_avis: 0,
-                    nombre_vues: 0,
-                    nombre_ventes: 0,
-                    date_creation: nouveauProduitDB.date_creation.toString(),
-                    categorie_nom: categories.find(c => c.id === nouveauProduitDB.categorie_id)?.nom || 'Sans catégorie',
-                    boutique: {
-                        id: boutique!.id,
-                        nom: boutique!.nom,
-                        logo: boutique!.logo,
-                        slug: boutique!.slug
-                    },
-                    categorie: {
-                        id: nouveauProduitDB.categorie_id,
-                        nom: categories.find(c => c.id === nouveauProduitDB.categorie_id)?.nom || 'Sans catégorie',
-                        slug: categories.find(c => c.id === nouveauProduitDB.categorie_id)?.slug || 'sans-categorie'
-                    }
-                };
-
-                console.log(nouveauProduit);
-
-                setProducts(prev => [...prev, nouveauProduit]);
-                success('Produit créé avec succès', 'Succès');
-            }
-        } catch (error: any) {
-            showError(error.message || 'Erreur lors de la sauvegarde', 'Erreur');
-        }
+        setProductToEdit(productData);
+        setSelectedCategory('autres');
+        setShowSimplifiedModal(true);
     };
 
     const formatPrice = (priceInCentimes: number) => {
@@ -1458,7 +1320,7 @@ export default function ProductsPage() {
                                 }
                             </p>
                             <button
-                                onClick={handleCreateProduct}
+                                onClick={handleCreateSimplifiedProduct}
                                 className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                             >
                                 <Plus className="h-4 w-4 mr-2" />
@@ -1541,21 +1403,7 @@ export default function ProductsPage() {
                 type="danger"
             />
 
-            {/* Modal de produit */}
-            <ProduitModal
-                isOpen={showProductModal}
-                onClose={() => {
-                    setShowProductModal(false);
-                    setProductToEdit(null);
-                }}
-                onSave={handleSaveProduct}
-                produit={productToEdit}
-                categories={categories}
-                boutiqueId={boutique?.id || 0}
-                boutiqueSlug={boutique?.slug || ''}
-            />
-
-            {/* Nouveaux modals simplifiés */}
+            {/* Modals simplifiés */}
             <CategorySelectionModal
                 isOpen={showCategoryModal}
                 onClose={handleCloseSimplifiedModals}

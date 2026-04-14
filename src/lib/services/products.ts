@@ -2,8 +2,90 @@
  * Service pour la gestion des produits
  */
 
-import api from '@/lib/api';
+import api, { ApiError } from '@/lib/api';
 import { ProduitDB } from '@/lib/database-types';
+import {
+  ProductValidationError,
+  type ProductValidationErrorItem,
+} from '@/lib/errors/product-validation-error';
+
+/** Réponse POST/PUT produit : succès ou échec (validation incluse) */
+type ProduitMutationResponse =
+  | { success: true; message?: string; produit: ProduitDB | string }
+  | {
+      success: false;
+      code?: string;
+      message: string;
+      errors?: ProductValidationErrorItem[];
+      stack?: string;
+    };
+
+type ProduitMutationContext = 'create' | 'update';
+
+/**
+ * Transforme une erreur HTTP API (400 avec corps validation) en ProductValidationError.
+ */
+const rethrowAsProduitError = (
+  error: unknown,
+  ctx: ProduitMutationContext
+): never => {
+  if (error instanceof ProductValidationError) {
+    throw error;
+  }
+
+  if (error instanceof ApiError) {
+    const data = error.response as
+      | {
+          code?: string;
+          message?: string;
+          errors?: ProductValidationErrorItem[];
+        }
+      | undefined;
+
+    if (
+      data &&
+      (data.code === 'VALIDATION_ERROR' ||
+        (Array.isArray(data.errors) && data.errors.length > 0))
+    ) {
+      const msg =
+        typeof data.message === 'string' && data.message.trim()
+          ? data.message
+          : error.message;
+      throw new ProductValidationError(msg, {
+        code:
+          typeof data.code === 'string' ? data.code : 'VALIDATION_ERROR',
+        errors: data.errors,
+      });
+    }
+
+    if (error.status === 400) {
+      throw new Error(error.message || 'Données invalides');
+    }
+    if (error.status === 401) {
+      throw new Error('Non authentifié');
+    }
+    if (error.status === 403) {
+      throw new Error(
+        ctx === 'update'
+          ? 'Non autorisé (pas le propriétaire)'
+          : 'Non autorisé (pas propriétaire de la boutique)'
+      );
+    }
+    if (error.status === 404) {
+      throw new Error('Produit non trouvé');
+    }
+    if (error.status === 409) {
+      throw new Error('Conflit (slug déjà utilisé)');
+    }
+    if (error.status === 500) {
+      throw new Error('Erreur serveur');
+    }
+
+    throw new Error(error.message || 'Erreur lors de la requête');
+  }
+
+  throw error;
+};
 
 /**
  * Interface pour la réponse paginée des produits
@@ -115,32 +197,27 @@ export async function creerProduit(produitData: {
   statut: 'actif' | 'inactif' | 'brouillon';
 }): Promise<ProduitDB> {
   try {
-    const response = await api.post<{success: boolean; message: string; produit: ProduitDB | string}>('/produits', produitData);
-    
+    const response = await api.post<ProduitMutationResponse>(
+      '/produits',
+      produitData
+    );
+
     if (!response.success) {
-      throw new Error(response.message || 'Erreur lors de la création du produit');
+      throw new ProductValidationError(
+        response.message || 'Erreur lors de la création du produit',
+        {
+          code: response.code,
+          errors: response.errors,
+        }
+      );
     }
-    
-    // Retourner les données du produit créé
+
     return typeof response.produit === 'string'
       ? JSON.parse(response.produit)
       : response.produit;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erreur lors de la création du produit:', error);
-    
-    if (error.status === 400) {
-      throw new Error('Données invalides');
-    } else if (error.status === 401) {
-      throw new Error('Non authentifié');
-    } else if (error.status === 403) {
-      throw new Error('Non autorisé (pas propriétaire de la boutique)');
-    } else if (error.status === 409) {
-      throw new Error('Conflit (slug déjà utilisé)');
-    } else if (error.status === 500) {
-      throw new Error('Erreur serveur');
-    }
-    
-    throw error;
+    return rethrowAsProduitError(error, 'create');
   }
 }
 
@@ -164,34 +241,27 @@ export async function modifierProduit(id: number, produitData: {
   statut?: 'actif' | 'inactif' | 'brouillon';
 }): Promise<ProduitDB> {
   try {
-    const response = await api.put<{success: boolean; message: string; produit: ProduitDB | string}>(`/produits/${id}`, produitData);
-    
+    const response = await api.put<ProduitMutationResponse>(
+      `/produits/${id}`,
+      produitData
+    );
+
     if (!response.success) {
-      throw new Error(response.message || 'Erreur lors de la modification du produit');
+      throw new ProductValidationError(
+        response.message || 'Erreur lors de la modification du produit',
+        {
+          code: response.code,
+          errors: response.errors,
+        }
+      );
     }
-    
-    // Retourner les données du produit mis à jour
+
     return typeof response.produit === 'string'
       ? JSON.parse(response.produit)
       : response.produit;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erreur lors de la modification du produit:', error);
-    
-    if (error.status === 400) {
-      throw new Error('Données invalides');
-    } else if (error.status === 401) {
-      throw new Error('Non authentifié');
-    } else if (error.status === 403) {
-      throw new Error('Non autorisé (pas le propriétaire)');
-    } else if (error.status === 404) {
-      throw new Error('Produit non trouvé');
-    } else if (error.status === 409) {
-      throw new Error('Conflit (slug déjà utilisé)');
-    } else if (error.status === 500) {
-      throw new Error('Erreur serveur');
-    }
-    
-    throw error;
+    return rethrowAsProduitError(error, 'update');
   }
 }
 
