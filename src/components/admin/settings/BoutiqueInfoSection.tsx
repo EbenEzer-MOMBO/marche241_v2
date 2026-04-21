@@ -2,6 +2,7 @@
 
 import { MapPin, Phone } from 'lucide-react';
 import PhoneNumberInput from '@/components/ui/PhoneNumberInput';
+import { BOUTIQUE_DESCRIPTION_MAX_LENGTH } from '@/lib/constants/boutique';
 
 interface BoutiqueInfoSectionProps {
   boutiqueData: {
@@ -59,15 +60,25 @@ export const BoutiqueInfoSection: React.FC<BoutiqueInfoSectionProps> = ({
 
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Description
+            Description{' '}
+            <span className="text-gray-500 font-normal">
+              (max. {BOUTIQUE_DESCRIPTION_MAX_LENGTH} caractères)
+            </span>
           </label>
           <textarea
             value={boutiqueData.description}
-            onChange={(e) => setBoutiqueData({ ...boutiqueData, description: e.target.value })}
+            onChange={(e) => {
+              const v = e.target.value.slice(0, BOUTIQUE_DESCRIPTION_MAX_LENGTH);
+              setBoutiqueData({ ...boutiqueData, description: v });
+            }}
             rows={4}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black-500 focus:border-transparent"
+            maxLength={BOUTIQUE_DESCRIPTION_MAX_LENGTH}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black-500 focus:border-transparent resize-none"
             placeholder="Décrivez votre boutique..."
           />
+          <p className="mt-1 text-xs text-gray-500 text-right">
+            {boutiqueData.description.length} / {BOUTIQUE_DESCRIPTION_MAX_LENGTH}
+          </p>
         </div>
 
         <div className="md:col-span-2">

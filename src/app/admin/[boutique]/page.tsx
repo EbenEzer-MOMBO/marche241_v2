@@ -41,6 +41,7 @@ export default function BoutiqueDashboard() {
   const boutiqueName = params.boutique as string;
   
   const { user, verifierBoutique } = useAuth();
+  const missingNumeroPaiement = !user?.numero_paiement?.trim();
   const { toasts, removeToast, success, error: showError } = useToast();
   
   const [boutique, setBoutique] = useState<BoutiqueData | null>(null);
@@ -359,7 +360,9 @@ export default function BoutiqueDashboard() {
           </div>
 
           {/* Alertes de configuration */}
-          {(stats.totalProduits === 0 || totalCommunes === 0) && (
+          {(stats.totalProduits === 0 ||
+            totalCommunes === 0 ||
+            missingNumeroPaiement) && (
             <div className="mb-6 space-y-3">
               {stats.totalProduits === 0 && (
                 <ConfigAlert 
@@ -372,6 +375,13 @@ export default function BoutiqueDashboard() {
                 <ConfigAlert 
                   type="shipping" 
                   onAction={() => router.push(`/admin/${boutique?.slug}/shipping`)} 
+                />
+              )}
+
+              {missingNumeroPaiement && (
+                <ConfigAlert
+                  type="payout"
+                  onAction={() => router.push(`/admin/${boutique?.slug}/settings`)}
                 />
               )}
             </div>

@@ -49,6 +49,8 @@ export interface Vendeur {
   statut: StatutVendeur;
   photo_profil?: string;
   ville?: string;
+  /** Numéro Mobile Money (Airtel / futur Moov) pour les reversements */
+  numero_paiement?: string | null;
   verification_telephone: boolean;
   verification_email: boolean;
   derniere_connexion?: Date;

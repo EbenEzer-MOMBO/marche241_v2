@@ -1,7 +1,7 @@
-import { AlertCircle, Plus, Truck, LucideIcon } from 'lucide-react';
+import { AlertCircle, Plus, Truck, Wallet } from 'lucide-react';
 
 interface ConfigAlertProps {
-  type: 'products' | 'shipping';
+  type: 'products' | 'shipping' | 'payout';
   onAction: () => void;
 }
 
@@ -29,6 +29,19 @@ const alertConfig = {
     title: 'Aucune zone de livraison configurée',
     description: 'Ajoutez des communes et leurs frais de livraison pour permettre à vos clients de commander.',
     buttonText: 'Configurer la livraison',
+  },
+  payout: {
+    bgColor: 'bg-violet-50',
+    borderColor: 'border-violet-200',
+    iconColor: 'text-violet-600',
+    titleColor: 'text-violet-900',
+    textColor: 'text-violet-700',
+    buttonColor: 'bg-violet-600 hover:bg-violet-700',
+    icon: Wallet,
+    title: 'Numéro de versement manquant',
+    description:
+      'Indiquez votre numéro Airtel Money dans les paramètres pour recevoir vos reversements.',
+    buttonText: 'Renseigner mon compte',
   },
 };
 

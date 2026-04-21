@@ -9,6 +9,7 @@ interface AuthUser {
   nom: string;
   telephone?: string;
   ville?: string;
+  numero_paiement?: string;
 }
 
 interface UseAuthReturn {
@@ -46,7 +47,8 @@ export function useAuth(): UseAuthReturn {
           email: parsedUser.email,
           nom: parsedUser.nom,
           telephone: parsedUser.telephone,
-          ville: parsedUser.ville
+          ville: parsedUser.ville,
+          numero_paiement: parsedUser.numero_paiement ?? undefined
         });
       } catch (error) {
         console.error('Erreur lors du parsing des données utilisateur:', error);
@@ -112,7 +114,8 @@ export function useAuth(): UseAuthReturn {
           email: response.vendeur.email,
           nom: response.vendeur.nom,
           telephone: response.vendeur.telephone,
-          ville: response.vendeur.ville
+          ville: response.vendeur.ville,
+          numero_paiement: response.vendeur.numero_paiement ?? undefined
         });
         success('Connexion réussie', `Bienvenue ${response.vendeur.nom}`);
         

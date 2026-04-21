@@ -2,6 +2,7 @@
 
 import { Mail, Phone, Save } from 'lucide-react';
 import PhoneNumberInput from '@/components/ui/PhoneNumberInput';
+import { VersementCompteSection } from '@/components/admin/settings/VersementCompteSection';
 
 interface ProfilSectionProps {
   profilData: {
@@ -10,6 +11,7 @@ interface ProfilSectionProps {
     email: string;
     telephone: string;
     ville: string;
+    numero_paiement: string;
   };
   setProfilData: (data: any) => void;
   onSave: () => void;
@@ -84,6 +86,11 @@ export const ProfilSection: React.FC<ProfilSectionProps> = ({
           />
         </div>
       </div>
+
+      <VersementCompteSection
+        value={profilData.numero_paiement}
+        onChange={(numero_paiement) => setProfilData({ ...profilData, numero_paiement })}
+      />
 
       <div className="flex justify-end pt-4 border-t border-gray-200">
         <button

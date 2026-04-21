@@ -1,10 +1,9 @@
 'use client';
 
-import Link from 'next/link';
+import { useState } from 'react';
 import { useBoutique } from '@/hooks/useBoutique';
 import { HeroSkeleton, ErrorState } from './LoadingStates';
 import SafeImage from './SafeImage';
-import { BoutiqueConfig } from '@/lib/boutiques';
 
 interface HeroSectionProps {
   boutiqueName: string;
@@ -28,8 +27,11 @@ function getBoutiqueLogo(logoUrl?: string | null): string {
   return '/default-shop.png';
 }
 
+const DESCRIPTION_PREVIEW_MAX = 200;
+
 export default function HeroSection({ boutiqueName }: HeroSectionProps) {
   const { boutique, config, loading, error, refetch } = useBoutique(boutiqueName);
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
   // Afficher le squelette pendant le chargement
   if (loading) {
@@ -46,6 +48,10 @@ export default function HeroSection({ boutiqueName }: HeroSectionProps) {
       />
     );
   }
+
+  const fullDescription = (config.description ?? '').trim();
+  const isDescriptionExpandable = fullDescription.length > DESCRIPTION_PREVIEW_MAX;
+
   return (
     <section className="relative py-6 sm:py-8 mt-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -98,10 +104,36 @@ export default function HeroSection({ boutiqueName }: HeroSectionProps) {
             {config.name}
           </h1>
           
-          {/* Description */}
-          <p className="text-base sm:text-md lg:text-xl text-gray-600 leading-relaxed max-w-3xl mx-auto">
-            {config.description}
-          </p>
+          {/* Description (tronquée puis expansible au clic) */}
+          {fullDescription ? (
+            <div
+              role={isDescriptionExpandable ? 'button' : undefined}
+              tabIndex={isDescriptionExpandable ? 0 : undefined}
+              aria-expanded={isDescriptionExpandable ? descriptionExpanded : undefined}
+              onClick={() =>
+                isDescriptionExpandable &&
+                setDescriptionExpanded((prev) => !prev)
+              }
+              onKeyDown={(e) => {
+                if (!isDescriptionExpandable) return;
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setDescriptionExpanded((prev) => !prev);
+                }
+              }}
+              className={
+                isDescriptionExpandable
+                  ? 'text-base sm:text-md lg:text-xl text-gray-600 leading-relaxed max-w-3xl mx-auto cursor-pointer rounded-xl px-3 py-2 -mx-3 transition-colors hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-300'
+                  : 'text-base sm:text-md lg:text-xl text-gray-600 leading-relaxed max-w-3xl mx-auto'
+              }
+            >
+              <p className="">
+                {isDescriptionExpandable && !descriptionExpanded
+                  ? `${fullDescription.slice(0, DESCRIPTION_PREVIEW_MAX)}…`
+                  : fullDescription}
+              </p>
+            </div>
+          ) : null}
         </div>
       </div>
     </section>

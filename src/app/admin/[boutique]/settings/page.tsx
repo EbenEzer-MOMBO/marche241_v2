@@ -14,6 +14,8 @@ import { BoutiqueInfoSection } from '@/components/admin/settings/BoutiqueInfoSec
 import { ApparenceSection } from '@/components/admin/settings/ApparenceSection';
 import { PaymentModeSection } from '@/components/admin/settings/PaymentModeSection';
 import { User, Store, Menu, Save } from 'lucide-react';
+import { BOUTIQUE_DESCRIPTION_MAX_LENGTH } from '@/lib/constants/boutique';
+import { normalizeMsisdnInput, validateMsisdn } from '@/lib/utils/mobileMoneyMsisdn';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -35,7 +37,8 @@ export default function SettingsPage() {
     prenom: '',
     email: '',
     telephone: '',
-    ville: ''
+    ville: '',
+    numero_paiement: ''
   });
 
   // États pour la boutique
@@ -96,14 +99,15 @@ export default function SettingsPage() {
           prenom: '',
           email: user.email || '',
           telephone: user.telephone || '',
-          ville: user.ville || ''
+          ville: user.ville || '',
+          numero_paiement: normalizeMsisdnInput(user.numero_paiement || '')
         });
 
         // Initialiser les données de la boutique
         setBoutiqueData({
           nom: boutiqueData.nom || '',
           slug: boutiqueData.slug || '',
-          description: boutiqueData.description || '',
+          description: (boutiqueData.description || '').slice(0, BOUTIQUE_DESCRIPTION_MAX_LENGTH),
           adresse: boutiqueData.adresse || '',
           telephone: boutiqueData.telephone || '',
           logo: boutiqueData.logo || '',
@@ -130,16 +134,29 @@ export default function SettingsPage() {
   const handleSaveProfil = async () => {
     if (!user) return;
 
+    const numeroPaiement = normalizeMsisdnInput(profilData.numero_paiement);
+    const versementErr = numeroPaiement ? validateMsisdn(numeroPaiement, 'airtel') : '';
+    if (versementErr) {
+      showError(versementErr, 'Compte versement');
+      return;
+    }
+
     setIsSaving(true);
     try {
       const response = await modifierVendeur(parseInt(user.id), {
         nom: profilData.nom,
         email: profilData.email,
         telephone: profilData.telephone,
-        ville: profilData.ville
+        ville: profilData.ville,
+        numero_paiement: numeroPaiement
       });
 
       if (response.success && response.vendeur) {
+        const numeroFromApi =
+          response.vendeur.numero_paiement != null
+            ? normalizeMsisdnInput(String(response.vendeur.numero_paiement))
+            : numeroPaiement;
+
         // Mettre à jour le localStorage avec les nouvelles données
         const currentUser = JSON.parse(localStorage.getItem('admin_user') || '{}');
         const updatedUserData = {
@@ -147,7 +164,8 @@ export default function SettingsPage() {
           nom: response.vendeur.nom,
           email: response.vendeur.email,
           telephone: response.vendeur.telephone,
-          ville: response.vendeur.ville
+          ville: response.vendeur.ville,
+          numero_paiement: numeroFromApi
         };
         localStorage.setItem('admin_user', JSON.stringify(updatedUserData));
         
@@ -156,8 +174,11 @@ export default function SettingsPage() {
           nom: response.vendeur.nom,
           email: response.vendeur.email,
           telephone: response.vendeur.telephone,
-          ville: response.vendeur.ville
+          ville: response.vendeur.ville,
+          numero_paiement: numeroFromApi
         });
+
+        setProfilData((prev) => ({ ...prev, numero_paiement: numeroFromApi }));
         
         success('Profil mis à jour avec succès');
       }
@@ -230,12 +251,14 @@ export default function SettingsPage() {
   const handleSaveBoutique = async () => {
     if (!boutique) return;
 
+    const description = boutiqueData.description.slice(0, BOUTIQUE_DESCRIPTION_MAX_LENGTH);
+
     setIsSaving(true);
     try {
       const response = await modifierBoutique(boutique.id, {
         nom: boutiqueData.nom,
         slug: boutiqueData.slug,
-        description: boutiqueData.description,
+        description,
         logo: boutiqueData.logo,
         banniere: boutiqueData.banniere,
         couleur_primaire: boutiqueData.couleur_primaire,

@@ -8,6 +8,7 @@ import { ToastContainer } from '@/components/ui/Toast';
 import { useToast } from '@/hooks/useToast';
 import { Building2, ArrowLeft, Store, FileText, MapPin, Loader2, Phone } from 'lucide-react';
 import PhoneNumberInput from '@/components/ui/PhoneNumberInput';
+import { BOUTIQUE_DESCRIPTION_MAX_LENGTH } from '@/lib/constants/boutique';
 
 export default function CreateBoutiquePage() {
   const router = useRouter();
@@ -60,9 +61,13 @@ export default function CreateBoutiquePage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+    const nextValue =
+      name === 'description' && value.length > BOUTIQUE_DESCRIPTION_MAX_LENGTH
+        ? value.slice(0, BOUTIQUE_DESCRIPTION_MAX_LENGTH)
+        : value;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: nextValue
     }));
   };
 
@@ -216,7 +221,7 @@ export default function CreateBoutiquePage() {
             {/* Description */}
             <div>
               <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-                Description *
+                Description * <span className="text-gray-500 font-normal">(max. {BOUTIQUE_DESCRIPTION_MAX_LENGTH} caractères)</span>
               </label>
               <div className="relative">
                 <div className="absolute top-3 left-3 pointer-events-none">
@@ -228,11 +233,15 @@ export default function CreateBoutiquePage() {
                   value={formData.description}
                   onChange={handleInputChange}
                   required
+                  maxLength={BOUTIQUE_DESCRIPTION_MAX_LENGTH}
                   rows={4}
                   placeholder="Décrivez votre boutique et vos produits..."
                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent resize-none"
                 />
               </div>
+              <p className="mt-1 text-xs text-gray-500 text-right">
+                {formData.description.length} / {BOUTIQUE_DESCRIPTION_MAX_LENGTH}
+              </p>
             </div>
 
             {/* Adresse */}

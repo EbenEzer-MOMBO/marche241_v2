@@ -17,6 +17,7 @@ import PhoneNumberInput from '@/components/ui/PhoneNumberInput';
 import PaymentProgressBar from '@/components/ui/PaymentProgressBar';
 import PaymentCountdown from '@/components/ui/PaymentCountdown';
 import { ToastContainer } from '@/components/ui/Toast';
+import { normalizeMsisdnInput, validateMsisdn, msisdnPlaceholder, type MobileMoneyOperator } from '@/lib/utils/mobileMoneyMsisdn';
 
 interface OrderSummaryProps {
   boutiqueConfig: BoutiqueConfig;
@@ -291,41 +292,18 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
   };
 
   const getPhonePlaceholder = () => {
-    if (selectedPayment === 'moov') return '06XXXXXXX';
-    if (selectedPayment === 'airtel') return '07XXXXXXX';
-    return '';
-  };
-
-  const validatePaymentPhone = (phone: string, paymentType: PaymentMethod): string => {
-    if (!phone) return '';
-
-    // Supprimer tous les espaces et caractères non numériques sauf le +
-    const cleanPhone = phone.replace(/[^\d+]/g, '');
-
-    if (paymentType === 'moov') {
-      // Format Moov: doit commencer par 06 et avoir 9 chiffres au total
-      if (!/^06\d{7}$/.test(cleanPhone)) {
-        return 'Le numéro Moov Money doit respecter le format 06XXXXXXX (9 chiffres)';
-      }
-    } else if (paymentType === 'airtel') {
-      // Format Airtel: doit commencer par 07 et avoir 9 chiffres au total
-      if (!/^07\d{7}$/.test(cleanPhone)) {
-        return 'Le numéro Airtel Money doit respecter le format 07XXXXXXX (9 chiffres)';
-      }
+    if (selectedPayment === 'moov' || selectedPayment === 'airtel') {
+      return msisdnPlaceholder(selectedPayment as MobileMoneyOperator);
     }
-
     return '';
   };
 
   const handlePaymentPhoneChange = (value: string) => {
-    // Limiter à 9 caractères et permettre seulement les chiffres
-    const cleanValue = value.replace(/[^\d]/g, '').slice(0, 9);
+    const cleanValue = normalizeMsisdnInput(value);
     setPaymentPhone(cleanValue);
 
-    // Validation en temps réel
-    if (selectedPayment) {
-      const error = validatePaymentPhone(cleanValue, selectedPayment);
-      setPaymentPhoneError(error);
+    if (selectedPayment === 'moov' || selectedPayment === 'airtel') {
+      setPaymentPhoneError(validateMsisdn(cleanValue, selectedPayment));
     }
   };
 

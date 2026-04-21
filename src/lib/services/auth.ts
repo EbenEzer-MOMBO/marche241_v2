@@ -58,6 +58,7 @@ export interface VerifierCodeResponse {
     statut: string;
     telephone?: string;
     ville?: string;
+    numero_paiement?: string | null;
   };
   token?: string;
   tentatives_restantes?: number;
@@ -138,6 +139,7 @@ export interface ModifierVendeurData {
   email?: string;
   telephone?: string;
   ville?: string;
+  numero_paiement?: string;
 }
 
 export interface ModifierVendeurResponse {
@@ -150,6 +152,7 @@ export interface ModifierVendeurResponse {
     telephone?: string;
     ville?: string;
     statut: string;
+    numero_paiement?: string | null;
   };
 }
 
