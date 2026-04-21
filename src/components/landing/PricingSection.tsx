@@ -87,14 +87,14 @@ export const PricingSection: React.FC = () => {
               key={index}
               className={`relative bg-white rounded-2xl shadow-lg border-2 transition-all hover:shadow-2xl ${
                 plan.isPopular 
-                  ? 'border-green-500 transform md:scale-105' 
+                  ? 'border-[#74adaf] transform md:scale-105' 
                   : 'border-gray-200'
               }`}
             >
               {/* Badge populaire */}
               {plan.isPopular && (
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <span className="bg-green-500 text-white px-4 py-1 rounded-full text-sm font-semibold shadow-lg">
+                  <span className="bg-gradient-to-r from-[#508e27] to-[#74adaf] text-white px-4 py-1 rounded-full text-sm font-semibold shadow-lg">
                     Le plus populaire
                   </span>
                 </div>
@@ -122,7 +122,7 @@ export const PricingSection: React.FC = () => {
                     <li key={idx} className="flex items-start gap-3">
                       <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${
                         feature.included 
-                          ? 'bg-green-100 text-green-600' 
+                          ? 'bg-gradient-to-r from-[#508e27]/10 to-[#74adaf]/10 text-[#508e27]' 
                           : 'bg-gray-100 text-gray-400'
                       }`}>
                         {feature.included ? (
@@ -143,7 +143,7 @@ export const PricingSection: React.FC = () => {
                   href={plan.ctaLink}
                   className={`block w-full py-3 px-6 rounded-lg text-center font-semibold transition-all ${
                     plan.isPopular
-                      ? 'bg-green-600 text-white hover:bg-green-700 shadow-lg'
+                      ? 'bg-gradient-to-r from-[#508e27] to-[#74adaf] text-white hover:opacity-90 shadow-lg'
                       : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
                   }`}
                 >
@@ -157,7 +157,7 @@ export const PricingSection: React.FC = () => {
         {/* Note en bas */}
         <p className="text-center text-gray-600 mt-12">
           Tous les plans incluent les mises à jour gratuites et la sécurité SSL. 
-          <a href="#" className="text-green-600 hover:underline ml-1">
+          <a href="#" className="bg-gradient-to-r from-[#508e27] to-[#74adaf] bg-clip-text text-transparent hover:underline ml-1">
             Comparer les fonctionnalités détaillées
           </a>
         </p>

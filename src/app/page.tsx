@@ -10,8 +10,12 @@ import { NewsletterSection } from '@/components/landing/NewsletterSection';
 import { AboutSection } from '@/components/landing/AboutSection';
 import { ScreenshotsSection } from '@/components/landing/ScreenshotsSection';
 import { PricingSection } from '@/components/landing/PricingSection';
+import { FAQSection } from '@/components/landing/FAQSection';
 import { CTASection } from '@/components/landing/CTASection';
+import { SocialMediaSection } from '@/components/landing/SocialMediaSection';
 import Footer from '@/components/Footer';
+import { InstallAppButton } from '@/components/InstallAppButton';
+
 
 export default function LandingPage() {
   const router = useRouter();
@@ -54,7 +58,7 @@ export default function LandingPage() {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#508e27] mx-auto mb-4"></div>
           <p className="text-gray-600">Redirection vers votre dashboard...</p>
         </div>
       </div>
@@ -78,16 +82,16 @@ export default function LandingPage() {
 
             {/* Menu Desktop et CTA Buttons */}
             <div className="hidden md:flex items-center space-x-8">
-              <a href="#features" className="text-gray-700 hover:text-green-600 transition-colors font-medium">
+              <a href="#features" className="text-gray-700 hover:bg-gradient-to-r hover:from-[#508e27] hover:to-[#74adaf] hover:bg-clip-text hover:text-transparent transition-colors font-medium">
                 Fonctionnalités
               </a>
-              <a href="#about" className="text-gray-700 hover:text-green-600 transition-colors font-medium">
+              <a href="#about" className="text-gray-700 hover:bg-gradient-to-r hover:from-[#508e27] hover:to-[#74adaf] hover:bg-clip-text hover:text-transparent transition-colors font-medium">
                 À propos
               </a>
-              <a href="#pricing" className="text-gray-700 hover:text-green-600 transition-colors font-medium">
-                Tarifs
+              <a href="#faq" className="text-gray-700 hover:bg-gradient-to-r hover:from-[#508e27] hover:to-[#74adaf] hover:bg-clip-text hover:text-transparent transition-colors font-medium">
+                FAQ
               </a>
-              <a href="/affiche_boutiques" className="text-gray-700 hover:text-green-600 transition-colors font-medium">
+              <a href="/affiche_boutiques" className="text-gray-700 hover:bg-gradient-to-r hover:from-[#508e27] hover:to-[#74adaf] hover:bg-clip-text hover:text-transparent transition-colors font-medium">
                 Boutiques
               </a>
               
@@ -112,7 +116,7 @@ export default function LandingPage() {
                   </Link>
                   <Link
                     href="/admin/register"
-                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                    className="px-6 py-2 bg-gradient-to-r from-[#508e27] to-[#74adaf] text-white rounded-lg hover:opacity-90 transition-all font-medium"
                   >
                     Créer ma boutique
                   </Link>
@@ -139,28 +143,28 @@ export default function LandingPage() {
               <div className="flex flex-col space-y-4">
                 <a 
                   href="#features" 
-                  className="text-gray-700 hover:text-green-600 transition-colors font-medium"
+                  className="text-gray-700 hover:bg-gradient-to-r hover:from-[#508e27] hover:to-[#74adaf] hover:bg-clip-text hover:text-transparent transition-colors font-medium"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Fonctionnalités
                 </a>
                 <a 
                   href="#about" 
-                  className="text-gray-700 hover:text-green-600 transition-colors font-medium"
+                  className="text-gray-700 hover:bg-gradient-to-r hover:from-[#508e27] hover:to-[#74adaf] hover:bg-clip-text hover:text-transparent transition-colors font-medium"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   À propos
                 </a>
                 <a 
-                  href="#pricing" 
-                  className="text-gray-700 hover:text-green-600 transition-colors font-medium"
+                  href="#faq" 
+                  className="text-gray-700 hover:bg-gradient-to-r hover:from-[#508e27] hover:to-[#74adaf] hover:bg-clip-text hover:text-transparent transition-colors font-medium"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  Tarifs
+                  FAQ
                 </a>
                 <a 
                   href="/affiche_boutiques" 
-                  className="text-gray-700 hover:text-green-600 transition-colors font-medium"
+                  className="text-gray-700 hover:bg-gradient-to-r hover:from-[#508e27] hover:to-[#74adaf] hover:bg-clip-text hover:text-transparent transition-colors font-medium"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Boutiques
@@ -184,7 +188,7 @@ export default function LandingPage() {
                       </Link>
                       <Link
                         href="/admin/register"
-                        className="block w-full px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-center"
+                        className="block w-full px-6 py-2 bg-gradient-to-r from-[#508e27] to-[#74adaf] text-white rounded-lg hover:opacity-90 transition-all font-medium text-center"
                       >
                         Créer ma boutique
                       </Link>
@@ -202,11 +206,18 @@ export default function LandingPage() {
         <HeroBanner />
         <FeaturesSection />
         <AboutSection />
+        <FAQSection />
         <CTASection />
       </main>
 
+      {/* Réseaux sociaux */}
+      <SocialMediaSection />
+
       {/* Footer */}
       <Footer />
+
+      {/* Bouton d'installation flottant */}
+      <InstallAppButton />
     </div>
   );
 }

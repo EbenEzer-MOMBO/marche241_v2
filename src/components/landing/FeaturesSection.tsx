@@ -68,15 +68,15 @@ export const FeaturesSection: React.FC = () => {
           {features.map((feature, index) => (
             <div
               key={index}
-              className="group relative bg-gradient-to-br from-gray-50 to-white p-8 rounded-2xl border border-gray-200 hover:border-green-400 hover:shadow-xl transition-all duration-300"
+              className="group relative bg-gradient-to-br from-gray-50 to-white p-8 rounded-2xl border border-gray-200 hover:border-[#74adaf] hover:shadow-xl transition-all duration-300"
             >
               {/* Numéro en arrière-plan */}
-              <span className="absolute top-4 right-4 text-6xl font-bold text-gray-100 group-hover:text-green-100 transition-colors">
+              <span className="absolute top-4 right-4 text-6xl font-bold text-gray-100 group-hover:text-[#74adaf]/20 transition-colors">
                 {feature.number}
               </span>
 
               {/* Icône */}
-              <div className="relative z-10 inline-flex items-center justify-center w-16 h-16 bg-green-100 text-green-600 rounded-xl mb-6 group-hover:bg-green-600 group-hover:text-white transition-all duration-300">
+              <div className="relative z-10 inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-[#508e27]/10 to-[#74adaf]/10 text-[#508e27] rounded-xl mb-6 group-hover:bg-gradient-to-r group-hover:from-[#508e27] group-hover:to-[#74adaf] group-hover:text-white transition-all duration-300">
                 {feature.icon}
               </div>
 
@@ -89,8 +89,7 @@ export const FeaturesSection: React.FC = () => {
               </p>
 
               {/* Flèche hover */}
-              <div className="mt-6 flex items-center text-green-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                <span className="text-sm font-medium">En savoir plus</span>
+              <div className="mt-6 flex items-center bg-gradient-to-r from-[#508e27] to-[#74adaf] bg-clip-text text-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                 <svg className="ml-2 h-4 w-4 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>

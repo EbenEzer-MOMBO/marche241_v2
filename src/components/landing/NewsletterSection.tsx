@@ -23,7 +23,7 @@ export const NewsletterSection: React.FC = () => {
   };
 
   return (
-    <section className="py-16 bg-gradient-to-r from-green-600 to-green-700">
+    <section className="py-16 bg-gradient-to-r from-[#508e27] to-[#74adaf]">
       <div className="container mx-auto px-4">
         <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
           {/* Texte */}
@@ -31,7 +31,7 @@ export const NewsletterSection: React.FC = () => {
             <h3 className="text-2xl md:text-3xl font-bold text-white mb-2">
               Restez informé des nouveautés
             </h3>
-            <p className="text-green-100 text-lg">
+            <p className="text-white/80 text-lg">
               Recevez nos conseils et astuces pour développer votre boutique
             </p>
           </div>
@@ -65,7 +65,7 @@ export const NewsletterSection: React.FC = () => {
               </button>
             </form>
             {status === 'success' && (
-              <p className="mt-2 text-sm text-green-100">
+              <p className="mt-2 text-sm text-white/80">
                 Merci ! Vous êtes maintenant inscrit à notre newsletter.
               </p>
             )}

@@ -11,7 +11,7 @@ export const AboutSection: React.FC = () => {
         <div className="flex flex-col lg:flex-row items-center gap-12 mb-32">
           <div className="flex-1">
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-blue-500 rounded-2xl blur-2xl opacity-20"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-[#508e27] to-[#74adaf] rounded-2xl blur-2xl opacity-20"></div>
               <Image
                 src="/home2.png"
                 alt="Interface Marché241"
@@ -33,8 +33,8 @@ export const AboutSection: React.FC = () => {
 
             <div className="space-y-4">
               <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <Check className="h-6 w-6 text-green-600" />
+                <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-r from-[#508e27]/10 to-[#74adaf]/10 rounded-lg flex items-center justify-center">
+                  <Check className="h-6 w-6 text-[#508e27]" />
                 </div>
                 <div>
                   <h4 className="text-xl font-semibold text-gray-900 mb-2">

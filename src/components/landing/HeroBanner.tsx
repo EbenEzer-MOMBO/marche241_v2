@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowRight, Download } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import Image from 'next/image';
 
 interface HeroBannerProps {
@@ -28,75 +28,70 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
   }, []);
 
   return (
-    <section className="relative bg-gradient-to-br from-gray-50 to-gray-100 py-20 lg:py-10 overflow-hidden">
-      {/* Motif de fond décoratif */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-green-500 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-500 rounded-full blur-3xl"></div>
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      {/* Image de fond */}
+      <div className="absolute inset-0 z-0">
+        <Image
+          src={imageSrc}
+          alt="Marché241"
+          fill
+          className="object-cover"
+          priority
+        />
       </div>
 
-      <div className="container mx-auto px-4 relative z-10">
-        <div className="flex flex-col lg:flex-row items-center gap-12">
-          {/* Contenu texte */}
-          <div className={`flex-1 space-y-6 text-center lg:text-left transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
-              {title}
-              <br />
-              <span className="text-green-600">{subtitle}</span>
-            </h1>
+      {/* Overlay sombre */}
+      <div className="absolute inset-0 bg-black/60 z-10"></div>
+
+      {/* Motif de fond décoratif */}
+      <div className="absolute inset-0 z-20 opacity-10">
+        <div className="absolute top-0 left-0 w-96 h-96 bg-[#508e27] rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-[#74adaf] rounded-full blur-3xl"></div>
+      </div>
+
+      {/* Contenu */}
+      <div className="container mx-auto px-4 relative z-30 py-20">
+        <div className={`max-w-4xl mx-auto text-center space-y-8 transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+          <h1 className="text-3xl md:text-4xl lg:text-6xl font-bold text-white leading-tight">
+            {title}
+            <br />
+            <span className="bg-gradient-to-r from-[#508e27] to-[#74adaf] bg-clip-text text-transparent">{subtitle}</span>
+          </h1>
+          
+          <p className="text-lg md:text-xl lg:text-2xl text-gray-200 max-w-3xl mx-auto">
+            {description}
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
+            <a
+              href={ctaLink}
+              className="inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-[#508e27] to-[#74adaf] text-white rounded-lg hover:opacity-90 transition-all transform hover:scale-105 shadow-lg group text-lg font-semibold"
+            >
+              {ctaText}
+              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+            </a>
             
-            <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto lg:mx-0">
-              {description}
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <a
-                href={ctaLink}
-                className="inline-flex items-center justify-center px-8 py-4 bg-black text-white rounded-lg hover:bg-gray-800 transition-all transform hover:scale-105 shadow-lg group"
-              >
-                {ctaText}
-                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-              </a>
-              
-              <a
-                href="/affiche_boutiques"
-                className="inline-flex items-center justify-center px-8 py-4 bg-white text-gray-900 rounded-lg hover:bg-gray-50 transition-all border-2 border-gray-200"
-              >
-                Rechercher une boutique
-              </a>
-            </div>
-
-            {/* Statistiques rapides */}
-            <div className="grid grid-cols-3 gap-6 pt-8 border-t border-gray-200 max-w-md mx-auto lg:mx-0">
-              <div>
-                <p className="text-3xl font-bold text-gray-900">10+</p>
-                <p className="text-sm text-gray-600">Boutiques</p>
-              </div>
-              <div>
-                <p className="text-3xl font-bold text-gray-900">50+</p>
-                <p className="text-sm text-gray-600">Produits</p>
-              </div>
-              <div>
-                <p className="text-3xl font-bold text-gray-900">24/7</p>
-                <p className="text-sm text-gray-600">Support</p>
-              </div>
-            </div>
+            <a
+              href="/affiche_boutiques"
+              className="inline-flex items-center justify-center px-8 py-4 bg-white/10 backdrop-blur-sm text-white rounded-lg hover:bg-white/20 transition-all border-2 border-white/30 text-lg font-semibold"
+            >
+              Rechercher une boutique
+            </a>
           </div>
 
-          {/* Image/Illustration */}
-          <div className={`flex-1 transition-all duration-1000 delay-300 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-10'}`}>
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-blue-500 rounded-2xl blur-2xl opacity-20 animate-pulse"></div>
-              <div className="relative bg-white p-4 rounded-2xl shadow-2xl">
-                <Image
-                  src={imageSrc}
-                  alt="Marché241 Dashboard"
-                  width={600}
-                  height={400}
-                  className="rounded-lg w-full h-auto"
-                  priority
-                />
-              </div>
+          {/* Statistiques rapides */}
+          <div className="grid grid-cols-3 gap-8 pt-12 max-w-2xl mx-auto">
+            <div className="backdrop-blur-sm bg-white/10 p-6 rounded-xl border border-white/20">
+              <p className="text-2xl font-bold text-white">50+</p>
+              <p className="text-sm text-gray-200 mt-2">Boutiques</p>
+            </div>
+            <div className="backdrop-blur-sm bg-white/10 p-6 rounded-xl border border-white/20">
+              <p className="text-2xl font-bold text-white">200+</p>
+              <p className="text-sm text-gray-200 mt-2">Produits</p>
+            </div>
+            <div className="backdrop-blur-sm bg-white/10 p-6 rounded-xl border border-white/20">
+              <p className="text-2xl font-bold text-white">24/7</p>
+              <p className="text-sm text-gray-200 mt-2">Support</p>
             </div>
           </div>
         </div>
