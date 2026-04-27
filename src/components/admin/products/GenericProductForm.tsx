@@ -107,7 +107,7 @@ const COULEURS_PRESETS = [
 
 const TAILLES_PRESETS = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', '5XL'];
 
-const CONTENANCE_PRESETS = ['50ml', '100ml', '250ml', '500ml', '1L', '2L', '5L'];
+const CONTENANCE_PRESETS = ['5ml', '10ml', '20ml', '50ml', '100ml', '200ml', '250ml', '500ml', '1L', '2L', '5L'];
 
 const STOCKAGE_PRESETS = [
   '2GB',
