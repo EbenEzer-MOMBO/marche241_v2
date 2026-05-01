@@ -105,7 +105,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
   const [whatsAppExists, setWhatsAppExists] = useState<boolean | null>(null);
 
   // Utilisation du hook panier pour récupérer les vraies données avec isolation par boutique
-  const { panier, totalItems, totalPrix, loading } = usePanier(boutiqueId);
+  const { panier, totalItems, totalPrix, loading, viderLePanier } = usePanier(boutiqueId);
   const { success, error, toasts, removeToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showProgressBar, setShowProgressBar] = useState(false);
@@ -492,10 +492,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
                     2000
                   );
 
-                  // Rediriger vers la page de confirmation après 2 secondes
-                  setTimeout(() => {
-                    window.location.href = `/${boutiqueSlug}/confirmation?commande=${commande.commande.numero_commande}&type=partiel`;
-                  }, 2000);
+                  await handleSuccessfulPayment('partiel', commande.commande.numero_commande);
                 } else if (verificationResult.status === 'echec' || verificationResult.status === 'failed') {
                   error(verificationResult.message || 'Le paiement des frais de livraison a échoué. Veuillez réessayer.');
                   setShowCountdown(false);
@@ -654,10 +651,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
                     2000
                   );
 
-                  // Rediriger vers la page de confirmation après 2 secondes
-                  setTimeout(() => {
-                    window.location.href = `/${boutiqueSlug}/confirmation?commande=${commande.commande.numero_commande}&type=complet`;
-                  }, 2000);
+                  await handleSuccessfulPayment('complet', commande.commande.numero_commande);
                 } else if (verificationResult.status === 'echec' || verificationResult.status === 'failed') {
                   error(verificationResult.message || 'Le paiement a échoué. Veuillez réessayer.');
                   setShowCountdown(false);
@@ -727,6 +721,18 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
 
     // Afficher un message d'annulation
     error('Paiement annulé par l\'utilisateur.');
+  };
+
+  const handleSuccessfulPayment = async (typePaiement: 'partiel' | 'complet', numeroCommande: string) => {
+    const panierVide = await viderLePanier();
+
+    if (!panierVide) {
+      console.warn('Le paiement est validé mais le panier n\'a pas pu être vidé.');
+    }
+
+    setTimeout(() => {
+      window.location.href = `/${boutiqueSlug}/confirmation?commande=${numeroCommande}&type=${typePaiement}`;
+    }, 2000);
   };
 
   return (
