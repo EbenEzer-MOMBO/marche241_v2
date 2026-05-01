@@ -7,8 +7,7 @@ import {
   ajouterAuPanier,
   getPanier,
   mettreAJourQuantitePanier,
-  supprimerDuPanier,
-  viderPanier
+  supprimerDuPanier
 } from '@/lib/services/panier';
 
 interface PanierItem {
@@ -253,11 +252,19 @@ export function usePanier(boutiqueId?: number): UsePanierResult {
     try {
       setError(null);
 
-      // Passer le boutiqueId pour vider uniquement le panier de cette boutique
-      await viderPanier(boutiqueId);
+      // Recharger depuis l'API pour supprimer les items réellement présents en base
+      const panierActuel = await getPanier(boutiqueId);
+
+      // Vider avec l'endpoint fiable utilisé par le sidebar: DELETE /panier/{itemId}
+      await Promise.all(
+        panierActuel.panier.map((item) => supprimerDuPanier(item.id))
+      );
 
       // Recharger le panier après vidage
       await chargerPanier();
+
+      // Émettre un événement pour notifier les autres composants
+      window.dispatchEvent(new CustomEvent('cartUpdated'));
 
       return true;
     } catch (err) {
