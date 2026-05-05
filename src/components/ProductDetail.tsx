@@ -578,7 +578,7 @@ export default function ProductDetail({
                 Produits
               </Link>
               <span>/</span>
-              <Link href={boutiqueSlug ? `/${boutiqueSlug}/categories/${product.categorie.slug}` : `/categories/${product.categorie.slug}`} className="hover:text-primary">
+              <Link href={boutiqueSlug ? `/${boutiqueSlug}/produits?categorie=${product.categorie.slug}` : `/produits?categorie=${product.categorie.slug}`} className="hover:text-primary">
                 {product.categorie.nom}
               </Link>
               <span>/</span>
