@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { formatPrice } from '@/lib/utils';
+import { getPrixUnitairePanier, getSousTotalLignePanier } from '@/lib/utils/panier-pricing';
 import { BoutiqueConfig } from '@/lib/boutiques';
 import { usePanier } from '@/hooks/usePanier';
 import { useToast } from '@/hooks/useToast';
@@ -18,6 +19,7 @@ import PaymentProgressBar from '@/components/ui/PaymentProgressBar';
 import PaymentCountdown from '@/components/ui/PaymentCountdown';
 import { ToastContainer } from '@/components/ui/Toast';
 import { normalizeMsisdnInput, validateMsisdn, msisdnPlaceholder, type MobileMoneyOperator } from '@/lib/utils/mobileMoneyMsisdn';
+import type { PersonnalisationSelectionPanier } from '@/lib/types/personnalisations';
 
 interface OrderSummaryProps {
   boutiqueConfig: BoutiqueConfig;
@@ -346,7 +348,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
         articles: panier.map(item => ({
           produit_id: item.produit_id,
           quantite: item.quantite,
-          prix_unitaire: item.variants_selectionnes?.variant?.prix || item.produit.prix,
+          prix_unitaire: getPrixUnitairePanier(item),
           nom_produit: item.produit.nom,
           description: item.produit.description_courte || item.produit.nom,
           variants_selectionnes: item.variants_selectionnes
@@ -407,9 +409,9 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
             acc[index + 1] = {
               id: item.produit_id,
               nom: item.produit.nom,
-              prix_unitaire: item.variants_selectionnes?.variant?.prix || item.produit.prix,
+              prix_unitaire: getPrixUnitairePanier(item),
               quantite: item.quantite,
-              sous_total: (item.variants_selectionnes?.variant?.prix || item.produit.prix) * item.quantite,
+              sous_total: getSousTotalLignePanier(item),
               variants: item.variants_selectionnes || undefined,
               variants_string: variantsString,
               image_url: item.variants_selectionnes?.variant?.image || item.produit.image_principale || undefined
@@ -566,9 +568,9 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
             acc[index + 1] = {
               id: item.produit_id,
               nom: item.produit.nom,
-              prix_unitaire: item.variants_selectionnes?.variant?.prix || item.produit.prix,
+              prix_unitaire: getPrixUnitairePanier(item),
               quantite: item.quantite,
-              sous_total: (item.variants_selectionnes?.variant?.prix || item.produit.prix) * item.quantite,
+              sous_total: getSousTotalLignePanier(item),
               variants: item.variants_selectionnes || undefined,
               variants_string: variantsString,
               image_url: item.variants_selectionnes?.variant?.image || item.produit.image_principale || undefined
@@ -819,10 +821,28 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
                           </div>
                         )}
 
+                        {/* Personnalisations */}
+                        {Array.isArray(item.variants_selectionnes?.personnalisations) &&
+                          item.variants_selectionnes.personnalisations.length > 0 && (
+                            <div className="text-xs text-gray-600 mb-2 space-y-0.5">
+                              {item.variants_selectionnes.personnalisations.map((ligne: PersonnalisationSelectionPanier) => (
+                                <div key={ligne.id}>
+                                  <span className="font-medium">{ligne.libelle}:</span> {ligne.valeur}
+                                  {ligne.prix_supplementaire > 0 ? (
+                                    <span className="text-gray-500">
+                                      {' '}
+                                      (+{formatPrice(ligne.prix_supplementaire)})
+                                    </span>
+                                  ) : null}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
                         <div className="flex justify-between items-center">
                           <span className="text-gray-600">Quantité: {item.quantite}</span>
                           <span className="font-semibold text-lg text-black">
-                            {formatPrice((item.variants_selectionnes?.variant?.prix || item.produit.prix) * item.quantite)}
+                            {formatPrice(getSousTotalLignePanier(item))}
                           </span>
                         </div>
                       </div>

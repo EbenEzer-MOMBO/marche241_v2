@@ -5,6 +5,8 @@ import Image from 'next/image';
 import { formatPrice } from '@/lib/utils';
 import { ProduitDetail } from '@/lib/database-types';
 import { Package } from 'lucide-react';
+import type { PersonnalisationEtatFormulaire, PersonnalisationProduitDef } from '@/lib/types/personnalisations';
+import { ProductPersonnalisationsFields } from './ProductPersonnalisationsFields';
 
 interface GenericVariant {
   id: string;
@@ -26,6 +28,10 @@ interface GenericProductDisplayProps {
   onQuantityChange: (qty: number) => void;
   isAddingToCart: boolean;
   selectedVariantId?: string;
+  personnalisationsEtat: Record<string, PersonnalisationEtatFormulaire>;
+  onPersonnalisationToggle: (id: string, nextActive: boolean) => void;
+  onPersonnalisationValueChange: (id: string, value: string) => void;
+  personnalisationValidationErrors?: Record<string, string>;
 }
 
 export function GenericProductDisplay({
@@ -35,7 +41,11 @@ export function GenericProductDisplay({
   quantity,
   onQuantityChange,
   isAddingToCart,
-  selectedVariantId
+  selectedVariantId,
+  personnalisationsEtat,
+  onPersonnalisationToggle,
+  onPersonnalisationValueChange,
+  personnalisationValidationErrors,
 }: GenericProductDisplayProps) {
   const [selectedVariant, setSelectedVariant] = useState<GenericVariant | null>(null);
   const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string>>({});
@@ -43,6 +53,10 @@ export function GenericProductDisplay({
 
   // Extraire les variants du produit
   const variants: GenericVariant[] = product.variants?.variants || [];
+  const personnalisationDefs = (
+    (product.variants as { personnalisations?: PersonnalisationProduitDef[] })?.personnalisations ??
+    []
+  ) as PersonnalisationProduitDef[];
 
   // Extraire tous les types d'attributs disponibles
   const attributeTypes = new Set<string>();
@@ -320,6 +334,15 @@ export function GenericProductDisplay({
         </div>
       </div>
 
+      {/* Personnalisation (interactive) */}
+      <ProductPersonnalisationsFields
+        definitions={personnalisationDefs}
+        state={personnalisationsEtat}
+        onToggle={onPersonnalisationToggle}
+        onValueChange={onPersonnalisationValueChange}
+        validationErrors={personnalisationValidationErrors}
+      />
+
       {/* Bouton d'ajout au panier - Masqué sur mobile (utilise le bouton flottant) */}
       <button
         onClick={onAddToCart}
@@ -328,32 +351,6 @@ export function GenericProductDisplay({
       >
         {isAddingToCart ? 'Ajout en cours...' : 'Ajouter au panier'}
       </button>
-
-      {/* Personnalisations (si disponibles) */}
-      {product.variants?.personnalisations && product.variants.personnalisations.length > 0 && (
-        <div className="border-t border-gray-200 pt-6">
-          <h3 className="text-sm font-medium text-gray-900 mb-3">
-            Personnalisations disponibles
-          </h3>
-          <div className="space-y-2">
-            {product.variants.personnalisations.map((custom: any) => (
-              <div key={custom.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{custom.libelle}</p>
-                  {custom.obligatoire && (
-                    <span className="text-xs text-red-600">Obligatoire</span>
-                  )}
-                </div>
-                {custom.prix_supplementaire > 0 && (
-                  <span className="text-sm font-medium text-gray-900">
-                    +{formatPrice(custom.prix_supplementaire)}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

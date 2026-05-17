@@ -5,6 +5,8 @@ import Image from 'next/image';
 import { formatPrice } from '@/lib/utils';
 import { ProduitDetail } from '@/lib/database-types';
 import { ShoppingBag } from 'lucide-react';
+import type { PersonnalisationEtatFormulaire, PersonnalisationProduitDef } from '@/lib/types/personnalisations';
+import { ProductPersonnalisationsFields } from './ProductPersonnalisationsFields';
 
 interface ShoesVariant {
   id: string;
@@ -27,6 +29,10 @@ interface ShoesProductDisplayProps {
   isAddingToCart: boolean;
   selectedVariantId?: string;
   selectedPointure?: string;
+  personnalisationsEtat: Record<string, PersonnalisationEtatFormulaire>;
+  onPersonnalisationToggle: (id: string, nextActive: boolean) => void;
+  onPersonnalisationValueChange: (id: string, value: string) => void;
+  personnalisationValidationErrors?: Record<string, string>;
 }
 
 export function ShoesProductDisplay({
@@ -37,7 +43,11 @@ export function ShoesProductDisplay({
   onQuantityChange,
   isAddingToCart,
   selectedVariantId,
-  selectedPointure
+  selectedPointure,
+  personnalisationsEtat,
+  onPersonnalisationToggle,
+  onPersonnalisationValueChange,
+  personnalisationValidationErrors,
 }: ShoesProductDisplayProps) {
   const [selectedVariant, setSelectedVariant] = useState<ShoesVariant | null>(null);
   const [selectedSize, setSelectedSize] = useState<string>('');
@@ -45,6 +55,10 @@ export function ShoesProductDisplay({
 
   // Extraire les variants du produit
   const variants: ShoesVariant[] = product.variants?.variants || [];
+  const personnalisationDefs = (
+    (product.variants as { personnalisations?: PersonnalisationProduitDef[] })?.personnalisations ??
+    []
+  ) as PersonnalisationProduitDef[];
 
   // Initialiser le variant et la pointure sélectionnés
   useEffect(() => {
@@ -246,6 +260,14 @@ export function ShoesProductDisplay({
         </div>
       </div>
 
+      <ProductPersonnalisationsFields
+        definitions={personnalisationDefs}
+        state={personnalisationsEtat}
+        onToggle={onPersonnalisationToggle}
+        onValueChange={onPersonnalisationValueChange}
+        validationErrors={personnalisationValidationErrors}
+      />
+
       {/* Bouton d'ajout au panier - Masqué sur mobile (utilise le bouton flottant) */}
       <button
         onClick={onAddToCart}
@@ -254,32 +276,6 @@ export function ShoesProductDisplay({
       >
         {isAddingToCart ? 'Ajout en cours...' : 'Ajouter au panier'}
       </button>
-
-      {/* Personnalisations (si disponibles) */}
-      {product.variants?.personnalisations && product.variants.personnalisations.length > 0 && (
-        <div className="border-t border-gray-200 pt-6">
-          <h3 className="text-sm font-medium text-gray-900 mb-3">
-            Personnalisations disponibles
-          </h3>
-          <div className="space-y-2">
-            {product.variants.personnalisations.map((custom: any) => (
-              <div key={custom.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{custom.libelle}</p>
-                  {custom.obligatoire && (
-                    <span className="text-xs text-red-600">Obligatoire</span>
-                  )}
-                </div>
-                {custom.prix_supplementaire > 0 && (
-                  <span className="text-sm font-medium text-gray-900">
-                    +{formatPrice(custom.prix_supplementaire)}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Guide des tailles */}
       <div className="border-t border-gray-200 pt-6">

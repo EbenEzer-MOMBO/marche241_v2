@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { formatPrice } from '@/lib/utils';
@@ -10,7 +10,19 @@ import { formatApiProduitPourDetail, formatVariantsPourInterface, getProduitImag
 import { useAjoutPanier } from '@/hooks/usePanier';
 import { useToast } from '@/hooks/useToast';
 import { ToastContainer } from '@/components/ui/Toast';
-import { ClothingProductDisplay, ShoesProductDisplay, GenericProductDisplay } from '@/components/products';
+import {
+  ClothingProductDisplay,
+  ShoesProductDisplay,
+  GenericProductDisplay,
+  ProductPersonnalisationsFields,
+} from '@/components/products';
+import type { PersonnalisationEtatFormulaire, PersonnalisationProduitDef } from '@/lib/types/personnalisations';
+import {
+  collectPersonnalisationsValidationErrors,
+  composePersonnalisationSelectionsPourPanier,
+  createInitialPersonnalisationsEtat,
+  getSupplementDepuisEtatEtDefinitions,
+} from '@/lib/types/personnalisations';
 
 interface ProductDetailProps {
   productId: string;
@@ -123,6 +135,88 @@ export default function ProductDetail({
       setQuantity(Math.max(1, maxQty));
     }
   }, [selectedVariants]);
+
+  const personnalisationDefsSignature =
+    product?.variants &&
+    typeof product.variants === 'object' &&
+    Array.isArray((product.variants as { personnalisations?: PersonnalisationProduitDef[] }).personnalisations)
+      ? (product.variants as { personnalisations: PersonnalisationProduitDef[] }).personnalisations
+          .map((definition) => `${definition.id}:${definition.obligatoire ? '1' : '0'}`)
+          .join('|')
+      : '';
+
+  const personnalisationDefinitions = useMemo((): PersonnalisationProduitDef[] => {
+    if (!product?.variants || typeof product.variants !== 'object') {
+      return [];
+    }
+    const raw = (product.variants as { personnalisations?: PersonnalisationProduitDef[] }).personnalisations;
+    return Array.isArray(raw) ? raw : [];
+  }, [product?.id, personnalisationDefsSignature]);
+
+  const [personnalisationsEtat, setPersonnalisationsEtat] =
+    useState<Record<string, PersonnalisationEtatFormulaire>>({});
+
+  const [personnalisationFieldErrors, setPersonnalisationFieldErrors] =
+    useState<Record<string, string> | undefined>();
+
+  useEffect(() => {
+    if (!product?.variants || typeof product.variants !== 'object') {
+      setPersonnalisationsEtat({});
+      return;
+    }
+    const raw = (product.variants as { personnalisations?: PersonnalisationProduitDef[] }).personnalisations;
+    const defs = Array.isArray(raw) ? raw : [];
+    setPersonnalisationsEtat(createInitialPersonnalisationsEtat(defs));
+    setPersonnalisationFieldErrors(undefined);
+  }, [product?.id, personnalisationDefsSignature]);
+
+  const supplementPersonnalisationsParUnite = product
+    ? getSupplementDepuisEtatEtDefinitions(personnalisationDefinitions, personnalisationsEtat)
+    : 0;
+
+  const handlePersonnalisationToggle = useCallback((id: string, nextActive: boolean) => {
+    setPersonnalisationFieldErrors((prev) => {
+      if (!prev?.[id]) {
+        return prev;
+      }
+      const next = { ...prev };
+      delete next[id];
+      return Object.keys(next).length > 0 ? next : undefined;
+    });
+    setPersonnalisationsEtat((prev) => ({
+      ...prev,
+      [id]: {
+        active: nextActive,
+        value: nextActive ? (prev[id]?.value ?? '') : '',
+      },
+    }));
+  }, []);
+
+  const handlePersonnalisationValueChange = useCallback(
+    (id: string, value: string) => {
+      setPersonnalisationFieldErrors((prev) => {
+        if (!prev?.[id]) {
+          return prev;
+        }
+        const next = { ...prev };
+        delete next[id];
+        return Object.keys(next).length > 0 ? next : undefined;
+      });
+      setPersonnalisationsEtat((prev) => {
+        const definition = personnalisationDefinitions.find((d) => d.id === id);
+        const fallbackActive = definition?.obligatoire ?? false;
+        const row = prev[id];
+        return {
+          ...prev,
+          [id]: {
+            active: row?.active ?? fallbackActive,
+            value,
+          },
+        };
+      });
+    },
+    [personnalisationDefinitions]
+  );
 
   // État de chargement avec skeleton loader élégant [[memory:8540418]]
   if (loading) {
@@ -442,6 +536,22 @@ export default function ProductDetail({
         }
       }
 
+      const persValidation = collectPersonnalisationsValidationErrors(
+        personnalisationDefinitions,
+        personnalisationsEtat
+      );
+      if (persValidation) {
+        setPersonnalisationFieldErrors(persValidation);
+        const firstErr = Object.values(persValidation)[0];
+        if (firstErr) {
+          showError(firstErr, 'Erreur', 5000);
+        }
+        setIsAddingToCart(false);
+        return;
+      }
+
+      setPersonnalisationFieldErrors(undefined);
+
       // Obtenir le variant sélectionné avec toutes ses données
       const selectedVariant = getSelectedVariant();
 
@@ -466,6 +576,14 @@ export default function ProductDetail({
         cartData.options = selectedOptions;
       }
 
+      const persSelections = composePersonnalisationSelectionsPourPanier(
+        personnalisationDefinitions,
+        personnalisationsEtat
+      );
+      if (persSelections.length > 0) {
+        cartData.personnalisations = persSelections;
+      }
+
       // Construire le message
       let message = `${product.nom} ajouté au panier`;
       if (selectedVariant) {
@@ -484,6 +602,8 @@ export default function ProductDetail({
         success(message, 'Succès', 4000);
         // Réinitialiser les options après ajout
         setSelectedOptions({});
+        setPersonnalisationsEtat(createInitialPersonnalisationsEtat(personnalisationDefinitions));
+        setPersonnalisationFieldErrors(undefined);
       }
     } catch (error) {
       console.error('Erreur lors de l\'ajout au panier:', error);
@@ -559,6 +679,7 @@ export default function ProductDetail({
         productName={product.nom}
         productImage={getDisplayImage()}
         price={getDisplayPrice()}
+        supplementPerUnit={supplementPersonnalisationsParUnite}
         quantity={quantity}
         onAddToCart={handleAddToCart}
         disabled={!product.en_stock}
@@ -683,20 +804,28 @@ export default function ProductDetail({
                 </div>
 
                 {/* Prix dynamique */}
-                <div className="flex items-center space-x-3 mb-4">
-                  <span className="text-3xl font-bold text-primary">
-                    {formatPrice(getDisplayPrice())}
-                  </span>
-                  {getOriginalPrice() && (
-                    <span className="text-lg text-gray-500 line-through">
-                      {formatPrice(getOriginalPrice())}
+                <div className="mb-4">
+                  <div className="flex items-center flex-wrap gap-x-3 gap-y-1">
+                    <span className="text-3xl font-bold text-primary">
+                      {formatPrice(getDisplayPrice() + supplementPersonnalisationsParUnite)}
                     </span>
-                  )}
-                  {(product.est_en_promotion || getSelectedVariant()?.prix_promo) && (
-                    <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                      Promotion
-                    </span>
-                  )}
+                    {getOriginalPrice() && (
+                      <span className="text-lg text-gray-500 line-through">
+                        {formatPrice(getOriginalPrice())}
+                      </span>
+                    )}
+                    {(product.est_en_promotion || getSelectedVariant()?.prix_promo) && (
+                      <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                        Promotion
+                      </span>
+                    )}
+                  </div>
+                  {supplementPersonnalisationsParUnite > 0 ? (
+                    <p className="mt-2 text-sm text-gray-600">
+                      dont personnalisation : +{formatPrice(supplementPersonnalisationsParUnite)} · prix de base{' '}
+                      {formatPrice(getDisplayPrice())}
+                    </p>
+                  ) : null}
                 </div>
 
                 {/* Information boutique */}
@@ -775,6 +904,10 @@ export default function ProductDetail({
                       isAddingToCart={isAddingToCart || panierLoading}
                       selectedVariantId={selectedVariantId}
                       selectedTaille={selectedTaille}
+                      personnalisationsEtat={personnalisationsEtat}
+                      onPersonnalisationToggle={handlePersonnalisationToggle}
+                      onPersonnalisationValueChange={handlePersonnalisationValueChange}
+                      personnalisationValidationErrors={personnalisationFieldErrors}
                     />
                   )}
 
@@ -788,6 +921,10 @@ export default function ProductDetail({
                       isAddingToCart={isAddingToCart || panierLoading}
                       selectedVariantId={selectedVariantId}
                       selectedPointure={selectedTaille}
+                      personnalisationsEtat={personnalisationsEtat}
+                      onPersonnalisationToggle={handlePersonnalisationToggle}
+                      onPersonnalisationValueChange={handlePersonnalisationValueChange}
+                      personnalisationValidationErrors={personnalisationFieldErrors}
                     />
                   )}
 
@@ -800,6 +937,10 @@ export default function ProductDetail({
                       onQuantityChange={setQuantity}
                       isAddingToCart={isAddingToCart || panierLoading}
                       selectedVariantId={selectedVariantId}
+                      personnalisationsEtat={personnalisationsEtat}
+                      onPersonnalisationToggle={handlePersonnalisationToggle}
+                      onPersonnalisationValueChange={handlePersonnalisationValueChange}
+                      personnalisationValidationErrors={personnalisationFieldErrors}
                     />
                   )}
                 </div>
@@ -884,6 +1025,20 @@ export default function ProductDetail({
                   </div>
                 )}
               </div>
+
+              {/* Personnalisations (produit sans variant à choix) */}
+              {(!product.variants ||
+                !product.variants.variants ||
+                product.variants.variants.length === 0) &&
+                personnalisationDefinitions.length > 0 && (
+                  <ProductPersonnalisationsFields
+                    definitions={personnalisationDefinitions}
+                    state={personnalisationsEtat}
+                    onToggle={handlePersonnalisationToggle}
+                    onValueChange={handlePersonnalisationValueChange}
+                    validationErrors={personnalisationFieldErrors}
+                  />
+                )}
 
               {/* Quantité - Affichée uniquement pour les produits sans composant spécialisé */}
               {(!product.variants || !product.variants.variants || product.variants.variants.length === 0) && (

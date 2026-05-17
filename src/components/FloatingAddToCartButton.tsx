@@ -6,7 +6,10 @@ import { formatPrice } from '@/lib/utils';
 interface FloatingAddToCartButtonProps {
   productName: string;
   productImage: string;
+  /** Prix unitaire de base (variant ou produit) */
   price: number;
+  /** Supplément personnalisations par unité (inclus dans le total affiché) */
+  supplementPerUnit?: number;
   quantity: number;
   onAddToCart: () => void;
   disabled?: boolean;
@@ -16,13 +19,14 @@ interface FloatingAddToCartButtonProps {
 export default function FloatingAddToCartButton({ 
   productName,
   productImage,
-  price, 
+  price,
+  supplementPerUnit = 0,
   quantity, 
   onAddToCart,
   disabled = false,
   loading = false
 }: FloatingAddToCartButtonProps) {
-  const totalPrice = price * quantity;
+  const totalPrice = (price + supplementPerUnit) * quantity;
 
   return (
     <div className="fixed bottom-4 left-4 right-4 z-30 lg:hidden">
@@ -80,9 +84,15 @@ export default function FloatingAddToCartButton({
               <span className="text-lg font-bold whitespace-nowrap">
                 {formatPrice(totalPrice)}
               </span>
-              <span className="text-xs opacity-90">
-                {disabled ? 'Indisponible' : 'Ajouter'}
-              </span>
+              {!disabled && supplementPerUnit > 0 ? (
+                <span className="text-[10px] opacity-85 text-right leading-tight">
+                  Pers. +{formatPrice(supplementPerUnit)}/u. · Ajouter
+                </span>
+              ) : (
+                <span className="text-xs opacity-90">
+                  {disabled ? 'Indisponible' : 'Ajouter'}
+                </span>
+              )}
             </div>
           </>
         )}

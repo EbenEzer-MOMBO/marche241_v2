@@ -4,6 +4,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { X, Spinner, Minus, Plus, Trash, Check, Warning, Info } from '@phosphor-icons/react';
 import { formatPrice } from '@/lib/utils';
+import { getPrixUnitairePanier, getSousTotalLignePanier } from '@/lib/utils/panier-pricing';
+import type { PersonnalisationSelectionPanier } from '@/lib/types/personnalisations';
 import { usePanier } from '@/hooks/usePanier';
 import { useBoutique } from '@/hooks/useBoutique';
 import { getProduitImageUrl } from '@/lib/services/produits';
@@ -262,12 +264,32 @@ export default function CartSidebar({ isOpen, onClose, boutiqueName = 'marche_24
                               </div>
                             )}
 
+                            {/* Personnalisations */}
+                            {Array.isArray(item.variants_selectionnes?.personnalisations) &&
+                              item.variants_selectionnes.personnalisations.length > 0 && (
+                                <div className="mt-1 space-y-0.5">
+                                  {item.variants_selectionnes.personnalisations.map(
+                                    (ligne: PersonnalisationSelectionPanier) => (
+                                      <div key={ligne.id} className="text-xs text-gray-600">
+                                        <span className="font-medium">{ligne.libelle}:</span> {ligne.valeur}
+                                        {ligne.prix_supplementaire > 0 && (
+                                          <span className="text-gray-500">
+                                            {' '}
+                                            (+{formatPrice(ligne.prix_supplementaire)})
+                                          </span>
+                                        )}
+                                      </div>
+                                    )
+                                  )}
+                                </div>
+                              )}
+
                             {/* Prix avec promo si applicable */}
                             <div className="mt-1">
                               {item.variants_selectionnes?.variant?.prix_original ? (
                                 <div className="flex items-center gap-2">
                                   <p className="text-sm font-semibold text-primary">
-                                    {formatPrice(item.variants_selectionnes.variant.prix)}
+                                    {formatPrice(getPrixUnitairePanier(item))}
                                   </p>
                                   <p className="text-xs text-gray-500 line-through">
                                     {formatPrice(item.variants_selectionnes.variant.prix_original)}
@@ -275,7 +297,7 @@ export default function CartSidebar({ isOpen, onClose, boutiqueName = 'marche_24
                                 </div>
                               ) : (
                                 <p className="text-sm font-semibold text-gray-900">
-                                  {formatPrice(item.variants_selectionnes?.variant?.prix || item.produit.prix)}
+                                  {formatPrice(getPrixUnitairePanier(item))}
                                 </p>
                               )}
                             </div>
@@ -322,7 +344,7 @@ export default function CartSidebar({ isOpen, onClose, boutiqueName = 'marche_24
 
                           {/* Prix total pour cet item */}
                           <span className="text-sm font-semibold text-gray-900">
-                            {formatPrice((item.variants_selectionnes?.variant?.prix || item.produit.prix) * item.quantite)}
+                            {formatPrice(getSousTotalLignePanier(item))}
                           </span>
                         </div>
                       </div>

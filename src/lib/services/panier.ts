@@ -10,7 +10,7 @@ interface AjoutPanierRequest {
   boutique_id: number;
   produit_id: number;
   quantite: number;
-  variants_selectionnes: { [key: string]: string };
+  variants_selectionnes: Record<string, unknown>;
 }
 
 interface AjoutPanierResponse {
@@ -22,7 +22,7 @@ interface AjoutPanierResponse {
     boutique_id: number;
     produit_id: number;
     quantite: number;
-    variants_selectionnes: { [key: string]: string };
+    variants_selectionnes: Record<string, unknown>;
     date_ajout: string;
   };
 }
@@ -126,7 +126,7 @@ export async function ajouterAuPanier(
   boutiqueId: number,
   produitId: number,
   quantite: number,
-  variantsSelectionnes: { [key: string]: string } = {}
+  variantsSelectionnes: Record<string, unknown> = {}
 ): Promise<AjoutPanierResponse> {
   try {
     // Obtenir une session spécifique à cette boutique

@@ -9,6 +9,8 @@ import {
   mettreAJourQuantitePanier,
   supprimerDuPanier
 } from '@/lib/services/panier';
+import type { PersonnalisationSelectionPanier } from '@/lib/types/personnalisations';
+import { getSousTotalLignePanier } from '@/lib/utils/panier-pricing';
 
 interface PanierItem {
   id: number;
@@ -24,6 +26,8 @@ interface PanierItem {
       image?: string;
     };
     options?: { [key: string]: string };
+    personnalisations?: PersonnalisationSelectionPanier[];
+    [key: string]: unknown;
   } | null;
   date_creation: string;
   date_modification: string;
@@ -155,11 +159,10 @@ export function usePanier(boutiqueId?: number): UsePanierResult {
       // Calculer les totaux à partir des données du panier
       const totalItems = response.panier.reduce((total, item) => total + item.quantite, 0);
 
-      // Utiliser le prix du variant si disponible, sinon le prix du produit
-      const totalPrix = response.panier.reduce((total, item) => {
-        const itemPrice = item.variants_selectionnes?.variant?.prix || item.produit.prix;
-        return total + (itemPrice * item.quantite);
-      }, 0);
+      const totalPrix = response.panier.reduce(
+        (total, item) => total + getSousTotalLignePanier(item),
+        0
+      );
 
       setTotalItems(totalItems);
       setTotalPrix(totalPrix);
@@ -320,6 +323,8 @@ export function useAjoutPanier() {
       setError(null);
 
       await ajouterAuPanier(boutiqueId, produitId, quantite, variantsSelectionnes);
+
+      window.dispatchEvent(new CustomEvent('cartUpdated'));
 
       return true;
     } catch (err) {

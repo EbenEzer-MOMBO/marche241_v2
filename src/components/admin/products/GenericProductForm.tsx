@@ -542,10 +542,23 @@ export function GenericProductForm({
             if (variant.prix_promo && variant.prix_promo >= variant.prix) {
               newErrors[`variant_${index}_prix_promo`] = 'Le prix promo doit être inférieur au prix normal';
             }
+            variant.attributes.forEach((attr, attrIndex) => {
+              if (!String(attr.value ?? '').trim()) {
+                newErrors[`variant_${index}_attr_${attrIndex}_value`] =
+                  'La valeur de l\'attribut est obligatoire';
+              }
+              if (
+                attr.type === 'personnalise' &&
+                !String(attr.customType ?? '').trim()
+              ) {
+                newErrors[`variant_${index}_attr_${attrIndex}_customType`] =
+                  'Le nom de l\'attribut personnalisé est obligatoire (ex. Contenance, Format)';
+              }
+            });
           });
         }
         break;
-      
+
       case 4:
         formData.personnalisations.forEach((custom, index) => {
           if (!custom.libelle.trim()) {
@@ -762,10 +775,20 @@ export function GenericProductForm({
 
   const updateAttribute = (variantIndex: number, attributeIndex: number, field: keyof VariantAttribute | 'customType', value: string) => {
     const variant = formData.variants[variantIndex];
-    const newAttributes = variant.attributes.map((attr, i) => 
+    const newAttributes = variant.attributes.map((attr, i) =>
       i === attributeIndex ? { ...attr, [field]: value } : attr
     );
     updateVariant(variantIndex, 'attributes', newAttributes);
+    setErrors((prev) => {
+      const next = { ...prev };
+      if (field === 'value' || field === 'type') {
+        delete next[`variant_${variantIndex}_attr_${attributeIndex}_value`];
+      }
+      if (field === 'customType' || field === 'type') {
+        delete next[`variant_${variantIndex}_attr_${attributeIndex}_customType`];
+      }
+      return next;
+    });
   };
 
   const getPresetsForType = (type: string) => {
@@ -1086,94 +1109,233 @@ export function GenericProductForm({
                     const presets = getPresetsForType(attr.type);
                     const allowsCustomInput = attr.type === 'poids';
                     const isPersonnalise = attr.type === 'personnalise';
-                    
+                    const errValue = errors[`variant_${variantIndex}_attr_${attrIndex}_value`];
+                    const errCustom = errors[`variant_${variantIndex}_attr_${attrIndex}_customType`];
+
+                    const borderTone = (hasError: boolean) =>
+                      `border ${hasError ? 'border-red-500' : 'border-gray-300'}`;
+
                     return (
                       <div key={attrIndex} className="space-y-2">
                         <div className="flex gap-2 items-start">
                           <select
                             value={attr.type}
-                            onChange={(e) => updateAttribute(variantIndex, attrIndex, 'type', e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 w-40"
+                            onChange={(e) =>
+                              updateAttribute(variantIndex, attrIndex, 'type', e.target.value)
+                            }
+                            aria-label={`Type d'attribut ${attrIndex + 1}`}
+                            className={`px-3 py-2 ${borderTone(false)} rounded-lg focus:ring-2 focus:ring-blue-500 w-40`}
                           >
-                            {ATTRIBUTE_TYPES.map(type => (
-                              <option key={type.value} value={type.value}>{type.label}</option>
+                            {ATTRIBUTE_TYPES.map((type) => (
+                              <option key={type.value} value={type.value}>
+                                {type.label}
+                              </option>
                             ))}
                           </select>
 
                           {isPersonnalise ? (
-                            <div className="flex-1 flex gap-2">
-                              <input
-                                type="text"
-                                value={attr.customType || ''}
-                                onChange={(e) => updateAttribute(variantIndex, attrIndex, 'customType', e.target.value)}
-                                placeholder="Nom de l'attribut (ex: Capacité, Format...)"
-                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                              />
-                              <input
-                                type="text"
-                                value={attr.value}
-                                onChange={(e) => updateAttribute(variantIndex, attrIndex, 'value', e.target.value)}
-                                placeholder="Valeur"
-                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                              />
+                            <div className="flex-1 flex flex-wrap gap-2">
+                              <div className="flex-1 min-w-[120px] flex flex-col gap-1">
+                                <label className="sr-only">Nom de l&apos;attribut personnalisé</label>
+                                <input
+                                  type="text"
+                                  value={attr.customType || ''}
+                                  onChange={(e) =>
+                                    updateAttribute(
+                                      variantIndex,
+                                      attrIndex,
+                                      'customType',
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="Nom de l'attribut (ex: Capacité) *"
+                                  aria-invalid={Boolean(errCustom)}
+                                  aria-required
+                                  aria-describedby={
+                                    errCustom
+                                      ? `err-custom-${variantIndex}-${attrIndex}`
+                                      : undefined
+                                  }
+                                  className={`w-full px-3 py-2 ${borderTone(
+                                    Boolean(errCustom)
+                                  )} rounded-lg focus:ring-2 focus:ring-blue-500`}
+                                />
+                                {errCustom ? (
+                                  <p
+                                    id={`err-custom-${variantIndex}-${attrIndex}`}
+                                    className="text-xs text-red-600"
+                                  >
+                                    {errCustom}
+                                  </p>
+                                ) : null}
+                              </div>
+                              <div className="flex-1 min-w-[120px] flex flex-col gap-1">
+                                <label className="sr-only">Valeur de l&apos;attribut</label>
+                                <input
+                                  type="text"
+                                  value={attr.value}
+                                  onChange={(e) =>
+                                    updateAttribute(
+                                      variantIndex,
+                                      attrIndex,
+                                      'value',
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="Valeur (ex: 500 ml) *"
+                                  aria-invalid={Boolean(errValue)}
+                                  aria-required
+                                  aria-describedby={
+                                    errValue
+                                      ? `err-value-${variantIndex}-${attrIndex}`
+                                      : undefined
+                                  }
+                                  className={`w-full px-3 py-2 ${borderTone(
+                                    Boolean(errValue)
+                                  )} rounded-lg focus:ring-2 focus:ring-blue-500`}
+                                />
+                                {errValue ? (
+                                  <p
+                                    id={`err-value-${variantIndex}-${attrIndex}`}
+                                    className="text-xs text-red-600"
+                                  >
+                                    {errValue}
+                                  </p>
+                                ) : null}
+                              </div>
                             </div>
                           ) : presets.length > 0 && !allowsCustomInput ? (
-                            <select
-                              value={attr.value}
-                              onChange={(e) => updateAttribute(variantIndex, attrIndex, 'value', e.target.value)}
-                              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                            >
-                              <option value="">Sélectionner...</option>
-                              {presets.map(preset => (
-                                <option key={preset} value={preset}>{preset}</option>
-                              ))}
-                            </select>
-                          ) : presets.length > 0 && allowsCustomInput ? (
-                            <div className="flex-1 flex gap-2">
+                            <div className="flex-1 flex flex-col gap-1">
+                              <label className="sr-only">Valeur de l&apos;attribut</label>
                               <select
                                 value={attr.value}
-                                onChange={(e) => {
-                                  if (e.target.value !== 'custom') {
-                                    updateAttribute(variantIndex, attrIndex, 'value', e.target.value);
-                                  }
-                                }}
-                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                onChange={(e) =>
+                                  updateAttribute(variantIndex, attrIndex, 'value', e.target.value)
+                                }
+                                aria-invalid={Boolean(errValue)}
+                                aria-required
+                                aria-describedby={
+                                  errValue
+                                    ? `err-value-${variantIndex}-${attrIndex}`
+                                    : undefined
+                                }
+                                className={`flex-1 px-3 py-2 ${borderTone(
+                                  Boolean(errValue)
+                                )} rounded-lg focus:ring-2 focus:ring-blue-500`}
                               >
-                                <option value="">Sélectionner...</option>
-                                {presets.map(preset => (
-                                  <option key={preset} value={preset}>{preset}</option>
+                                <option value="">Sélectionner une valeur… *</option>
+                                {presets.map((preset) => (
+                                  <option key={preset} value={preset}>
+                                    {preset}
+                                  </option>
                                 ))}
-                                <option value="custom">Poids personnalisé...</option>
                               </select>
-                              <input
-                                type="text"
-                                value={attr.value && !presets.includes(attr.value) ? attr.value : ''}
-                                onChange={(e) => updateAttribute(variantIndex, attrIndex, 'value', e.target.value)}
-                                placeholder="Ex: 2.5kg"
-                                className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                              />
+                              {errValue ? (
+                                <p
+                                  id={`err-value-${variantIndex}-${attrIndex}`}
+                                  className="text-xs text-red-600"
+                                >
+                                  {errValue}
+                                </p>
+                              ) : null}
+                            </div>
+                          ) : presets.length > 0 && allowsCustomInput ? (
+                            <div className="flex-1 flex flex-col gap-1">
+                              <div className="flex gap-2">
+                                <select
+                                  value={attr.value}
+                                  onChange={(e) => {
+                                    if (e.target.value !== 'custom') {
+                                      updateAttribute(
+                                        variantIndex,
+                                        attrIndex,
+                                        'value',
+                                        e.target.value
+                                      );
+                                    }
+                                  }}
+                                  aria-label="Liste de poids"
+                                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                >
+                                  <option value="">Sélectionner…</option>
+                                  {presets.map((preset) => (
+                                    <option key={preset} value={preset}>
+                                      {preset}
+                                    </option>
+                                  ))}
+                                  <option value="custom">Poids personnalisé…</option>
+                                </select>
+                                <input
+                                  type="text"
+                                  value={
+                                    attr.value && !presets.includes(attr.value)
+                                      ? attr.value
+                                      : ''
+                                  }
+                                  onChange={(e) =>
+                                    updateAttribute(
+                                      variantIndex,
+                                      attrIndex,
+                                      'value',
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="Ex: 2,5 kg *"
+                                  aria-invalid={Boolean(errValue)}
+                                  aria-required
+                                  className={`w-32 px-3 py-2 ${borderTone(
+                                    Boolean(errValue)
+                                  )} rounded-lg focus:ring-2 focus:ring-blue-500`}
+                                />
+                              </div>
+                              {errValue ? (
+                                <p className="text-xs text-red-600">{errValue}</p>
+                              ) : null}
                             </div>
                           ) : (
-                            <input
-                              type="text"
-                              value={attr.value}
-                              onChange={(e) => updateAttribute(variantIndex, attrIndex, 'value', e.target.value)}
-                              placeholder={`${attr.type}...`}
-                              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                            />
+                            <div className="flex-1 flex flex-col gap-1">
+                              <label className="sr-only">Valeur de l&apos;attribut</label>
+                              <input
+                                type="text"
+                                value={attr.value}
+                                onChange={(e) =>
+                                  updateAttribute(variantIndex, attrIndex, 'value', e.target.value)
+                                }
+                                placeholder={`${attr.type} (obligatoire)`}
+                                aria-invalid={Boolean(errValue)}
+                                aria-required
+                                aria-describedby={
+                                  errValue
+                                    ? `err-value-${variantIndex}-${attrIndex}`
+                                    : undefined
+                                }
+                                className={`flex-1 px-3 py-2 ${borderTone(
+                                  Boolean(errValue)
+                                )} rounded-lg focus:ring-2 focus:ring-blue-500`}
+                              />
+                              {errValue ? (
+                                <p
+                                  id={`err-value-${variantIndex}-${attrIndex}`}
+                                  className="text-xs text-red-600"
+                                >
+                                  {errValue}
+                                </p>
+                              ) : null}
+                            </div>
                           )}
 
                           <button
                             type="button"
                             onClick={() => removeAttribute(variantIndex, attrIndex)}
+                            aria-label={`Supprimer l'attribut ${attrIndex + 1}`}
                             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
                         {isPersonnalise && (
-                          <p className="text-xs text-gray-500 ml-44">
-                            Exemple: Nom = "Capacité", Valeur = "500ml" ou Nom = "Format", Valeur = "A4"
+                          <p className="text-xs text-gray-500 ml-[11rem] pl-2 sm:ml-44">
+                            Exemple&nbsp;: Nom = «&nbsp;Contenance&nbsp;», Valeur = «&nbsp;30&nbsp;ml&nbsp;»
                           </p>
                         )}
                       </div>
