@@ -17,7 +17,7 @@ export async function getCategoriesParBoutique(boutiqueId: number): Promise<Cate
     if (!response.success || !response.categories) {
       throw new Error('Erreur lors de la récupération des catégories');
     }
-    
+
     return response.categories;
   } catch (error) {
     console.error('Erreur lors de la récupération des catégories:', error);
