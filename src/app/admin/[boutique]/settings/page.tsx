@@ -52,7 +52,7 @@ export default function SettingsPage() {
     banniere: '',
     couleur_primaire: '#000000',
     couleur_secondaire: '#ffffff',
-    is_full_payment_activated: true
+    payment_restriction_mode: 'les_deux' as 'complet_uniquement' | 'livraison_uniquement' | 'les_deux'
   });
 
   // États pour la sécurité
@@ -114,7 +114,7 @@ export default function SettingsPage() {
           banniere: boutiqueData.banniere || '',
           couleur_primaire: boutiqueData.couleur_primaire || '#000000',
           couleur_secondaire: boutiqueData.couleur_secondaire || '#ffffff',
-          is_full_payment_activated: boutiqueData.is_full_payment_activated ?? true
+          payment_restriction_mode: boutiqueData.payment_restriction_mode ?? 'les_deux'
         });
       } catch (err) {
         console.error('Erreur lors du chargement de la boutique:', err);
@@ -265,7 +265,7 @@ export default function SettingsPage() {
         couleur_secondaire: boutiqueData.couleur_secondaire,
         adresse: boutiqueData.adresse,
         telephone: boutiqueData.telephone,
-        is_full_payment_activated: boutiqueData.is_full_payment_activated
+        payment_restriction_mode: boutiqueData.payment_restriction_mode
       });
 
       if (response.success && response.boutique) {
@@ -390,8 +390,8 @@ export default function SettingsPage() {
                       />
 
                       <PaymentModeSection
-                        isFullPaymentActivated={boutiqueData.is_full_payment_activated ?? true}
-                        onChange={(value) => setBoutiqueData({ ...boutiqueData, is_full_payment_activated: value })}
+                        paymentRestrictionMode={boutiqueData.payment_restriction_mode}
+                        onChange={(value) => setBoutiqueData({ ...boutiqueData, payment_restriction_mode: value })}
                       />
 
                       <ApparenceSection

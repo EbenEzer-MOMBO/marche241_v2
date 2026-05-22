@@ -85,10 +85,16 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
   const [paymentPhone, setPaymentPhone] = useState('');
   const [paymentPhoneError, setPaymentPhoneError] = useState('');
 
-  // Si is_full_payment_activated est false, forcer le paiement à la livraison uniquement (checkbox cochée et non modifiable)
-  // Si is_full_payment_activated est true, l'utilisateur peut choisir librement
-  const isFullPaymentActivated = boutiqueData?.is_full_payment_activated === true;
-  const [payOnDelivery, setPayOnDelivery] = useState(!isFullPaymentActivated); // Inversé : true si mode restreint
+  // Récupération de la restriction des modes de paiement :
+  // - complet_uniquement : paiement complet obligatoire en ligne.
+  // - livraison_uniquement : paiement des frais de livraison uniquement en ligne.
+  // - les_deux : l'utilisateur peut choisir entre les deux.
+  const paymentRestrictionMode = boutiqueData?.payment_restriction_mode || 'les_deux';
+  const [payOnDelivery, setPayOnDelivery] = useState(() => {
+    if (paymentRestrictionMode === 'livraison_uniquement') return true;
+    return false;
+  });
+
   const [communes, setCommunes] = useState<Commune[]>([]);
   const [communesLoading, setCommunesLoading] = useState(true);
   const [deliveryAddress, setDeliveryAddress] = useState<DeliveryAddress>({
@@ -180,6 +186,22 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
 
   const deliveryFee = getDeliveryFee();
 
+  // Synchronisation de payOnDelivery en fonction des restrictions et des frais de livraison
+  useEffect(() => {
+    if (paymentRestrictionMode === 'livraison_uniquement') {
+      if (deliveryFee > 0) {
+        setPayOnDelivery(true);
+      } else {
+        // Si livraison gratuite, on ne peut pas payer uniquement les frais de livraison (qui sont de 0) en ligne
+        setPayOnDelivery(false);
+      }
+    } else if (paymentRestrictionMode === 'complet_uniquement') {
+      setPayOnDelivery(false);
+    } else if (deliveryFee === 0) {
+      setPayOnDelivery(false);
+    }
+  }, [paymentRestrictionMode, deliveryFee]);
+
   // Calcul des frais de transaction (10%)
   const getTransactionFee = () => {
     const transactionRate = 0.10; // 10%
@@ -269,9 +291,12 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
         if (selectedCommune.tarif_livraison === 0) {
           // Désactiver le paiement à la livraison si la livraison est gratuite
           setPayOnDelivery(false);
-        } else if (!isFullPaymentActivated) {
-          // Si mode restreint (is_full_payment_activated = false), forcer le paiement à la livraison
+        } else if (paymentRestrictionMode === 'livraison_uniquement') {
+          // Si mode livraison uniquement, forcer le paiement à la livraison
           setPayOnDelivery(true);
+        } else if (paymentRestrictionMode === 'complet_uniquement') {
+          // Si mode complet uniquement, désactiver le paiement à la livraison
+          setPayOnDelivery(false);
         }
       }
     }
@@ -1127,32 +1152,42 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
 
               {/* Option paiement à la livraison */}
               <div className="border-t border-b py-4 border-gray-200">
-                <label className={`flex items-center ${!isFullPaymentActivated || deliveryFee === 0
+                <label className={`flex items-center ${paymentRestrictionMode !== 'les_deux' || deliveryFee === 0
                   ? 'cursor-not-allowed opacity-50'
                   : 'cursor-pointer'
                   }`}>
                   <input
                     type="checkbox"
                     checked={payOnDelivery}
-                    onChange={(e) => isFullPaymentActivated && setPayOnDelivery(e.target.checked)}
-                    disabled={!isFullPaymentActivated || deliveryFee === 0}
+                    onChange={(e) => paymentRestrictionMode === 'les_deux' && deliveryFee > 0 && setPayOnDelivery(e.target.checked)}
+                    disabled={paymentRestrictionMode !== 'les_deux' || deliveryFee === 0}
                     className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:cursor-not-allowed"
                   />
                   <span className="ml-3 text-sm font-medium text-gray-700">
                     Je paie à la livraison
                   </span>
                 </label>
-                {!isFullPaymentActivated && (
+                {paymentRestrictionMode === 'livraison_uniquement' && deliveryFee > 0 && (
                   <p className="text-xs text-amber-600 mt-2 ml-7 font-medium">
-                    Seul le paiement des frais de livraison est disponible pour cette boutique
+                    Seul le paiement des frais de livraison est requis en ligne pour cette boutique
                   </p>
                 )}
-                {isFullPaymentActivated && deliveryFee === 0 && deliveryAddress.city && (
+                {paymentRestrictionMode === 'livraison_uniquement' && deliveryFee === 0 && deliveryAddress.city && (
+                  <p className="text-xs text-amber-600 mt-2 ml-7 font-medium">
+                    Livraison gratuite : paiement complet en ligne requis (pas de frais de livraison à payer)
+                  </p>
+                )}
+                {paymentRestrictionMode === 'complet_uniquement' && (
+                  <p className="text-xs text-blue-600 mt-2 ml-7 font-medium">
+                    Le paiement complet en ligne est obligatoire pour cette boutique
+                  </p>
+                )}
+                {paymentRestrictionMode === 'les_deux' && deliveryFee === 0 && deliveryAddress.city && (
                   <p className="text-xs text-gray-500 mt-2 ml-7">
                     Non disponible pour les livraisons gratuites
                   </p>
                 )}
-                {isFullPaymentActivated && payOnDelivery && deliveryFee > 0 && (
+                {paymentRestrictionMode === 'les_deux' && payOnDelivery && deliveryFee > 0 && (
                   <p className="text-xs text-gray-500 mt-2 ml-7">
                     Vous payez les frais de livraison + frais de transaction maintenant. Le reste sera payé à la réception.
                   </p>

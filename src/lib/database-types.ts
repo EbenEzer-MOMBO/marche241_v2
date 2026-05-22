@@ -71,7 +71,7 @@ export interface Boutique {
   telephone?: string;
   email?: string;
   ville?: string;
-  is_full_payment_activated: boolean; // Si true, paiement à la livraison désactivé
+  payment_restriction_mode: 'complet_uniquement' | 'livraison_uniquement' | 'les_deux'; // Restriction de paiement de la boutique
   statut: StatutBoutique;
   date_creation: Date;
   date_modification: Date;

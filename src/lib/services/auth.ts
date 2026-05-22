@@ -79,7 +79,7 @@ export interface BoutiqueData {
   couleur_secondaire?: string;
   adresse?: string;
   telephone?: string;
-  is_full_payment_activated?: boolean; // Si true, paiement à la livraison désactivé
+  payment_restriction_mode?: 'complet_uniquement' | 'livraison_uniquement' | 'les_deux';
   statut: 'active' | 'inactive' | 'suspended';
   date_creation: string;
   date_modification: string;
@@ -125,7 +125,7 @@ export interface ModifierBoutiqueData {
   couleur_secondaire?: string;
   adresse?: string;
   telephone?: string;
-  is_full_payment_activated?: boolean;
+  payment_restriction_mode?: 'complet_uniquement' | 'livraison_uniquement' | 'les_deux';
 }
 
 export interface ModifierBoutiqueResponse {
