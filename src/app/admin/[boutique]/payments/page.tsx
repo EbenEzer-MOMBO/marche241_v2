@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import {
   getTransactionsParBoutique,
+  telechargerExportTransactionsCSV,
   type Transaction,
   type TransactionsParams
 } from '@/lib/services/transactions';
@@ -25,7 +26,8 @@ import {
   TrendingUp,
   DollarSign,
   Calendar,
-  Wallet
+  Wallet,
+  Download
 } from 'lucide-react';
 
 export default function PaymentsPage() {
@@ -43,26 +45,69 @@ export default function PaymentsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterType, setFilterType] = useState<string>('all');
+  const [filterMonth, setFilterMonth] = useState<string>('all');
+  const [isExporting, setIsExporting] = useState(false);
 
   // États pour la pagination côté client
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
-  // Fonction pour charger toutes les transactions depuis l'API
-  const loadTransactions = async (boutiqueId: number) => {
+  // Générer les 12 derniers mois
+  const getMonthsList = () => {
+    const months = [];
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(currentYear, currentMonth - i, 1);
+      const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(d);
+      const capitalizedLabel = label.charAt(0).toUpperCase() + label.slice(1);
+      months.push({ value, label: capitalizedLabel });
+    }
+    return months;
+  };
+
+  // Exporter en CSV
+  const handleExportCSV = async () => {
+    if (!boutique) return;
+    
+    try {
+      setIsExporting(true);
+      await telechargerExportTransactionsCSV(boutique.id, boutique.slug, {
+        statut: filterStatus,
+        type_paiement: filterType,
+        recherche: searchTerm,
+        mois: filterMonth !== 'all' ? filterMonth : undefined
+      });
+      success('Exportation CSV réussie !');
+    } catch (error: any) {
+      console.error(error);
+      showError(error.message || 'Erreur lors de l\'exportation CSV');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Fonction pour charger les transactions depuis l'API avec filtres
+  const loadTransactions = async (
+    boutiqueId: number,
+    filters?: { status?: string; type?: string; search?: string; month?: string }
+  ) => {
     try {
       setIsLoading(true);
 
-      // Charger toutes les transactions sans pagination côté serveur
       const response = await getTransactionsParBoutique(boutiqueId, {
         page: 1,
-        limite: 100 // Charger jusqu'à 100 transactions
+        limite: 100, // Charger jusqu'à 100 transactions filtrées
+        statut: filters?.status,
+        type_paiement: filters?.type,
+        recherche: filters?.search,
+        mois: filters?.month !== 'all' ? filters?.month : undefined
       });
 
-      console.log('💳 Réponse API transactions:', response);
-      console.log('📋 Données transactions:', response.transactions);
-      console.log('🔢 Total transactions:', response.total);
-
+      console.log('💳 Réponse API transactions filtrées:', response);
       setTransactions(response.transactions || []);
     } catch (error) {
       console.error('Erreur lors du chargement des transactions:', error);
@@ -73,6 +118,7 @@ export default function PaymentsPage() {
     }
   };
 
+  // Premier useEffect: Chargement initial de la boutique
   useEffect(() => {
     const loadBoutiqueData = async () => {
       if (!user) {
@@ -94,7 +140,6 @@ export default function PaymentsPage() {
         }
 
         setBoutique(boutiqueData);
-        await loadTransactions(boutiqueData.id);
       } catch (error) {
         console.error('Erreur lors du chargement de la boutique:', error);
         showError('Erreur lors du chargement de la boutique');
@@ -109,6 +154,18 @@ export default function PaymentsPage() {
 
     return () => clearTimeout(timer);
   }, [user, boutiqueName, router]);
+
+  // Deuxième useEffect: Recharger les transactions quand les filtres changent
+  useEffect(() => {
+    if (boutique) {
+      loadTransactions(boutique.id, {
+        status: filterStatus,
+        type: filterType,
+        search: searchTerm,
+        month: filterMonth
+      });
+    }
+  }, [filterStatus, filterType, searchTerm, filterMonth, boutique?.id]);
 
   // Calculer les statistiques
   const calculateStats = () => {
@@ -172,23 +229,8 @@ export default function PaymentsPage() {
 
   const stats = calculateStats();
 
-  // Filtrer et paginer les transactions côté client
-  const filteredTransactions = transactions.filter(transaction => {
-    // Filtre par statut
-    const matchStatus = filterStatus === 'all' || transaction.statut.toLowerCase() === filterStatus.toLowerCase();
-    
-    // Filtre par type
-    const matchType = filterType === 'all' || transaction.type_paiement.toLowerCase() === filterType.toLowerCase();
-    
-    // Filtre par recherche
-    const searchLower = searchTerm.toLowerCase();
-    const matchSearch = !searchTerm || 
-      transaction.reference_transaction.toLowerCase().includes(searchLower) ||
-      transaction.numero_telephone?.toLowerCase().includes(searchLower) ||
-      transaction.reference_operateur?.toLowerCase().includes(searchLower);
-    
-    return matchStatus && matchType && matchSearch;
-  });
+  // Les transactions sont déjà filtrées par le serveur
+  const filteredTransactions = transactions;
 
   // Calcul de la pagination
   const totalTransactions = filteredTransactions.length;
@@ -475,15 +517,34 @@ export default function PaymentsPage() {
 
           {/* Search and Filters */}
           <div className="mb-6 space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Rechercher par référence, téléphone..."
-                value={searchTerm}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-              />
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Rechercher par référence, téléphone..."
+                  value={searchTerm}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-sm"
+                />
+              </div>
+              <button
+                onClick={handleExportCSV}
+                disabled={isExporting || isLoading}
+                className="flex items-center justify-center px-4 py-2 bg-black hover:bg-gray-800 text-white rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm font-medium whitespace-nowrap"
+              >
+                {isExporting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Exportation...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Exporter en CSV
+                  </>
+                )}
+              </button>
             </div>
 
             {/* Filters et compteur de résultats */}
@@ -562,6 +623,28 @@ export default function PaymentsPage() {
                   >
                     Frais de livraison
                   </button>
+                </div>
+              </div>
+
+              {/* Month Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Mois de versement</label>
+                <div className="relative max-w-xs">
+                  <select
+                    value={filterMonth}
+                    onChange={(e) => {
+                      setFilterMonth(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-black focus:border-transparent outline-none cursor-pointer"
+                  >
+                    <option value="all">Tous les mois</option>
+                    {getMonthsList().map((m) => (
+                      <option key={m.value} value={m.value}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

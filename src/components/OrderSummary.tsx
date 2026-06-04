@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
+import Script from 'next/script';
 import Image from 'next/image';
 import { formatPrice } from '@/lib/utils';
 import { getPrixUnitairePanier, getSousTotalLignePanier } from '@/lib/utils/panier-pricing';
@@ -85,6 +86,11 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
   const [paymentPhone, setPaymentPhone] = useState('');
   const [paymentPhoneError, setPaymentPhoneError] = useState('');
 
+  // États pour Cloudflare Turnstile
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileContainerRef = useRef<HTMLDivElement>(null);
+  const widgetIdRef = useRef<string | null>(null);
+
   // Récupération de la restriction des modes de paiement :
   // - complet_uniquement : paiement complet obligatoire en ligne.
   // - livraison_uniquement : paiement des frais de livraison uniquement en ligne.
@@ -137,6 +143,52 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
 
     loadCommunes();
   }, [boutiqueId]);
+
+  // Initialiser le widget Cloudflare Turnstile de façon robuste
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (
+        typeof window !== 'undefined' &&
+        (window as any).turnstile &&
+        turnstileContainerRef.current &&
+        !widgetIdRef.current
+      ) {
+        clearInterval(interval);
+        try {
+          const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+          if (siteKey) {
+            widgetIdRef.current = (window as any).turnstile.render(turnstileContainerRef.current, {
+              sitekey: siteKey,
+              callback: (token: string) => {
+                console.log('[Turnstile] Jeton généré avec succès');
+                setTurnstileToken(token);
+              },
+              'expired-callback': () => {
+                console.log('[Turnstile] Jeton expiré');
+                setTurnstileToken(null);
+              },
+              'error-callback': () => {
+                console.error('[Turnstile] Erreur de validation');
+                setTurnstileToken(null);
+              }
+            });
+          }
+        } catch (e) {
+          console.error('Erreur lors du rendu de Turnstile:', e);
+        }
+      }
+    }, 500);
+
+    return () => {
+      clearInterval(interval);
+      if (widgetIdRef.current && typeof window !== 'undefined' && (window as any).turnstile) {
+        try {
+          (window as any).turnstile.remove(widgetIdRef.current);
+          widgetIdRef.current = null;
+        } catch (e) {}
+      }
+    };
+  }, []);
 
   // Vérifier le numéro WhatsApp quand il est valide
   useEffect(() => {
@@ -251,7 +303,12 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
     // Vérifier qu'une commune est sélectionnée (même si les frais sont à 0)
     const isCommuneSelected = deliveryAddress.city.trim() !== '';
 
-    return isAddressComplete && isWhatsAppValid && isPaymentSelected && isPaymentPhoneValid && isCommuneSelected;
+    // Si Turnstile est configuré, valider que le jeton a bien été généré
+    const isTurnstileValid = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
+      ? turnstileToken !== null
+      : true;
+
+    return isAddressComplete && isWhatsAppValid && isPaymentSelected && isPaymentPhoneValid && isCommuneSelected && isTurnstileValid;
   };
 
   // Génère le message approprié pour le bouton selon l'état de validation
@@ -273,6 +330,9 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
     }
     if (!paymentPhone || paymentPhoneError) {
       return 'Saisissez un numéro de paiement valide';
+    }
+    if (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && !turnstileToken) {
+      return 'Validation de sécurité requise';
     }
 
     if (payOnDelivery) {
@@ -382,7 +442,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
 
 
 
-      const commande = await creerCommande(commandeData);
+      const commande = await creerCommande(commandeData, turnstileToken || undefined);
       success('Commande créée avec succès !', 'Succès', 3000);
 
       console.log('Données de la commande:', commandeData);
@@ -764,6 +824,11 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
 
   return (
     <div className="w-full">
+      {/* Script de Cloudflare Turnstile */}
+      {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && (
+        <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />
+      )}
+
       {/* Container des toasts */}
       <ToastContainer toasts={toasts} onClose={removeToast} />
 
@@ -1212,6 +1277,13 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
                   </div>
                 )}
               </div>
+
+              {/* Widget Cloudflare Turnstile */}
+              {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && (
+                <div className="mb-4 flex justify-center">
+                  <div ref={turnstileContainerRef} />
+                </div>
+              )}
 
               <button
                 onClick={handleSubmitOrder}

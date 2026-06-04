@@ -169,17 +169,26 @@ export async function getCommandeById(commandeId: number): Promise<Commande> {
 /**
  * Créer une nouvelle commande
  * @param commandeData - Données de la commande à créer
+ * @param captchaToken - Token de captcha Turnstile (optionnel)
  * @returns Promise<CommandeResponse>
  */
-export async function creerCommande(commandeData: CreerCommandeData): Promise<CommandeResponse> {
+export async function creerCommande(
+  commandeData: CreerCommandeData,
+  captchaToken?: string
+): Promise<CommandeResponse> {
   try {
-    const response = await api.post<CommandeResponse>('/commandes', commandeData);
+    const headers: Record<string, string> = {};
+    if (captchaToken) {
+      headers['x-cf-token'] = captchaToken;
+    }
+    const response = await api.post<CommandeResponse>('/commandes', commandeData, { headers });
     return response;
   } catch (error) {
     console.error('Erreur lors de la création de la commande:', error);
     throw new Error('Impossible de créer la commande. Veuillez réessayer.');
   }
 }
+
 
 /**
  * Modifier une commande existante

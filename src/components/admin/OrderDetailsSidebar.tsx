@@ -305,15 +305,12 @@ const OrderDetailsSidebar = ({ commandeId, isOpen, onClose, onStatusUpdate }: Or
                             {commandeInfo.client_commune}
                           </p>
                         )}
+                        {commandeInfo.client_instructions && (
+                          <div className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded px-2 py-1.5 mt-2 font-medium italic">
+                            <span className="font-bold not-italic">Instructions :</span> {commandeInfo.client_instructions}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  )}
-                  {commandeInfo.client_instructions && (
-                    <div className="pt-2 border-t border-gray-200">
-                      <span className="text-sm text-gray-600">Instructions</span>
-                      <p className="text-sm text-gray-900 mt-1">
-                        {commandeInfo.client_instructions}
-                      </p>
                     </div>
                   )}
                   {!commandeInfo.client_nom && !commandeInfo.client_telephone && !commandeInfo.client_adresse && (

@@ -60,12 +60,13 @@ export async function creerTransaction(transactionData: CreerTransactionData): P
   }
 }
 
-/**
- * Paramètres pour récupérer les transactions d'une boutique
- */
 interface TransactionsParams {
   page?: number;
   limite?: number;
+  statut?: string;
+  type_paiement?: string;
+  recherche?: string;
+  mois?: string;
 }
 
 /**
@@ -83,7 +84,7 @@ interface TransactionsResponse {
 /**
  * Récupérer toutes les transactions d'une boutique
  * @param boutiqueId - ID de la boutique
- * @param params - Paramètres de pagination
+ * @param params - Paramètres de pagination et filtres
  * @returns Promise<TransactionsResponse>
  */
 export async function getTransactionsParBoutique(
@@ -100,6 +101,22 @@ export async function getTransactionsParBoutique(
     if (params?.limite) {
       queryParams.append('limite', params.limite.toString());
     }
+
+    if (params?.statut && params.statut !== 'all') {
+      queryParams.append('statut', params.statut);
+    }
+
+    if (params?.type_paiement && params.type_paiement !== 'all') {
+      queryParams.append('type_paiement', params.type_paiement);
+    }
+
+    if (params?.recherche) {
+      queryParams.append('recherche', params.recherche);
+    }
+
+    if (params?.mois) {
+      queryParams.append('mois', params.mois);
+    }
     
     const url = `/transactions/boutique/${boutiqueId}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await api.get<TransactionsResponse>(url);
@@ -108,6 +125,58 @@ export async function getTransactionsParBoutique(
   } catch (error) {
     console.error('Erreur lors de la récupération des transactions:', error);
     throw new Error('Impossible de récupérer les transactions. Veuillez réessayer.');
+  }
+}
+
+/**
+ * Télécharger l'export CSV des transactions d'une boutique
+ * @param boutiqueId - ID de la boutique
+ * @param params - Filtres de recherche
+ */
+export async function telechargerExportTransactionsCSV(
+  boutiqueId: number,
+  boutiqueSlug: string,
+  params?: Omit<TransactionsParams, 'page' | 'limite'>
+): Promise<void> {
+  try {
+    const queryParams = new URLSearchParams();
+    
+    if (params?.statut && params.statut !== 'all') {
+      queryParams.append('statut', params.statut);
+    }
+
+    if (params?.type_paiement && params.type_paiement !== 'all') {
+      queryParams.append('type_paiement', params.type_paiement);
+    }
+
+    if (params?.recherche) {
+      queryParams.append('recherche', params.recherche);
+    }
+
+    if (params?.mois) {
+      queryParams.append('mois', params.mois);
+    }
+    
+    const url = `/transactions/boutique/${boutiqueId}/export${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const response = await api.get<string>(url);
+    
+    // Créer un blob à partir du texte CSV
+    const blob = new Blob([response], { type: 'text/csv;charset=utf-8;' });
+    const blobUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    
+    const monthSuffix = params?.mois ? params.mois : 'GLOBAL';
+    const filename = `transactions_${boutiqueSlug}_${monthSuffix}.csv`;
+    
+    link.href = blobUrl;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
+  } catch (error) {
+    console.error('Erreur lors du téléchargement de l\'export CSV:', error);
+    throw new Error('Impossible de télécharger l\'export CSV. Veuillez réessayer.');
   }
 }
 
