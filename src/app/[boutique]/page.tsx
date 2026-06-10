@@ -5,6 +5,21 @@ import SocialShareSection from '@/components/SocialShareSection';
 import { getBoutiqueConfig, getBoutiqueBySlug, type BoutiqueConfig } from '@/lib/boutiques';
 import { notFound } from 'next/navigation';
 
+const reservedSlugs = ['admin', 'affiche_boutiques', 'promo-poster', 'favicon.ico', 'manifest.json', 'robots.txt'];
+
+function isReservedOrAsset(slug: string): boolean {
+  if (!slug) {
+    return true;
+  }
+  if (reservedSlugs.includes(slug.toLowerCase())) {
+    return true;
+  }
+  if (slug.includes('.')) {
+    return true;
+  }
+  return false;
+}
+
 // Force le mode dynamique pour éviter les erreurs de génération statique
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +31,10 @@ interface BoutiquePageProps {
 
 export default async function BoutiquePage({ params }: BoutiquePageProps) {
   const { boutique } = await params;
+  
+  if (isReservedOrAsset(boutique)) {
+    notFound();
+  }
   
   let boutiqueConfig: BoutiqueConfig;
   let boutiqueData;

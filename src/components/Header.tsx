@@ -40,13 +40,9 @@ export default function Header({ onMenuClick, onCartClick, boutiqueName, hideCar
   const { boutique, config, loading, error } = useBoutique(boutiqueName);
   const { totalItems, rafraichir } = usePanier(boutique?.id);
 
-  // Rafraîchir le panier périodiquement pour détecter les changements
+  // Rafraîchir le panier lors du montage du composant
   useEffect(() => {
-    const interval = setInterval(() => {
-      rafraichir();
-    }, 5000); // Rafraîchir toutes les 5 secondes
-
-    return () => clearInterval(interval);
+    rafraichir();
   }, [rafraichir]);
   
   // Le logo du hero devient invisible après 300px de scroll (mobile uniquement)

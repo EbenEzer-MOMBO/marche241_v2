@@ -5,6 +5,21 @@ import { getBoutiqueConfig, getBoutiqueBySlug, type BoutiqueConfig } from "@/lib
 // Force le mode dynamique pour éviter les erreurs de génération statique
 export const dynamic = 'force-dynamic';
 
+const reservedSlugs = ['admin', 'affiche_boutiques', 'promo-poster', 'favicon.ico', 'manifest.json', 'robots.txt'];
+
+function isReservedOrAsset(slug: string): boolean {
+  if (!slug) {
+    return true;
+  }
+  if (reservedSlugs.includes(slug.toLowerCase())) {
+    return true;
+  }
+  if (slug.includes('.')) {
+    return true;
+  }
+  return false;
+}
+
 /**
  * Utilitaire pour obtenir l'URL complète du logo de la boutique
  */
@@ -31,6 +46,13 @@ export async function generateMetadata({
   params: Promise<{ boutique: string }>;
 }): Promise<Metadata> {
   const { boutique } = await params;
+  
+  if (isReservedOrAsset(boutique)) {
+    return {
+      title: "Boutique non trouvée",
+      description: "Cette boutique n'existe pas"
+    };
+  }
   
   try {
     // Récupérer les données complètes de la boutique pour le logo
@@ -94,6 +116,10 @@ export default async function BoutiqueLayout({
   params: Promise<{ boutique: string }>;
 }) {
   const { boutique } = await params;
+  
+  if (isReservedOrAsset(boutique)) {
+    notFound();
+  }
   
   let boutiqueConfig: BoutiqueConfig;
   try {
