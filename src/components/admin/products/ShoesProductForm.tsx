@@ -258,14 +258,15 @@ export function ShoesProductForm({
   };
 
   const uploadImages = async () => {
-    if (formData.images.length === 0 || uploadedImageUrls.length > 0) {
+    if (formData.images.length === 0) {
       return;
     }
 
-    const allImagesAreUrls = formData.images.every(img => 
+    // Vérifier si toutes les images sont déjà des URLs (mode édition sans nouvelles images)
+    const allImagesAreUrls = formData.images.every(img =>
       img.startsWith('http://') || img.startsWith('https://')
     );
-    
+
     if (allImagesAreUrls) {
       console.log('✅ Images déjà uploadées (URLs)');
       setUploadedImageUrls(formData.images);
