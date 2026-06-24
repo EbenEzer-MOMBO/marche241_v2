@@ -238,8 +238,8 @@ export default function CartSidebar({ isOpen, onClose, boutiqueName = 'marche_24
 
                       {/* Informations du produit */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
                             <h4 className="text-sm font-medium text-gray-900 truncate">
                               {item.produit.nom}
                             </h4>
