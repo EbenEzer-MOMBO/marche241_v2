@@ -232,7 +232,7 @@ export async function modifierProduit(id: number, produitData: {
   slug?: string;
   description?: string;
   prix?: number;
-  prix_promo?: number;
+  prix_promo?: number | null;
   en_stock?: number;
   categorie_id?: number;
   images?: string[];

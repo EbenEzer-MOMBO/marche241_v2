@@ -457,8 +457,8 @@ export default function ProductsPage() {
                     const prixMin = Math.min(...variantsAvecPrix.map((v: any) => v.prix));
                     const variantAvecPrixMin = variantsAvecPrix.find((v: any) => v.prix === prixMin);
                     
-                    prixPrincipal = variantAvecPrixMin.prix_promo || variantAvecPrixMin.prix;
-                    if (variantAvecPrixMin.prix_promo) {
+                    prixPrincipal = variantAvecPrixMin.prix_promo > 0 ? variantAvecPrixMin.prix_promo : variantAvecPrixMin.prix;
+                    if (variantAvecPrixMin.prix_promo > 0) {
                         prixOriginal = variantAvecPrixMin.prix;
                     }
                 }
@@ -489,7 +489,7 @@ export default function ProductsPage() {
                     slug: genererSlugProduit(productData.nom),
                     description: productData.description || '',
                     prix: prixPrincipal,
-                    prix_promo: prixOriginal ? prixPrincipal : undefined,
+                    prix_promo: prixOriginal ? prixPrincipal : null,
                     en_stock: stockTotal,
                     categorie_id: productData.categorie_id,
                     images: images,
