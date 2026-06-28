@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useSessionHeartbeat } from '@/hooks/useSessionHeartbeat';
 import { BoutiqueData } from '@/lib/services/auth';
 import { ToastContainer } from '@/components/ui/Toast';
 import { useToast } from '@/hooks/useToast';
@@ -40,7 +41,8 @@ export default function BoutiqueDashboard() {
   const params = useParams();
   const boutiqueName = params.boutique as string;
   
-  const { user, verifierBoutique } = useAuth();
+  const { user, isAuthenticated, verifierBoutique } = useAuth();
+  useSessionHeartbeat(isAuthenticated);
   const missingNumeroPaiement = !user?.numero_paiement?.trim();
   const { toasts, removeToast, success, error: showError } = useToast();
   
