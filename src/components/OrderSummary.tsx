@@ -21,6 +21,7 @@ import PaymentCountdown from '@/components/ui/PaymentCountdown';
 import { ToastContainer } from '@/components/ui/Toast';
 import { normalizeMsisdnInput, validateMsisdn, msisdnPlaceholder, type MobileMoneyOperator } from '@/lib/utils/mobileMoneyMsisdn';
 import type { PersonnalisationSelectionPanier } from '@/lib/types/personnalisations';
+import { Trash, Check } from '@phosphor-icons/react';
 
 interface OrderSummaryProps {
   boutiqueConfig: BoutiqueConfig;
@@ -119,7 +120,28 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
   const [whatsAppExists, setWhatsAppExists] = useState<boolean | null>(null);
 
   // Utilisation du hook panier pour récupérer les vraies données avec isolation par boutique
-  const { panier, totalItems, totalPrix, loading, viderLePanier } = usePanier(boutiqueId);
+  const { panier, totalItems, totalPrix, loading, supprimerItem, viderLePanier } = usePanier(boutiqueId);
+  const [itemsToDelete, setItemsToDelete] = useState<Set<number>>(new Set());
+
+  const handleDeleteClick = (itemId: number) => {
+    if (itemsToDelete.has(itemId)) {
+      supprimerItem(itemId);
+      setItemsToDelete(prev => {
+        const next = new Set(prev);
+        next.delete(itemId);
+        return next;
+      });
+    } else {
+      setItemsToDelete(prev => new Set(prev).add(itemId));
+      setTimeout(() => {
+        setItemsToDelete(prev => {
+          const next = new Set(prev);
+          next.delete(itemId);
+          return next;
+        });
+      }, 3000);
+    }
+  };
   const { success, error, toasts, removeToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showProgressBar, setShowProgressBar] = useState(false);
@@ -890,8 +912,17 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
                           className="rounded-lg object-cover"
                         />
                       </div>
-                      <div className="flex-1 ml-4">
-                        <h4 className="font-medium text-gray-900 mb-1">{item.produit.nom}</h4>
+                      <div className="flex-1 ml-4 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <h4 className="font-medium text-gray-900 mb-1 min-w-0 truncate">{item.produit.nom}</h4>
+                          <button
+                            onClick={() => handleDeleteClick(item.id)}
+                            className={`shrink-0 transition-all duration-300 ${itemsToDelete.has(item.id) ? 'text-green-500 hover:text-green-600' : 'text-gray-400 hover:text-red-500'}`}
+                            aria-label={itemsToDelete.has(item.id) ? "Confirmer la suppression" : "Supprimer l'article"}
+                          >
+                            {itemsToDelete.has(item.id) ? <Check size={18} className="animate-pulse" /> : <Trash size={18} />}
+                          </button>
+                        </div>
 
                         {/* Affichage du variant */}
                         {item.variants_selectionnes?.variant && (
