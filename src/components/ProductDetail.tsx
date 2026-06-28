@@ -69,6 +69,7 @@ export default function ProductDetail({
       const type = product.variants.type;
       if (type === 'vetements') return 'vetements';
       if (type === 'chaussures') return 'chaussures';
+      if (type === 'autres') return 'generic';
     }
 
     // Sinon, déduire du nom de la catégorie
