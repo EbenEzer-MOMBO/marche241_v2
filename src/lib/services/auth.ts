@@ -159,11 +159,16 @@ export interface ModifierVendeurResponse {
 /**
  * Inscrire un nouveau vendeur
  * @param data - Données d'inscription du vendeur
+ * @param captchaToken - Token de captcha Turnstile (optionnel)
  * @returns Promise<InscriptionResponse>
  */
-export async function inscrireVendeur(data: InscriptionData): Promise<InscriptionResponse> {
+export async function inscrireVendeur(data: InscriptionData, captchaToken?: string): Promise<InscriptionResponse> {
   try {
-    const response = await api.post<InscriptionResponse>('/vendeurs/inscription', data);
+    const headers: Record<string, string> = {};
+    if (captchaToken) {
+      headers['x-cf-token'] = captchaToken;
+    }
+    const response = await api.post<InscriptionResponse>('/vendeurs/inscription', data, { headers });
     return response;
   } catch (error: any) {
     console.error('Erreur lors de l\'inscription:', error);

@@ -19,7 +19,7 @@ interface UseAuthReturn {
   error: string | null;
   demanderCode: (data: DemanderCodeData) => Promise<boolean>;
   verifier: (data: VerifierCodeData) => Promise<boolean>;
-  inscrire: (data: InscriptionData) => Promise<{ success: boolean; email?: string }>;
+  inscrire: (data: InscriptionData, captchaToken?: string) => Promise<{ success: boolean; email?: string }>;
   verifierBoutique: () => Promise<BoutiqueData | null>;
   updateUser: (userData: Partial<AuthUser>) => void;
   logout: () => void;
@@ -160,12 +160,12 @@ export function useAuth(): UseAuthReturn {
     }
   };
 
-  const inscrire = async (data: InscriptionData): Promise<{ success: boolean; email?: string }> => {
+  const inscrire = async (data: InscriptionData, captchaToken?: string): Promise<{ success: boolean; email?: string }> => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await inscrireVendeur(data);
+      const response = await inscrireVendeur(data, captchaToken);
       
       if (response.success) {
         success('Compte créé avec succès', 'Un code de vérification a été envoyé par email');

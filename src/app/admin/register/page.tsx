@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import Script from 'next/script';
 import PhoneNumberInput from '@/components/ui/PhoneNumberInput';
 import { useAuth } from '@/hooks/useAuth';
 import { ToastContainer } from '@/components/ui/Toast';
@@ -23,6 +24,54 @@ export default function AdminRegisterPage() {
     const [whatsAppError, setWhatsAppError] = useState<string | null>(null);
     const router = useRouter();
     const { inscrire, isLoading: authLoading, toasts, removeToast } = useAuth();
+
+    // États pour Cloudflare Turnstile
+    const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+    const turnstileContainerRef = useRef<HTMLDivElement>(null);
+    const widgetIdRef = useRef<string | null>(null);
+
+    // Initialiser le widget Cloudflare Turnstile de façon robuste
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (
+                typeof window !== 'undefined' &&
+                (window as any).turnstile &&
+                turnstileContainerRef.current &&
+                !widgetIdRef.current
+            ) {
+                clearInterval(interval);
+                try {
+                    const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+                    if (siteKey) {
+                        widgetIdRef.current = (window as any).turnstile.render(turnstileContainerRef.current, {
+                            sitekey: siteKey,
+                            callback: (token: string) => {
+                                setTurnstileToken(token);
+                            },
+                            'expired-callback': () => {
+                                setTurnstileToken(null);
+                            },
+                            'error-callback': () => {
+                                setTurnstileToken(null);
+                            }
+                        });
+                    }
+                } catch (e) {
+                    console.error('Erreur lors du rendu de Turnstile:', e);
+                }
+            }
+        }, 500);
+
+        return () => {
+            clearInterval(interval);
+            if (widgetIdRef.current && typeof window !== 'undefined' && (window as any).turnstile) {
+                try {
+                    (window as any).turnstile.remove(widgetIdRef.current);
+                    widgetIdRef.current = null;
+                } catch (e) {}
+            }
+        };
+    }, []);
 
     // Vérifier le numéro WhatsApp quand il est valide
     useEffect(() => {
@@ -75,12 +124,18 @@ export default function AdminRegisterPage() {
             return;
         }
 
+        // Si Turnstile est configuré, vérifier que le jeton a bien été généré
+        if (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && !turnstileToken) {
+            setError('Validation de sécurité requise');
+            return;
+        }
+
         const result = await inscrire({
             email: formData.email,
             nom: formData.nom,
             telephone: formData.telephone,
             ville: formData.ville
-        });
+        }, turnstileToken || undefined);
 
         if (result.success && result.email) {
             // Rediriger vers la page de vérification
@@ -96,16 +151,25 @@ export default function AdminRegisterPage() {
 
     const isFormValid = () => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const isTurnstileValid = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
+            ? turnstileToken !== null
+            : true;
         return (
             formData.nom.trim().length >= 2 &&
             emailRegex.test(formData.email) &&
             isPhoneValid &&
-            formData.ville.trim().length >= 2
+            formData.ville.trim().length >= 2 &&
+            isTurnstileValid
         );
     };
 
     return (
         <div className="min-h-screen bg-white flex items-center justify-center p-4">
+            {/* Script de Cloudflare Turnstile */}
+            {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && (
+                <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />
+            )}
+
             <div className="max-w-md w-full space-y-8">
                 {/* Logo et titre */}
                 <div className="text-center">
@@ -251,6 +315,13 @@ export default function AdminRegisterPage() {
                         {error && (
                             <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                                 <p className="text-sm text-red-600">{error}</p>
+                            </div>
+                        )}
+
+                        {/* Widget Cloudflare Turnstile */}
+                        {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && (
+                            <div className="flex justify-center">
+                                <div ref={turnstileContainerRef} />
                             </div>
                         )}
 
