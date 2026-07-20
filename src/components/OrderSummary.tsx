@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/useToast';
 import { creerCommande, CreerCommandeData } from '@/lib/services/commandes';
 import { useEffect } from 'react';
 import { getCommunesActives } from '@/lib/services/communes';
-import { initierPaiementMobile, verifierPaiementEnBoucle, type PaiementMobileData, type WebhookPaiementData } from '@/lib/services/paiements';
+import { initierPaiementMobile, verifierPaiementEnBoucle, type PaiementMobileData } from '@/lib/services/paiements';
 import { creerTransaction, type CreerTransactionData } from '@/lib/services/transactions';
 import { checkWhatsAppNumber } from '@/lib/services/whatsapp';
 import PhoneNumberInput from '@/components/ui/PhoneNumberInput';
@@ -391,15 +391,6 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
     setPaymentPhoneError('');
   };
 
-  /**
-   * Formate un numéro de téléphone pour WhatsApp
-   * Enlève le + et tous les caractères non numériques
-   * Ex: "+241 06 26 48 538" => "24162648538"
-   */
-  const formatWhatsAppNumber = (phone: string): string => {
-    return phone.replace(/[^\d]/g, '');
-  };
-
   const getPhonePlaceholder = () => {
     if (selectedPayment === 'moov' || selectedPayment === 'airtel') {
       return msisdnPlaceholder(selectedPayment as MobileMoneyOperator);
@@ -492,69 +483,9 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
           firstname: nameParts
         };
 
-        // Préparer les données pour le webhook
-        const webhookData: WebhookPaiementData = {
-          billId: '', // Sera rempli après l'initiation du paiement
-          boutique: {
-            id: boutiqueId,
-            nom: boutiqueConfig.name,
-            slug: boutiqueSlug as string,
-            telephone: boutiqueTelephone,
-            whatsapp: formatWhatsAppNumber(boutiqueTelephone || '')
-          },
-          commande: {
-            id: commande.commande.id,
-            numero_commande: commande.commande.numero_commande,
-            total: commande.commande.total,
-            sous_total: commande.commande.sous_total,
-            frais_livraison: commande.commande.frais_livraison,
-            taxes: commande.commande.taxes
-          },
-          produits: panier.reduce((acc, item, index) => {
-            const variantsString = formatVariantsString(item.variants_selectionnes);
-
-            acc[index + 1] = {
-              id: item.produit_id,
-              nom: item.produit.nom,
-              prix_unitaire: getPrixUnitairePanier(item),
-              quantite: item.quantite,
-              sous_total: getSousTotalLignePanier(item),
-              variants: item.variants_selectionnes || undefined,
-              variants_string: variantsString,
-              image_url: item.variants_selectionnes?.variant?.image || item.produit.image_principale || undefined
-            };
-
-            return acc;
-          }, {} as Record<number, {
-            id: number;
-            nom: string;
-            prix_unitaire: number;
-            quantite: number;
-            sous_total: number;
-            variants?: any;
-            variants_string?: string;
-            image_url?: string;
-          }>),
-          client: {
-            nom: deliveryAddress.fullName,
-            telephone: deliveryAddress.phone,
-            whatsapp: formatWhatsAppNumber(deliveryAddress.phone),
-            email: 'ebenezermombo@gmail.com',
-            adresse: deliveryAddress.address,
-            ville: deliveryAddress.city,
-            commune: deliveryAddress.district
-          },
-          paiement: {
-            montant: totalToPay,
-            type_paiement: 'frais_livraison',
-            methode_paiement: selectedPayment === 'moov' ? 'moov_money' : 'airtel_money',
-            reference: commande.commande.numero_commande
-          }
-        };
-
         setShowProgressBar(true);
 
-        const paiement = await initierPaiementMobile(paiementData, webhookData);
+        const paiement = await initierPaiementMobile(paiementData);
 
         if (paiement.success) {
           console.log('Paiement frais de livraison initié:', paiement);
@@ -651,69 +582,9 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
           firstname: nameParts
         };
 
-        // Préparer les données pour le webhook
-        const webhookData: WebhookPaiementData = {
-          billId: '', // Sera rempli après l'initiation du paiement
-          boutique: {
-            id: boutiqueId,
-            nom: boutiqueConfig.name,
-            slug: boutiqueSlug as string,
-            telephone: boutiqueTelephone,
-            whatsapp: formatWhatsAppNumber(boutiqueTelephone || '')
-          },
-          commande: {
-            id: commande.commande.id,
-            numero_commande: commande.commande.numero_commande,
-            total: commande.commande.total,
-            sous_total: commande.commande.sous_total,
-            frais_livraison: commande.commande.frais_livraison,
-            taxes: commande.commande.taxes
-          },
-          produits: panier.reduce((acc, item, index) => {
-            const variantsString = formatVariantsString(item.variants_selectionnes);
-
-            acc[index + 1] = {
-              id: item.produit_id,
-              nom: item.produit.nom,
-              prix_unitaire: getPrixUnitairePanier(item),
-              quantite: item.quantite,
-              sous_total: getSousTotalLignePanier(item),
-              variants: item.variants_selectionnes || undefined,
-              variants_string: variantsString,
-              image_url: item.variants_selectionnes?.variant?.image || item.produit.image_principale || undefined
-            };
-
-            return acc;
-          }, {} as Record<number, {
-            id: number;
-            nom: string;
-            prix_unitaire: number;
-            quantite: number;
-            sous_total: number;
-            variants?: any;
-            variants_string?: string;
-            image_url?: string;
-          }>),
-          client: {
-            nom: deliveryAddress.fullName,
-            telephone: deliveryAddress.phone,
-            whatsapp: formatWhatsAppNumber(deliveryAddress.phone),
-            email: 'ebenezermombo@gmail.com',
-            adresse: deliveryAddress.address,
-            ville: deliveryAddress.city,
-            commune: deliveryAddress.district
-          },
-          paiement: {
-            montant: totalToPay,
-            type_paiement: 'paiement_complet',
-            methode_paiement: selectedPayment === 'moov' ? 'moov_money' : 'airtel_money',
-            reference: commande.commande.numero_commande
-          }
-        };
-
         setShowProgressBar(true);
 
-        const paiement = await initierPaiementMobile(paiementData, webhookData);
+        const paiement = await initierPaiementMobile(paiementData);
 
         if (paiement.success) {
           console.log('Paiement complet initié:', paiement);

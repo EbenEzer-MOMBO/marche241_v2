@@ -125,11 +125,44 @@ async function apiRequest<T>(
 }
 
 /**
+ * Coalesce les GET concurrentes + cache court (2s) pour Strict Mode / parent+enfant.
+ */
+const inflightGetRequests = new Map<string, Promise<unknown>>();
+const recentGetResults = new Map<string, { expiresAt: number; value: unknown }>();
+const GET_CACHE_TTL_MS = 2000;
+
+function coalesceGet<T>(endpoint: string, factory: () => Promise<T>): Promise<T> {
+  const cached = recentGetResults.get(endpoint);
+  if (cached && Date.now() < cached.expiresAt) {
+    return Promise.resolve(cached.value as T);
+  }
+
+  const existing = inflightGetRequests.get(endpoint);
+  if (existing) {
+    return existing as Promise<T>;
+  }
+
+  const promise = factory()
+    .then((value) => {
+      recentGetResults.set(endpoint, {
+        value,
+        expiresAt: Date.now() + GET_CACHE_TTL_MS,
+      });
+      return value;
+    })
+    .finally(() => {
+      inflightGetRequests.delete(endpoint);
+    });
+  inflightGetRequests.set(endpoint, promise);
+  return promise;
+}
+
+/**
  * Méthodes HTTP spécialisées
  */
 export const api = {
   get: <T>(endpoint: string, options?: RequestInit) =>
-    apiRequest<T>(endpoint, { ...options, method: 'GET' }),
+    coalesceGet(endpoint, () => apiRequest<T>(endpoint, { ...options, method: 'GET' })),
   
   post: <T>(endpoint: string, data?: any, options?: RequestInit) =>
     apiRequest<T>(endpoint, {

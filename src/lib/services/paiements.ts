@@ -15,50 +15,6 @@ interface PaiementMobileData {
   firstname: string;
 }
 
-export interface WebhookPaiementData {
-  billId: string;
-  boutique: {
-    id: number;
-    nom: string;
-    slug: string;
-    telephone?: string;
-    whatsapp?: string;
-  };
-  commande: {
-    id: number;
-    numero_commande: string;
-    total: number;
-    sous_total: number;
-    frais_livraison: number;
-    taxes: number;
-  };
-  produits: Record<number, {
-    id: number;
-    nom: string;
-    prix_unitaire: number;
-    quantite: number;
-    sous_total: number;
-    variants?: Record<string, string>;
-    variants_string?: string;
-    image_url?: string;
-  }>;
-  client: {
-    nom: string;
-    telephone: string;
-    whatsapp: string; // Format: "24162648538" (sans +)
-    email: string;
-    adresse: string;
-    ville: string;
-    commune: string;
-  };
-  paiement: {
-    montant: number;
-    type_paiement: string;
-    methode_paiement: string;
-    reference: string;
-  };
-}
-
 interface PaiementMobileResponse {
   success: boolean;
   bill_id?: string;
@@ -76,65 +32,13 @@ interface VerificationPaiementResponse {
 }
 
 /**
- * Envoyer les données de paiement au webhook
- * @param webhookData - Données à envoyer au webhook
- */
-async function envoyerWebhookPaiement(webhookData: WebhookPaiementData): Promise<void> {
-  try {
-    const webhookUrl = process.env.NEXT_PUBLIC_WEBHOOK_PAYMENT;
-    
-    if (!webhookUrl) {
-      console.warn('⚠️ WEBHOOK_PAYMENT non configuré, envoi ignoré');
-      return;
-    }
-
-    console.log('📤 Envoi des données au webhook:', webhookUrl);
-    
-    const response = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(webhookData),
-    });
-
-    if (response.ok) {
-      console.log('✅ Webhook envoyé avec succès');
-    } else {
-      console.error('❌ Erreur lors de l\'envoi du webhook:', response.status, response.statusText);
-    }
-  } catch (error) {
-    // Ne pas bloquer le flux principal si le webhook échoue
-    console.error('❌ Erreur lors de l\'envoi du webhook:', error);
-  }
-}
-
-/**
- * Initier un paiement mobile
- * @param paiementData - Données du paiement à initier
- * @param webhookData - Données optionnelles à envoyer au webhook après initiation
- * @returns Promise<PaiementMobileResponse>
+ * Initier un paiement mobile (le webhook Make.com est envoyé côté API serveur)
  */
 export async function initierPaiementMobile(
-  paiementData: PaiementMobileData,
-  webhookData?: WebhookPaiementData
+  paiementData: PaiementMobileData
 ): Promise<PaiementMobileResponse> {
   try {
-    const response = await api.post<PaiementMobileResponse>('/paiements/mobile', paiementData);
-    
-    // Envoyer les données au webhook si disponibles
-    if (response.success && response.bill_id && webhookData) {
-      // S'assurer que le billId dans webhookData correspond à celui retourné
-      const webhookDataWithBillId = {
-        ...webhookData,
-        billId: response.bill_id
-      };
-      
-      // Envoyer au webhook en arrière-plan (ne pas attendre)
-      envoyerWebhookPaiement(webhookDataWithBillId).catch(console.error);
-    }
-    
-    return response;
+    return await api.post<PaiementMobileResponse>('/paiements/mobile', paiementData);
   } catch (error) {
     console.error('Erreur lors de l\'initiation du paiement:', error);
     throw new Error('Impossible d\'initier le paiement. Veuillez réessayer.');
@@ -143,24 +47,18 @@ export async function initierPaiementMobile(
 
 /**
  * Vérifier le statut d'un paiement mobile
- * @param billId - ID de la facture à vérifier
- * @returns Promise<VerificationPaiementResponse>
  */
 export async function verifierPaiement(billId: string): Promise<VerificationPaiementResponse> {
   try {
     const response = await api.get<any>(`/paiements/verification/${billId}`);
     
-    // Extraire le statut de différentes sources possibles
     let status: string | undefined;
     
     if (response.transaction?.statut) {
-      // Le statut vient de transaction.statut
       status = response.transaction.statut;
     } else if (response.state) {
-      // Le statut vient de state
       status = response.state;
     } else if (response.status) {
-      // Le statut vient de status
       status = response.status;
     }
     
@@ -179,11 +77,6 @@ export async function verifierPaiement(billId: string): Promise<VerificationPaie
 
 /**
  * Vérifier le paiement en boucle pendant une durée donnée
- * @param billId - ID de la facture à vérifier
- * @param durationMs - Durée en millisecondes (défaut: 60000 = 1 minute)
- * @param intervalMs - Intervalle entre les vérifications (défaut: 5000 = 5 secondes)
- * @param cancelSignal - Signal d'annulation optionnel
- * @returns Promise<VerificationPaiementResponse>
  */
 export async function verifierPaiementEnBoucle(
   billId: string, 
@@ -196,7 +89,6 @@ export async function verifierPaiementEnBoucle(
   
   return new Promise((resolve, reject) => {
     const checkPayment = async () => {
-      // Vérifier si l'annulation a été demandée
       if (cancelSignal?.cancelled) {
         console.log('🛑 Vérification annulée par l\'utilisateur');
         if (timeoutId) clearTimeout(timeoutId);
@@ -209,11 +101,9 @@ export async function verifierPaiementEnBoucle(
         
         console.log('🔍 Vérification paiement:', { billId, status: result.status, result });
         
-        // Si la réponse contient une erreur ou pas de statut, considérer comme en attente
         if (!result.success || !result.status) {
           console.warn('⚠️ Réponse invalide ou erreur backend:', result);
           
-          // Si on a dépassé la durée limite, on arrête avec erreur
           if (Date.now() - startTime >= durationMs) {
             console.log('⏱️ Timeout de vérification atteint avec erreur');
             if (timeoutId) clearTimeout(timeoutId);
@@ -225,25 +115,20 @@ export async function verifierPaiementEnBoucle(
             return;
           }
           
-          // Continuer à vérifier
           console.log(`⏳ Prochaine vérification dans ${intervalMs / 1000}s (erreur backend temporaire)...`);
           timeoutId = setTimeout(checkPayment, intervalMs);
           return;
         }
         
-        // Statuts de succès (paiement confirmé)
         const successStatuses = ['paye', 'paid', 'processed'];
-        // Statuts d'échec
         const failureStatuses = ['echec', 'failed', 'rembourse', 'refunded'];
         
         const statusLower = result.status.toLowerCase();
         
-        // Si le paiement est terminé (succès ou échec), on arrête
         if (successStatuses.includes(statusLower) || failureStatuses.includes(statusLower)) {
           console.log('✅ Paiement terminé:', result.status);
           if (timeoutId) clearTimeout(timeoutId);
           
-          // Normaliser le statut pour la compatibilité
           if (successStatuses.includes(statusLower)) {
             result.status = 'paye' as any;
           } else if (failureStatuses.includes(statusLower)) {
@@ -257,35 +142,30 @@ export async function verifierPaiementEnBoucle(
           return;
         }
         
-        // Si on a dépassé la durée limite, on arrête
         if (Date.now() - startTime >= durationMs) {
           console.log('⏱️ Timeout de vérification atteint');
           if (timeoutId) clearTimeout(timeoutId);
-          resolve(result); // Retourner le dernier statut
+          resolve(result);
           return;
         }
         
-        // Programmer la prochaine vérification
         console.log(`⏳ Prochaine vérification dans ${intervalMs / 1000}s...`);
         timeoutId = setTimeout(checkPayment, intervalMs);
         
       } catch (error) {
         console.error('❌ Erreur lors de la vérification:', error);
         
-        // Si on a dépassé la durée limite, on arrête avec erreur
         if (Date.now() - startTime >= durationMs) {
           if (timeoutId) clearTimeout(timeoutId);
           reject(error);
           return;
         }
         
-        // Sinon, continuer à essayer
         console.log(`⏳ Nouvelle tentative dans ${intervalMs / 1000}s après erreur...`);
         timeoutId = setTimeout(checkPayment, intervalMs);
       }
     };
     
-    // Démarrer la première vérification
     checkPayment();
   });
 }

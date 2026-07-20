@@ -212,38 +212,40 @@ export default function BoutiqueDashboard() {
 
     const loadStats = async (boutiqueId: number) => {
       try {
-        // Charger les produits
-        const produitsData = await getProduitsParBoutique(boutiqueId, { limite: 5 });
-        
-        // Charger les catégories
-        const categoriesData = await getCategoriesParBoutique(boutiqueId);
-        
-        // Charger les communes
-        const communesData = await getCommunesParBoutique(boutiqueId);
-        setTotalCommunes(communesData.length || 0);
-        
-        // Charger les statistiques complètes
-        const statsData = await getStatistiquesDashboard(boutiqueId, periode);
+        // Produits récents + stats dashboard (categories/communes: Sidebar fait déjà le check alertes)
+        const [produitsData, statsData, topProducts] = await Promise.all([
+          getProduitsParBoutique(boutiqueId, { limite: 5 }),
+          getStatistiquesDashboard(boutiqueId, periode),
+          getProduitsLesPlusVus(boutiqueId, 5),
+        ]);
+
+        setTotalCommunes(0);
         setStatistiques(statsData);
-        
-        // Calculer les statistiques
+
         const produitsActifs = produitsData.donnees.filter(p => p.statut === 'actif').length;
         const produitsEnRupture = produitsData.donnees.filter(p => Number(p.en_stock) === 0).length;
-        
+
         setStats({
           totalProduits: produitsData.total || 0,
           totalCommandes: statsData.total_commandes || 0,
-          totalCategories: categoriesData.length || 0,
+          totalCategories: 0,
           produitsActifs,
           produitsEnRupture
         });
-        
-        // Garder les 5 produits les plus récents
+
         setRecentProducts(produitsData.donnees.slice(0, 5));
-        
-        // Charger les produits les plus vus
-        const topProducts = await getProduitsLesPlusVus(boutiqueId, 5);
         setTopViewedProducts(topProducts);
+
+        // Compteurs categories/communes sans bloquer le dashboard (partagés via coalesce GET)
+        const [categoriesData, communesData] = await Promise.all([
+          getCategoriesParBoutique(boutiqueId),
+          getCommunesParBoutique(boutiqueId),
+        ]);
+        setTotalCommunes(communesData.length || 0);
+        setStats(prev => ({
+          ...prev,
+          totalCategories: categoriesData.length || 0,
+        }));
       } catch (error: any) {
         console.error('Erreur lors du chargement des statistiques:', error);
         
