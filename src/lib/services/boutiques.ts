@@ -45,37 +45,57 @@ export async function getBoutiqueById(id: number): Promise<Boutique> {
   }
 }
 
+interface BoutiquesPaginatedResponse {
+  success?: boolean;
+  donnees?: Boutique[];
+  boutiques?: Boutique[];
+  total?: number;
+  page?: number;
+  limite?: number;
+  total_pages?: number;
+}
+
+const BOUTIQUES_PAGE_SIZE = 100;
+
 /**
- * Récupère la liste de toutes les boutiques
+ * Récupère la liste de toutes les boutiques (toutes les pages API, max 100/page)
  * @returns Promise<Boutique[]> - La liste des boutiques
  */
 export async function getAllBoutiques(): Promise<Boutique[]> {
   try {
-    // Le backend retourne les données paginées, on récupère toutes les boutiques
-    const response = await api.get<{ 
-      success?: boolean; 
-      donnees?: Boutique[];
-      boutiques?: Boutique[];
-      total?: number;
-    }>('/boutiques?limite=100');
-    
-    console.log('[getAllBoutiques] Réponse API:', response);
-    
-    // Vérifier si on a des données (certaines APIs ne renvoient pas success)
-    if (response.donnees || response.boutiques) {
-      const boutiques = response.donnees || response.boutiques || [];
-      console.log('[getAllBoutiques] Nombre de boutiques récupérées:', boutiques.length);
-      return boutiques;
-    }
-    
-    // Si pas de données et success = false, erreur
-    if (response.success === false) {
-      throw new Error('Erreur lors de la récupération des boutiques');
-    }
-    
-    // Sinon retourner un tableau vide
-    console.warn('[getAllBoutiques] Aucune donnée trouvée dans la réponse');
-    return [];
+    const allBoutiques: Boutique[] = [];
+    let page = 1;
+    let totalPages = 1;
+
+    do {
+      const response = await api.get<BoutiquesPaginatedResponse>(
+        `/boutiques?page=${page}&limite=${BOUTIQUES_PAGE_SIZE}`
+      );
+
+      if (response.success === false) {
+        throw new Error('Erreur lors de la récupération des boutiques');
+      }
+
+      const pageBoutiques = response.donnees || response.boutiques || [];
+      allBoutiques.push(...pageBoutiques);
+
+      totalPages =
+        response.total_pages ||
+        (response.total
+          ? Math.ceil(response.total / BOUTIQUES_PAGE_SIZE)
+          : pageBoutiques.length < BOUTIQUES_PAGE_SIZE
+            ? page
+            : page + 1);
+
+      // Sécurité : arrêter si une page revient vide
+      if (pageBoutiques.length === 0) {
+        break;
+      }
+
+      page += 1;
+    } while (page <= totalPages);
+
+    return allBoutiques;
   } catch (error) {
     console.error('Erreur lors de la récupération des boutiques:', error);
     throw error;
