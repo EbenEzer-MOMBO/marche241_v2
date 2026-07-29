@@ -32,7 +32,7 @@ interface VerificationPaiementResponse {
 }
 
 /**
- * Initier un paiement mobile (le webhook Make.com est envoyé côté API serveur)
+ * Initier un paiement mobile (USSD push côté API ; confirmation via poll / réconciliation cron)
  */
 export async function initierPaiementMobile(
   paiementData: PaiementMobileData
