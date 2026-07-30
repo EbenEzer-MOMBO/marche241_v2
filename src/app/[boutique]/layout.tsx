@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getBoutiqueConfig, getBoutiqueBySlug, type BoutiqueConfig } from "@/lib/boutiques";
+import {
+  absoluteAssetUrl,
+  absoluteUrl,
+  buildStoreJsonLd,
+  OG_LOCALE,
+} from "@/lib/seo";
 
 // Force le mode dynamique pour éviter les erreurs de génération statique
 export const dynamic = 'force-dynamic';
@@ -18,26 +24,6 @@ function isReservedOrAsset(slug: string): boolean {
     return true;
   }
   return false;
-}
-
-/**
- * Utilitaire pour obtenir l'URL complète du logo de la boutique
- */
-function getBoutiqueLogoUrl(logoUrl?: string | null): string {
-  if (logoUrl && logoUrl.trim() !== '') {
-    // Vérifier si l'URL est déjà absolue
-    try {
-      new URL(logoUrl);
-      return logoUrl;
-    } catch {
-      // Si relative, créer une URL absolue (pour l'OpenGraph)
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-      return `${baseUrl}${logoUrl}`;
-    }
-  }
-  // Logo par défaut
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-  return `${baseUrl}/default-shop.png`;
 }
 
 export async function generateMetadata({
@@ -66,16 +52,15 @@ export async function generateMetadata({
           : boutiqueData.description)
       : `Découvrez ${boutiqueConfig.name} - Boutique en ligne`;
     
-    // URL du logo pour OpenGraph
-    const logoUrl = getBoutiqueLogoUrl(boutiqueData.logo);
-    
-    // URL de la boutique
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-    const boutiqueUrl = `${baseUrl}/${boutique}`;
+    const logoUrl = absoluteAssetUrl(boutiqueData.logo);
+    const boutiqueUrl = absoluteUrl(`/${boutique}`);
     
     return {
       title: `${boutiqueConfig.name} - Boutique en ligne`,
       description: description,
+      alternates: {
+        canonical: boutiqueUrl,
+      },
       openGraph: {
         title: `${boutiqueConfig.name} - Boutique en ligne`,
         description: description,
@@ -89,7 +74,7 @@ export async function generateMetadata({
             alt: `${boutiqueConfig.name} Logo`,
           },
         ],
-        locale: 'fr_FR',
+        locale: OG_LOCALE,
         type: 'website',
       },
       twitter: {
@@ -122,12 +107,16 @@ export default async function BoutiqueLayout({
   }
   
   let boutiqueConfig: BoutiqueConfig;
+  let boutiqueData;
   try {
     boutiqueConfig = await getBoutiqueConfig(boutique);
+    boutiqueData = await getBoutiqueBySlug(boutique);
   } catch (error) {
     console.error('Erreur lors de la récupération de la boutique:', error);
     notFound();
   }
+
+  const storeJsonLd = buildStoreJsonLd(boutiqueData, boutique);
 
   return (
     <div 
@@ -138,6 +127,10 @@ export default async function BoutiqueLayout({
         '--accent-color': boutiqueConfig.theme.accent,
       } as React.CSSProperties}
     >
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(storeJsonLd) }}
+      />
       {children}
     </div>
   );

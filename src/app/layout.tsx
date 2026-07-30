@@ -100,9 +100,7 @@ export const metadata: Metadata = {
     // yandex: "votre-code-yandex",
     // bing: "votre-code-bing",
   },
-  alternates: {
-    canonical: "https://marche241.ga",
-  },
+  // Canonical défini par page (accueil, boutique, produit…) — pas de valeur globale héritée
   category: "E-commerce",
   classification: "Business",
 };

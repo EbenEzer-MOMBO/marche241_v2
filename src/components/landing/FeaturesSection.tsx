@@ -1,101 +1,76 @@
 'use client';
 
-import { ShoppingCart, Smartphone, TrendingUp, Shield, Clock, Users } from 'lucide-react';
+import { Smartphone, MessageCircle, TrendingUp, Headphones } from 'lucide-react';
 
 interface Feature {
   icon: React.ReactNode;
-  number: string;
   title: string;
   description: string;
 }
 
 const features: Feature[] = [
   {
-    icon: <ShoppingCart className="h-8 w-8" />,
-    number: "01",
-    title: "Gestion des commandes simplifiée",
-    description: "Recevez et gérez vos commandes en temps réel. Notifications WhatsApp automatiques pour chaque nouvelle commande."
+    icon: <Smartphone className="h-5 w-5" />,
+    title: 'Paiements mobiles',
+    description: 'Airtel Money et Moov Money. Vos clients paient avec ce qu\'ils ont déjà.',
   },
   {
-    icon: <Smartphone className="h-8 w-8" />,
-    number: "02",
-    title: "Paiements mobiles intégrés",
-    description: "Acceptez Airtel Money et Moov Money directement. Vos clients paient en toute sécurité avec leurs moyens préférés."
+    icon: <MessageCircle className="h-5 w-5" />,
+    title: 'Commandes sur WhatsApp',
+    description:
+      'Notification automatique à chaque commande, vous répondez comme d\'habitude.',
   },
   {
-    icon: <TrendingUp className="h-8 w-8" />,
-    number: "03",
-    title: "Statistiques en temps réel",
-    description: "Suivez vos ventes, votre chiffre d'affaires et l'évolution de votre boutique avec des graphiques détaillés."
+    icon: <TrendingUp className="h-5 w-5" />,
+    title: 'Ventes en temps réel',
+    description: 'Chiffre d\'affaires, produits vus, commandes du jour sur un seul écran.',
   },
   {
-    icon: <Shield className="h-8 w-8" />,
-    number: "04",
-    title: "Sécurisé et fiable",
-    description: "Vos données et celles de vos clients sont protégées. Infrastructure sécurisée et conforme aux standards."
+    icon: <Headphones className="h-5 w-5" />,
+    title: 'Support par WhatsApp',
+    description:
+      'Une vraie personne vous répond, 7j/7, pour configurer votre boutique.',
   },
-  {
-    icon: <Clock className="h-8 w-8" />,
-    number: "05",
-    title: "Déploiement rapide",
-    description: "Créez votre boutique en moins de 5 minutes. Ajoutez vos produits et commencez à vendre immédiatement."
-  },
-  {
-    icon: <Users className="h-8 w-8" />,
-    number: "06",
-    title: "Support dédié",
-    description: "Notre équipe vous accompagne à chaque étape. Support via WhatsApp, email et téléphone disponible."
-  }
 ];
 
 export const FeaturesSection: React.FC = () => {
   return (
-    <section id="features" className="py-20 lg:py-28 bg-white">
-      <div className="container mx-auto px-4">
-        {/* En-tête de section */}
-        <div className="max-w-3xl mx-auto text-center mb-16">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-            Tout ce dont vous avez besoin
+    <section id="features" className="py-12 lg:py-[60px] bg-gray-50 border-t border-gray-200">
+      <div className="container mx-auto px-4 lg:px-10">
+        <div className="max-w-[1160px] mx-auto flex flex-col gap-6 lg:gap-7">
+          <h2 className="text-[26px] lg:text-[28px] font-bold tracking-tight text-gray-900">
+            Tout ce dont vous avez besoin, rien de plus
           </h2>
-          <p className="text-lg text-gray-600">
-            Une plateforme complète pour gérer votre commerce en ligne au Gabon. 
-            Concentrez-vous sur vos produits, nous nous occupons du reste.
-          </p>
-        </div>
 
-        {/* Grille de fonctionnalités */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {features.map((feature, index) => (
-            <div
-              key={index}
-              className="group relative bg-gradient-to-br from-gray-50 to-white p-8 rounded-2xl border border-gray-200 hover:border-[#74adaf] hover:shadow-xl transition-all duration-300"
-            >
-              {/* Numéro en arrière-plan */}
-              <span className="absolute top-4 right-4 text-6xl font-bold text-gray-100 group-hover:text-[#74adaf]/20 transition-colors">
-                {feature.number}
-              </span>
-
-              {/* Icône */}
-              <div className="relative z-10 inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-[#508e27]/10 to-[#74adaf]/10 text-[#508e27] rounded-xl mb-6 group-hover:bg-gradient-to-r group-hover:from-[#508e27] group-hover:to-[#74adaf] group-hover:text-white transition-all duration-300">
-                {feature.icon}
+          <div className="hidden lg:grid grid-cols-4 gap-5">
+            {features.map((feature) => (
+              <div
+                key={feature.title}
+                className="flex flex-col gap-2.5 p-6 bg-white border border-gray-200 rounded-[14px]"
+              >
+                <div className="w-[38px] h-[38px] rounded-[10px] bg-[#508e27]/12 text-[#508e27] flex items-center justify-center">
+                  {feature.icon}
+                </div>
+                <h3 className="text-[17px] font-semibold text-gray-900">{feature.title}</h3>
+                <p className="text-sm leading-relaxed text-gray-600">{feature.description}</p>
               </div>
+            ))}
+          </div>
 
-              {/* Contenu */}
-              <h3 className="text-xl font-bold text-gray-900 mb-3">
-                {feature.title}
-              </h3>
-              <p className="text-gray-600 leading-relaxed">
-                {feature.description}
-              </p>
-
-              {/* Flèche hover */}
-              <div className="mt-6 flex items-center bg-gradient-to-r from-[#508e27] to-[#74adaf] bg-clip-text text-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                <svg className="ml-2 h-4 w-4 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+          <div className="lg:hidden flex gap-2.5 overflow-x-auto snap-x snap-mandatory pb-2 -mx-4 px-4 scrollbar-none">
+            {features.map((feature) => (
+              <div
+                key={feature.title}
+                className="snap-start shrink-0 w-[230px] flex flex-col gap-2 p-[18px] border border-gray-200 rounded-[13px] bg-white"
+              >
+                <div className="w-[34px] h-[34px] rounded-[9px] bg-[#508e27]/12 text-[#508e27] flex items-center justify-center">
+                  {feature.icon}
+                </div>
+                <h3 className="text-base font-semibold text-gray-900">{feature.title}</h3>
+                <p className="text-sm leading-relaxed text-gray-600">{feature.description}</p>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </section>

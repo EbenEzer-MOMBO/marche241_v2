@@ -10,6 +10,10 @@ export const metadata: Metadata = {
   manifest: '/admin/manifest.json',
   title: 'Ma Boutique',
   description: 'Gérez votre boutique en ligne',
+  robots: {
+    index: false,
+    follow: false,
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',

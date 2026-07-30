@@ -3,7 +3,13 @@
 import { useState, useEffect } from 'react';
 import { Download, X, Share, Plus } from 'lucide-react';
 
-export const InstallAppButton: React.FC = () => {
+interface InstallAppButtonProps {
+  className?: string;
+}
+
+export const InstallAppButton: React.FC<InstallAppButtonProps> = ({
+  className = 'bottom-6',
+}) => {
   const [showModal, setShowModal] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isInStandaloneMode, setIsInStandaloneMode] = useState(false);
@@ -29,7 +35,7 @@ export const InstallAppButton: React.FC = () => {
       {/* Bouton flottant */}
       <button
         onClick={() => setShowModal(true)}
-        className="fixed bottom-6 right-6 z-50 group"
+        className={`fixed z-50 group right-6 ${className}`}
         aria-label="Installer l'application"
       >
         <div className="relative">

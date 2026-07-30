@@ -103,15 +103,22 @@ export async function getAllBoutiques(): Promise<Boutique[]> {
 }
 
 /**
+ * Boutiques internes (tests) à exclure des listes publiques
+ */
+const INTERNAL_BOUTIQUE_IDS = new Set([1]);
+
+/**
  * Récupère la liste de toutes les boutiques actives
  * @returns Promise<Boutique[]> - La liste des boutiques actives
  */
 export async function getAllBoutiquesActives(): Promise<Boutique[]> {
   try {
     const boutiques = await getAllBoutiques();
-    
-    // Filtrer uniquement les boutiques actives
-    return boutiques.filter(boutique => boutique.statut === 'active');
+
+    return boutiques.filter(
+      (boutique) =>
+        boutique.statut === 'active' && !INTERNAL_BOUTIQUE_IDS.has(boutique.id)
+    );
   } catch (error) {
     console.error('Erreur lors de la récupération des boutiques actives:', error);
     throw error;

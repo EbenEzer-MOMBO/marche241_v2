@@ -16,11 +16,19 @@ export async function generateMetadata({ params }: OrderPageProps): Promise<Meta
     return {
       title: `Résumé de commande - ${boutiqueConfig.name}`,
       description: `Finalisez votre commande sur ${boutiqueConfig.name}`,
+      robots: {
+        index: false,
+        follow: false,
+      },
     };
   } catch (error) {
     console.error('Erreur lors de la récupération des métadonnées:', error);
     return {
       title: 'Boutique non trouvée',
+      robots: {
+        index: false,
+        follow: false,
+      },
     };
   }
 }

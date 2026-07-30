@@ -1,13 +1,15 @@
+import { SITE_URL, SOCIAL_PROFILES } from '@/lib/seo';
+
 export default function StructuredData() {
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: 'Marché241',
     description: 'Plateforme de commerce en ligne pour les commerçants gabonais',
-    url: 'https://marche241.ga',
+    url: SITE_URL,
     potentialAction: {
       '@type': 'SearchAction',
-      target: 'https://marche241.ga/marche_241?q={search_term_string}',
+      target: `${SITE_URL}/affiche_boutiques?q={search_term_string}`,
       'query-input': 'required name=search_term_string',
     },
     publisher: {
@@ -15,7 +17,7 @@ export default function StructuredData() {
       name: 'Marché241',
       logo: {
         '@type': 'ImageObject',
-        url: 'https://marche241.ga/marche241_Web_without_text-01-01.svg',
+        url: `${SITE_URL}/marche241_Web_without_text-01-01.svg`,
       },
     },
   };
@@ -25,8 +27,8 @@ export default function StructuredData() {
     '@type': 'Organization',
     name: 'Marché241',
     description: 'Plateforme de commerce en ligne pour les commerçants gabonais',
-    url: 'https://marche241.ga',
-    logo: 'https://marche241.ga/marche241_Web_without_text-01-01.svg',
+    url: SITE_URL,
+    logo: `${SITE_URL}/marche241_Web_without_text-01-01.svg`,
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'Customer Service',
@@ -36,12 +38,7 @@ export default function StructuredData() {
       '@type': 'Country',
       name: 'Gabon',
     },
-    sameAs: [
-      // Ajoutez vos réseaux sociaux ici
-      // 'https://www.facebook.com/marche241',
-      // 'https://twitter.com/marche241',
-      // 'https://www.instagram.com/marche241',
-    ],
+    sameAs: [...SOCIAL_PROFILES],
   };
 
   const breadcrumbData = {
@@ -52,7 +49,7 @@ export default function StructuredData() {
         '@type': 'ListItem',
         position: 1,
         name: 'Accueil',
-        item: 'https://marche241.ga',
+        item: SITE_URL,
       },
     ],
   };
@@ -74,4 +71,3 @@ export default function StructuredData() {
     </>
   );
 }
-

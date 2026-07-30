@@ -1,9 +1,11 @@
 import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
 import ProductDetail from '@/components/ProductDetail';
 import { getBoutiqueConfig, type BoutiqueConfig } from '@/lib/boutiques';
 import { getBoutiqueBySlug } from '@/lib/services/boutiques';
 import { getProduitById, formatApiProduitPourDetail, formatProduitPourAffichage } from '@/lib/services/produits';
 import type { ProduitDetail, ProduitAffichage } from '@/lib/database-types';
+import { absoluteUrl, buildProductJsonLd, OG_LOCALE } from '@/lib/seo';
 
 interface ProductPageProps {
   params: Promise<{
@@ -72,6 +74,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
     notFound();
   }
 
+  const productJsonLd = buildProductJsonLd(
+    productData,
+    boutiqueConfig.name,
+    boutique,
+    id
+  );
+
   return (
     <div 
       className="boutique-container"
@@ -81,6 +90,10 @@ export default async function ProductPage({ params }: ProductPageProps) {
         '--accent-color': boutiqueConfig.theme.accent,
       } as React.CSSProperties}
     >
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
       <ProductDetail 
         productId={id}
         productData={productData}
@@ -121,7 +134,7 @@ export async function generateMetadata({
   params,
 }: {
   params: Promise<{ boutique: string; id: string }>;
-}) {
+}): Promise<Metadata> {
   const { boutique, id } = await params;
   
   try {
@@ -145,12 +158,24 @@ export async function generateMetadata({
       throw new Error('Erreur lors du formatage du produit');
     }
 
+    const description =
+      productDetail.description ||
+      productDetail.description_courte ||
+      `Découvrez ${productDetail.nom} sur ${boutiqueConfig.name}`;
+    const productUrl = absoluteUrl(`/${boutique}/produit/${id}`);
+
     return {
       title: `${productDetail.nom} - ${boutiqueConfig.name}`,
-      description: productDetail.description || productDetail.description_courte || `Découvrez ${productDetail.nom} sur ${boutiqueConfig.name}`,
+      description,
+      alternates: {
+        canonical: productUrl,
+      },
       openGraph: {
         title: `${productDetail.nom} - ${boutiqueConfig.name}`,
-        description: productDetail.description || productDetail.description_courte || `Découvrez ${productDetail.nom} sur ${boutiqueConfig.name}`,
+        description,
+        url: productUrl,
+        locale: OG_LOCALE,
+        type: 'website',
         images: productDetail.image_principale ? [productDetail.image_principale] : undefined,
       },
     };
