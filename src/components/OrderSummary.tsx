@@ -300,10 +300,10 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
 
   // Calcul du total selon le mode de paiement
   const getTotalToPay = () => {
-    if (payOnDelivery) {
-      return deliveryFee + getTransactionFee(); // Frais de livraison + frais de transaction
-    }
-    return subtotal + deliveryFee + getTransactionFee(); // Total complet
+    const total = payOnDelivery
+      ? deliveryFee + getTransactionFee()
+      : subtotal + deliveryFee + getTransactionFee();
+    return Math.round(total);
   };
 
   const totalToPay = getTotalToPay();
