@@ -44,7 +44,8 @@ const SIMPLIFIED_CATEGORIES = [
     icon: <Ticket className="h-12 w-12" />,
     bgColor: 'bg-violet-50',
     color: 'text-violet-700',
-    borderColor: 'hover:border-violet-500'
+    borderColor: 'hover:border-violet-500',
+    comingSoon: true,
   },
   {
     id: 'service' as ProductCategory,
@@ -53,7 +54,8 @@ const SIMPLIFIED_CATEGORIES = [
     icon: <Wrench className="h-12 w-12" />,
     bgColor: 'bg-teal-50',
     color: 'text-teal-700',
-    borderColor: 'hover:border-teal-500'
+    borderColor: 'hover:border-teal-500',
+    comingSoon: true,
   }
 ];
 
@@ -88,13 +90,28 @@ export function CategorySelectionModal({
         {/* Grille de catégories simplifiée */}
         <div className="flex-1 overflow-y-auto p-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {SIMPLIFIED_CATEGORIES.map((category) => (
+            {SIMPLIFIED_CATEGORIES.map((category) => {
+              const isComingSoon = Boolean(category.comingSoon);
+              return (
               <button
                 key={category.id}
                 type="button"
-                onClick={() => onSelectCategory(category.id)}
-                className={`${category.bgColor} ${category.color} p-8 rounded-xl border-2 border-transparent ${category.borderColor} transition-all duration-200 text-center group hover:scale-105 hover:shadow-lg`}
-                aria-label={`Choisir le type ${category.nom}`}
+                disabled={isComingSoon}
+                onClick={() => {
+                  if (isComingSoon) return;
+                  onSelectCategory(category.id);
+                }}
+                className={`${category.bgColor} ${category.color} p-8 rounded-xl border-2 border-transparent text-center transition-all duration-200 ${
+                  isComingSoon
+                    ? 'cursor-not-allowed opacity-55 grayscale'
+                    : `${category.borderColor} group hover:scale-105 hover:shadow-lg`
+                }`}
+                aria-label={
+                  isComingSoon
+                    ? `${category.nom} — bientôt disponible`
+                    : `Choisir le type ${category.nom}`
+                }
+                aria-disabled={isComingSoon}
               >
                 <div className="flex justify-center mb-4">
                   {category.icon}
@@ -105,8 +122,14 @@ export function CategorySelectionModal({
                 <p className="text-sm text-gray-600">
                   {category.description}
                 </p>
+                {isComingSoon && (
+                  <p className="mt-3 text-xs font-medium uppercase tracking-wide text-gray-500">
+                    Bientôt disponible
+                  </p>
+                )}
               </button>
-            ))}
+              );
+            })}
           </div>
         </div>
 
