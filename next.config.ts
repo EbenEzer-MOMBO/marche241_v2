@@ -10,13 +10,27 @@ const nextConfig: NextConfig = {
   // Configuration des images externes
   images: {
     remotePatterns: [
+      // CDN Cloudflare R2 (stockage actuel)
+      {
+        protocol: 'https',
+        hostname: 'cdn.marche241.ga',
+        port: '',
+        pathname: '/**',
+      },
+      // Sous-domaine public R2, utilisé en secours
+      {
+        protocol: 'https',
+        hostname: '**.r2.dev',
+        port: '',
+        pathname: '/**',
+      },
+      // Supabase Storage (obsolète, conservé le temps de la migration)
       {
         protocol: 'https',
         hostname: 'aeukfmfxvcnrjfktahab.supabase.co',
         port: '',
         pathname: '/storage/v1/object/public/**',
       },
-      // Vous pouvez ajouter d'autres domaines ici si nécessaire
       {
         protocol: 'https',
         hostname: '*.supabase.co',
