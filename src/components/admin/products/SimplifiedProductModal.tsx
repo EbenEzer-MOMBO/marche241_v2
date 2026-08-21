@@ -7,6 +7,8 @@ import { ProductCategory, getCategoryInfo } from '@/lib/constants/product-catego
 import { ClothingProductForm } from './ClothingProductForm';
 import { ShoesProductForm } from './ShoesProductForm';
 import { GenericProductForm } from './GenericProductForm';
+import { EventProductForm } from './EventProductForm';
+import { ServiceProductForm } from './ServiceProductForm';
 
 interface SimplifiedProductModalProps {
   isOpen: boolean;
@@ -75,6 +77,40 @@ export function SimplifiedProductModal({
   if (category === 'autres') {
     return (
       <GenericProductForm
+        key={modalKey}
+        isOpen={isOpen}
+        onClose={onClose}
+        category={category}
+        onBack={onBack}
+        onSave={onSave}
+        categories={categories}
+        boutiqueId={boutiqueId}
+        boutiqueSlug={boutiqueSlug}
+        productToEdit={productToEdit}
+      />
+    );
+  }
+
+  if (category === 'evenement') {
+    return (
+      <EventProductForm
+        key={modalKey}
+        isOpen={isOpen}
+        onClose={onClose}
+        category={category}
+        onBack={onBack}
+        onSave={onSave}
+        categories={categories}
+        boutiqueId={boutiqueId}
+        boutiqueSlug={boutiqueSlug}
+        productToEdit={productToEdit}
+      />
+    );
+  }
+
+  if (category === 'service') {
+    return (
+      <ServiceProductForm
         key={modalKey}
         isOpen={isOpen}
         onClose={onClose}

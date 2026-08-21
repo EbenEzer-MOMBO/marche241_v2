@@ -7,6 +7,8 @@ export type ProductCategory =
   | 'vetements'
   | 'chaussures'
   | 'autres'
+  | 'evenement'
+  | 'service'
   | 'electronique'
   | 'beaute'
   | 'bijoux'
@@ -131,6 +133,62 @@ export const PRODUCT_CATEGORIES: Record<ProductCategory, ProductCategoryInfo> = 
     fields: {
       base: ['nom', 'prix', 'description', 'images'],
       specific: []
+    }
+  },
+
+  evenement: {
+    id: 'evenement',
+    nom: 'Événement',
+    description: 'Concerts, ateliers, billetterie',
+    icon: '🎟️',
+    color: 'text-violet-600',
+    bgColor: 'bg-violet-50',
+    fields: {
+      base: ['nom', 'prix', 'description', 'images'],
+      specific: [
+        {
+          name: 'date_debut',
+          label: 'Date de début',
+          type: 'text',
+          required: true,
+          placeholder: '2026-09-12T20:00'
+        },
+        {
+          name: 'lieu',
+          label: 'Lieu',
+          type: 'text',
+          required: true,
+          placeholder: 'Institut Français, Libreville'
+        }
+      ]
+    }
+  },
+
+  service: {
+    id: 'service',
+    nom: 'Service',
+    description: 'Prestations, rendez-vous, devis',
+    icon: '🛠️',
+    color: 'text-teal-600',
+    bgColor: 'bg-teal-50',
+    fields: {
+      base: ['nom', 'prix', 'description', 'images'],
+      specific: [
+        {
+          name: 'duree',
+          label: 'Durée',
+          type: 'text',
+          required: true,
+          placeholder: '1 h 30'
+        },
+        {
+          name: 'lieu',
+          label: 'Lieu',
+          type: 'text',
+          required: true,
+          placeholder: 'En boutique · PK8'
+        }
+      ]
     }
   },
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { X, Shirt, ShoppingBag, Package } from 'lucide-react';
+import { X, Shirt, ShoppingBag, Package, Ticket, Wrench } from 'lucide-react';
 import { ProductCategory } from '@/lib/constants/product-categories';
 
 interface CategorySelectionModalProps {
@@ -36,6 +36,24 @@ const SIMPLIFIED_CATEGORIES = [
     bgColor: 'bg-green-50',
     color: 'text-green-700',
     borderColor: 'hover:border-green-500'
+  },
+  {
+    id: 'evenement' as ProductCategory,
+    nom: 'Événement',
+    description: 'Concerts, ateliers, billetterie',
+    icon: <Ticket className="h-12 w-12" />,
+    bgColor: 'bg-violet-50',
+    color: 'text-violet-700',
+    borderColor: 'hover:border-violet-500'
+  },
+  {
+    id: 'service' as ProductCategory,
+    nom: 'Service',
+    description: 'Prestations, rendez-vous, devis',
+    icon: <Wrench className="h-12 w-12" />,
+    bgColor: 'bg-teal-50',
+    color: 'text-teal-700',
+    borderColor: 'hover:border-teal-500'
   }
 ];
 
@@ -69,12 +87,14 @@ export function CategorySelectionModal({
 
         {/* Grille de catégories simplifiée */}
         <div className="flex-1 overflow-y-auto p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {SIMPLIFIED_CATEGORIES.map((category) => (
               <button
                 key={category.id}
+                type="button"
                 onClick={() => onSelectCategory(category.id)}
                 className={`${category.bgColor} ${category.color} p-8 rounded-xl border-2 border-transparent ${category.borderColor} transition-all duration-200 text-center group hover:scale-105 hover:shadow-lg`}
+                aria-label={`Choisir le type ${category.nom}`}
               >
                 <div className="flex justify-center mb-4">
                   {category.icon}

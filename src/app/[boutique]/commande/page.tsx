@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import CheckoutLayout from '@/components/CheckoutLayout';
 import { OrderSummary } from '@/components/OrderSummary';
@@ -48,24 +49,22 @@ export default async function OrderPage({ params }: OrderPageProps) {
 
   return (
     <CheckoutLayout boutiqueConfig={boutiqueConfig} boutiqueName={boutique}>
-      <div className="py-8">
+      <div className="min-h-[calc(100vh-58px)] bg-[#fbfaf8] py-6 sm:py-8">
         <div className="container mx-auto px-4">
-          <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-8">
-              <h3 className="text-2xl font-bold mb-2 text-black">
-                Résumé de votre commande
-              </h3>
-              <p className="text-muted-foreground">
-                Vérifiez vos articles et finalisez votre commande
-              </p>
-            </div>
-            <OrderSummary 
-              boutiqueConfig={boutiqueConfig} 
-              boutiqueId={boutiqueData.id} 
-              boutiqueTelephone={boutiqueData.telephone} 
+          <Suspense
+            fallback={
+              <div className="flex min-h-[40vh] items-center justify-center text-sm text-[#8b8f95]">
+                Chargement du récapitulatif…
+              </div>
+            }
+          >
+            <OrderSummary
+              boutiqueConfig={boutiqueConfig}
+              boutiqueId={boutiqueData.id}
+              boutiqueTelephone={boutiqueData.telephone}
               boutiqueData={boutiqueData}
             />
-          </div>
+          </Suspense>
         </div>
       </div>
     </CheckoutLayout>

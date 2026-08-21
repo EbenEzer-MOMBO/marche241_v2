@@ -7,6 +7,7 @@ import {
   buildStoreJsonLd,
   OG_LOCALE,
 } from "@/lib/seo";
+import { getCtaTextColor } from "@/lib/utils/shop-theme";
 
 // Force le mode dynamique pour éviter les erreurs de génération statique
 export const dynamic = 'force-dynamic';
@@ -118,13 +119,17 @@ export default async function BoutiqueLayout({
 
   const storeJsonLd = buildStoreJsonLd(boutiqueData, boutique);
 
+  const primary = boutiqueConfig.theme.primary;
+
   return (
     <div 
       className="boutique-container"
       style={{
-        '--primary-color': boutiqueConfig.theme.primary,
+        '--primary-color': primary,
         '--secondary-color': boutiqueConfig.theme.secondary,
         '--accent-color': boutiqueConfig.theme.accent,
+        '--color-shop-primary': primary,
+        '--shop-cta-fg': getCtaTextColor(primary),
       } as React.CSSProperties}
     >
       <script

@@ -2,160 +2,124 @@
 
 import Link from 'next/link';
 import { useEffect } from 'react';
-import { List, MagnifyingGlass, ShoppingCart } from '@phosphor-icons/react';
+import { MagnifyingGlass } from '@phosphor-icons/react';
 import { useScrollPosition } from '@/hooks/useScrollPosition';
 import { useBoutique } from '@/hooks/useBoutique';
 import { usePanier } from '@/hooks/usePanier';
 import { HeaderSkeleton } from './LoadingStates';
 import SafeImage from './SafeImage';
-import { BoutiqueConfig } from '@/lib/boutiques';
 
 interface HeaderProps {
-  onMenuClick?: () => void;
   onCartClick?: () => void;
   boutiqueName: string;
   hideCartButton?: boolean;
 }
 
-/**
- * Utilitaire pour obtenir l'URL du logo de la boutique
- */
-function getBoutiqueLogo(logoUrl?: string | null): string {
+const getBoutiqueLogo = (logoUrl?: string | null): string => {
   if (logoUrl && logoUrl.trim() !== '') {
-    // Vérifier si l'URL est valide
     try {
       new URL(logoUrl);
       return logoUrl;
     } catch {
-      // Si l'URL n'est pas valide, utiliser l'image par défaut
-      console.warn('URL de logo invalide:', logoUrl);
       return '/default-shop.png';
     }
   }
   return '/default-shop.png';
-}
+};
 
-export default function Header({ onMenuClick, onCartClick, boutiqueName, hideCartButton = false }: HeaderProps) {
+export default function Header({
+  onCartClick,
+  boutiqueName,
+  hideCartButton = false,
+}: HeaderProps) {
   const scrollY = useScrollPosition();
   const { boutique, config, loading, error } = useBoutique(boutiqueName);
   const { totalItems, rafraichir } = usePanier(boutique?.id);
+  const showBrand = scrollY > 180;
 
-  // Rafraîchir le panier lors du montage du composant
   useEffect(() => {
     rafraichir();
   }, [rafraichir]);
-  
-  // Le logo du hero devient invisible après 300px de scroll (mobile uniquement)
-  const showMobileNavbarLogo = scrollY > 300;
 
-  // Afficher le squelette pendant le chargement
   if (loading) {
     return <HeaderSkeleton />;
   }
 
-  // En cas d'erreur, afficher un header minimal
   if (error || !config) {
     return (
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm shadow-sm border-b border-red-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <span className="text-lg font-bold text-red-600">Erreur de chargement</span>
-            </div>
-            <div className="text-sm text-red-600">Boutique introuvable</div>
-          </div>
+      <header className="fixed top-0 left-0 right-0 z-50 border-b border-[#ececea] bg-white">
+        <div className="mx-auto flex h-[54px] max-w-7xl items-center justify-between px-4 sm:h-[60px] sm:px-8">
+          <span className="text-sm font-medium text-[#b3261e]">
+            Boutique introuvable
+          </span>
         </div>
       </header>
     );
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm shadow-sm border-b border-accent/20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Section gauche */}
-          <div className="flex items-center">
-            {/* Menu hamburger (mobile/tablet) */}
+    <header className="fixed top-0 left-0 right-0 z-50 border-b border-[#ececea] bg-white/95 backdrop-blur-sm">
+      <div className="mx-auto flex h-[54px] max-w-7xl items-center justify-between px-4 sm:h-[60px] sm:px-8">
+        <div className="flex min-w-0 flex-1 items-center">
+          <Link
+            href={`/${boutiqueName}`}
+            className={`flex items-center gap-2.5 transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#17181a]/30 rounded sm:gap-3 ${
+              showBrand
+                ? 'opacity-100 translate-y-0'
+                : 'pointer-events-none opacity-0 -translate-y-1'
+            }`}
+            aria-label={`Accueil ${config.name}`}
+            tabIndex={showBrand ? 0 : -1}
+            aria-hidden={!showBrand}
+          >
+            <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full border-2 border-white shadow-sm sm:h-[30px] sm:w-[30px] sm:rounded-lg sm:border-0 sm:shadow-none">
+              <SafeImage
+                src={getBoutiqueLogo(boutique?.logo)}
+                alt=""
+                width={40}
+                height={40}
+                className="h-full w-full object-cover"
+                priority
+              />
+            </div>
+            <span className="max-w-[140px] truncate text-sm font-semibold text-[#17181a] sm:max-w-none sm:text-base">
+              {config.name}
+            </span>
+          </Link>
+        </div>
+
+        <div className="flex items-center gap-4 sm:gap-5">
+          <Link
+            href={`/${boutiqueName}/produits`}
+            className="text-[14px] text-[#5f6369] hover:text-[#17181a] focus:outline-none focus-visible:underline"
+            aria-label="Rechercher des produits"
+          >
+            <span className="hidden sm:inline">Rechercher</span>
+            <MagnifyingGlass size={18} className="sm:hidden" />
+          </Link>
+
+          {!hideCartButton && (
             <button
               type="button"
-              className="lg:hidden text-primary hover:text-secondary focus:outline-none focus:text-secondary mr-3"
-              aria-label="Menu"
-              onClick={onMenuClick}
+              className="flex items-center gap-2 text-[14px] font-medium text-[#17181a] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#17181a]/30 rounded"
+              aria-label="Panier"
+              onClick={onCartClick}
             >
-              <List size={24} />
+              <span>Panier</span>
+              {totalItems > 0 && (
+                <span
+                  className="inline-flex min-w-[18px] items-center justify-center rounded-[9px] px-1.5 font-mono text-[10px] font-medium leading-[18px] sm:min-w-5 sm:text-[11px] sm:leading-5"
+                  style={{
+                    backgroundColor:
+                      'var(--color-shop-primary, var(--primary-color))',
+                    color: 'var(--shop-cta-fg, #fff)',
+                  }}
+                >
+                  {totalItems > 99 ? '99+' : totalItems}
+                </span>
+              )}
             </button>
-
-            {/* Logo fixe desktop - toujours visible */}
-            <Link href={`/${boutiqueName}`} className="hidden lg:flex items-center space-x-2">
-              <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
-                <SafeImage
-                  src={getBoutiqueLogo(boutique?.logo)}
-                  alt={`${config.name} Logo`}
-                  width={40}
-                  height={40}
-                  className="w-full h-full object-cover aspect-square"
-                  priority
-                />
-              </div>
-              <span className="text-xl font-bold text-primary">
-                {config.name}
-              </span>
-            </Link>
-          </div>
-
-          {/* Logo mobile qui apparaît au scroll */}
-          <div className="lg:hidden flex-1 flex justify-center">
-            <Link 
-              href={`/${boutiqueName}`} 
-              className={`flex items-center space-x-2 transition-all duration-300 ${
-                showMobileNavbarLogo 
-                  ? 'opacity-100 transform translate-y-0' 
-                  : 'opacity-0 transform -translate-y-2 pointer-events-none'
-              }`}
-            >
-              <div className="w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center border-2 overflow-hidden flex-shrink-0" style={{ borderColor: 'var(--primary-color)' }}>
-                <SafeImage
-                  src={getBoutiqueLogo(boutique?.logo)}
-                  alt={`${config.name} Logo`}
-                  width={32}
-                  height={32}
-                  className="w-full h-full rounded-full object-cover aspect-square"
-                  priority
-                />
-              </div>
-              <span className="text-sm font-bold text-primary">
-                {config.name}
-              </span>
-            </Link>
-          </div>
-
-          
-          {/* Actions à droite */}
-          <div className="flex items-center space-x-3">
-            <Link
-              href={`/${boutiqueName}/produits`}
-              className="text-black hover:text-secondary transition-colors duration-200"
-              aria-label="Rechercher"
-            >
-              <MagnifyingGlass size={20} />
-            </Link>
-            
-            {!hideCartButton && (
-              <button
-                type="button"
-                className="text-black hover:text-secondary transition-colors duration-200 relative"
-                aria-label="Panier"
-                onClick={onCartClick}
-              >
-                <ShoppingCart size={20} />
-                {totalItems > 0 && (
-                  <span className="absolute -top-2 -right-2 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center" style={{ backgroundColor: 'var(--primary-color)' }}>
-                    {totalItems > 99 ? '99+' : totalItems}
-                  </span>
-                )}
-              </button>
-            )}
-          </div>
+          )}
         </div>
       </div>
     </header>

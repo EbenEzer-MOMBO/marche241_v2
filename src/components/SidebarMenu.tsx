@@ -35,8 +35,8 @@ export default function SidebarMenu({ isOpen = true, onClose }: SidebarMenuProps
         />
       )}
 
-      <aside className={`fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-white shadow-lg border-r border-accent/20 z-40 transition-transform duration-300 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:block`}>
+      <aside className={`fixed left-0 top-[54px] sm:top-[60px] h-[calc(100vh-54px)] sm:h-[calc(100vh-60px)] w-64 bg-white shadow-lg border-r border-[#ececea] z-40 transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'
+        } lg:hidden`}>
         <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-accent/20 scrollbar-track-transparent">
           <div className="p-4">
             {/* En-tête du menu */}

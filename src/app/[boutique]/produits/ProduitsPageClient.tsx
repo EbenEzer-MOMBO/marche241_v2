@@ -5,17 +5,23 @@ import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigat
 import Link from 'next/link';
 import MainLayout from '@/components/MainLayout';
 import { useBoutique } from '@/hooks/useBoutique';
-import { formatPrix, getProduitImageUrl } from '@/lib/services/produits';
+import { useAjoutPanier } from '@/hooks/usePanier';
+import { useToast } from '@/hooks/useToast';
+import { ToastContainer } from '@/components/ui/Toast';
 import { getProduitsParBoutique } from '@/lib/services/products';
 import { ProduitDB } from '@/lib/database-types';
 import type { Categorie } from '@/lib/database-types';
-import SafeImage from '@/components/SafeImage';
-import { Skeleton, SkeletonText } from '@/components/ui/Skeleton';
+import { CategoryChipsSkeleton, ProductCardGridSkeleton, Skeleton } from '@/components/ui/Skeleton';
 import { ErrorState } from '@/components/LoadingStates';
-import { X, Search } from 'lucide-react';
-import { ProduitsPagination } from '@/components/storefront/ProduitsPagination';
+import { CategoryChips } from '@/components/storefront/CategoryChips';
+import { StorefrontCard } from '@/components/storefront/StorefrontCard';
+import { ShopCtaButton } from '@/components/storefront/ShopCtaButton';
+import { produitHasRequiredVariants } from '@/lib/utils/shop-theme';
+import { Search, SlidersHorizontal, X } from 'lucide-react';
 
 type SortKey = 'recent' | 'price-asc' | 'price-desc' | 'name';
+type FilterStock = 'all' | 'in-stock' | 'out-stock';
+type FilterType = 'all' | 'nouveau' | 'promo' | 'featured';
 
 /** Catégorie affichée dans le filtre, dérivée de l’ensemble des produits boutique (comptage exact) */
 type CategorieAvecCompte = {
@@ -25,8 +31,35 @@ type CategorieAvecCompte = {
   count: number;
 };
 
+type FiltreActif = {
+  id: string;
+  label: string;
+  onRemove: () => void;
+};
+
 const CHUNK_FETCH_META = 100;
 const MAX_PAGES_META = 500;
+const TAILLE_LOT = 12;
+
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: 'recent', label: 'Plus récents' },
+  { value: 'price-asc', label: 'Prix croissant' },
+  { value: 'price-desc', label: 'Prix décroissant' },
+  { value: 'name', label: 'Nom A-Z' },
+];
+
+const STOCK_OPTIONS: { value: FilterStock; label: string }[] = [
+  { value: 'all', label: 'Tous' },
+  { value: 'in-stock', label: 'En stock' },
+  { value: 'out-stock', label: 'Épuisés' },
+];
+
+const TYPE_OPTIONS: { value: FilterType; label: string }[] = [
+  { value: 'all', label: 'Tous' },
+  { value: 'nouveau', label: 'Nouveautés' },
+  { value: 'promo', label: 'Promotions' },
+  { value: 'featured', label: 'Vedettes' },
+];
 
 const mapSortToApi = (sort: SortKey): { tri_par: string; ordre: 'ASC' | 'DESC' } => {
   switch (sort) {
@@ -123,6 +156,18 @@ const trierProduitsClient = (list: ProduitDB[], sort: SortKey): ProduitDB[] => {
   return copie;
 };
 
+const labelForFilterStock = (value: FilterStock): string =>
+  STOCK_OPTIONS.find((opt) => opt.value === value)?.label ?? value;
+
+const labelForFilterType = (value: FilterType): string =>
+  TYPE_OPTIONS.find((opt) => opt.value === value)?.label ?? value;
+
+const filtreChipStyle = {
+  borderColor: 'var(--color-shop-primary, var(--primary-color))',
+  backgroundColor: 'var(--shop-primary-tint)',
+  color: 'var(--shop-primary-dark)',
+};
+
 export default function ProduitsPageClient() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -137,6 +182,8 @@ export default function ProduitsPageClient() {
   const selectedCategorieSlug = searchParams.get('categorie');
 
   const { boutique, loading: boutiqueLoading, error: boutiqueError } = useBoutique(boutiqueName);
+  const { ajouterProduit, loading: adding } = useAjoutPanier();
+  const { success, error: showError, toasts, removeToast } = useToast();
 
   const [produits, setProduits] = useState<ProduitDB[]>([]);
   /** Catalogue complet boutique (agrégation API) : catégories + pagination filtrée côté client */
@@ -147,11 +194,13 @@ export default function ProduitsPageClient() {
   const [error, setError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortKey>('recent');
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStock, setFilterStock] = useState<'all' | 'in-stock' | 'out-stock'>('all');
-  const [filterType, setFilterType] = useState<'all' | 'nouveau' | 'promo' | 'featured'>('all');
+  const [filterStock, setFilterStock] = useState<FilterStock>('all');
+  const [filterType, setFilterType] = useState<FilterType>('all');
   const [pageSize, setPageSize] = useState(24);
   const [totalProducts, setTotalProducts] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [addingId, setAddingId] = useState<number | null>(null);
+  const [filtresOuverts, setFiltresOuverts] = useState(false);
 
   const replaceSearchParams = useCallback(
     (mutate: (p: URLSearchParams) => void) => {
@@ -345,28 +394,31 @@ export default function ProduitsPageClient() {
     setPageInUrl,
   ]);
 
-  const handleCategorieChange = (slug: string | null) => {
-    replaceSearchParams((p) => {
-      if (slug) {
-        p.set('categorie', slug);
-      } else {
-        p.delete('categorie');
-      }
-      p.delete('page');
-    });
-  };
+  const handleCategorieChange = useCallback(
+    (slug: string | null) => {
+      replaceSearchParams((p) => {
+        if (slug) {
+          p.set('categorie', slug);
+        } else {
+          p.delete('categorie');
+        }
+        p.delete('page');
+      });
+    },
+    [replaceSearchParams]
+  );
 
   const handleSortChange = (value: SortKey) => {
     setSortBy(value);
     handleResetPageInUrl();
   };
 
-  const handleFilterStockChange = (value: 'all' | 'in-stock' | 'out-stock') => {
+  const handleFilterStockChange = (value: FilterStock) => {
     setFilterStock(value);
     handleResetPageInUrl();
   };
 
-  const handleFilterTypeChange = (value: 'all' | 'nouveau' | 'promo' | 'featured') => {
+  const handleFilterTypeChange = (value: FilterType) => {
     setFilterType(value);
     handleResetPageInUrl();
   };
@@ -376,33 +428,131 @@ export default function ProduitsPageClient() {
     handleResetPageInUrl();
   };
 
+  const handleClearAllFilters = useCallback(() => {
+    setSearchTerm('');
+    setFilterStock('all');
+    setFilterType('all');
+    replaceSearchParams((p) => {
+      p.delete('categorie');
+      p.delete('page');
+    });
+  }, [replaceSearchParams]);
+
+  const handleVoirPlus = () => {
+    handlePageSizeChange(pageSize + TAILLE_LOT);
+  };
+
+  const handleAddToCart = async (produit: ProduitDB) => {
+    if (!boutique?.id) return;
+
+    if (produitHasRequiredVariants(produit.variants)) {
+      router.push(`/${boutiqueName}/produit/${produit.id}`);
+      return;
+    }
+
+    try {
+      setAddingId(produit.id);
+      const ok = await ajouterProduit(boutique.id, produit.id, 1, {});
+      if (ok) {
+        success(`${produit.nom} ajouté au panier`, 'Succès', 3000);
+      } else {
+        showError("Impossible d'ajouter au panier", 'Erreur', 4000);
+      }
+    } catch {
+      showError("Impossible d'ajouter au panier", 'Erreur', 4000);
+    } finally {
+      setAddingId(null);
+    }
+  };
+
   const subtitleParts = useMemo(() => {
     const n = aFiltresLocaux ? totalPourPagination : totalProducts;
     return `${n} produit${n > 1 ? 's' : ''}`;
   }, [aFiltresLocaux, totalPourPagination, totalProducts]);
 
+  const categoryChipItems = useMemo(
+    () => [
+      { id: 'all', label: 'Tout', count: catalogueComplet.length },
+      ...categories.map((categorie) => ({
+        id: categorie.slug,
+        label: categorie.nom,
+        count: categorie.count,
+      })),
+    ],
+    [categories, catalogueComplet.length]
+  );
+
+  const activeCategoryId = selectedCategorieSlug || 'all';
+
+  const handleCategoryChipSelect = useCallback(
+    (id: string) => {
+      handleCategorieChange(id === 'all' ? null : id);
+    },
+    [handleCategorieChange]
+  );
+
+  const activeFilterChips = useMemo(() => {
+    const chips: FiltreActif[] = [];
+
+    if (selectedCategorieSlug) {
+      const categorie = categories.find((c) => c.slug === selectedCategorieSlug);
+      chips.push({
+        id: 'categorie',
+        label: categorie?.nom ?? selectedCategorieSlug,
+        onRemove: () => handleCategorieChange(null),
+      });
+    }
+
+    if (searchTerm.trim()) {
+      chips.push({
+        id: 'recherche',
+        label: `« ${searchTerm.trim()} »`,
+        onRemove: () => setSearchTerm(''),
+      });
+    }
+
+    if (filterStock !== 'all') {
+      chips.push({
+        id: 'stock',
+        label: labelForFilterStock(filterStock),
+        onRemove: () => handleFilterStockChange('all'),
+      });
+    }
+
+    if (filterType !== 'all') {
+      chips.push({
+        id: 'type',
+        label: labelForFilterType(filterType),
+        onRemove: () => handleFilterTypeChange('all'),
+      });
+    }
+
+    return chips;
+  }, [selectedCategorieSlug, categories, searchTerm, filterStock, filterType, handleCategorieChange]);
+
+  const mobileFilterCount =
+    (filterStock !== 'all' ? 1 : 0) + (filterType !== 'all' ? 1 : 0) + (sortBy !== 'recent' ? 1 : 0);
+
+  const resteAVoir = Math.max(0, totalPourPagination - produitsAffiche.length);
+  const prochainLot = Math.min(TAILLE_LOT, resteAVoir);
+
   if (boutiqueLoading || (aFiltresLocaux ? categoriesLoading : loading)) {
     return (
       <MainLayout boutiqueName={boutiqueName}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Skeleton className="h-10 w-64 mb-8" />
-
-          <div className="flex gap-8">
-            <div className="hidden lg:block w-64 flex-shrink-0">
-              <Skeleton className="h-48 w-full" />
+        <div className="mx-auto max-w-7xl px-4 sm:px-8">
+          <div className="flex items-end justify-between gap-4 pt-5 pb-4 sm:pt-7">
+            <div>
+              <Skeleton className="mb-2 h-7 w-52 sm:h-8" />
+              <Skeleton className="h-4 w-28" />
             </div>
-
-            <div className="flex-1">
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                  <div key={i} className="bg-white rounded-xl p-4">
-                    <Skeleton className="w-full aspect-square rounded-lg mb-3" />
-                    <SkeletonText lines={2} />
-                    <Skeleton className="h-4 w-20 mt-2" />
-                  </div>
-                ))}
-              </div>
-            </div>
+            <Skeleton className="hidden h-3.5 w-32 sm:block" />
+          </div>
+          <div className="hidden items-center gap-4 border-b border-[#ececea] pb-4 sm:flex">
+            <Skeleton className="h-10 w-full max-w-[300px] rounded-[9px]" />
+            <CategoryChipsSkeleton count={4} />
+          </div>
+          <div className="py-6">
+            <ProductCardGridSkeleton count={8} />
           </div>
         </div>
       </MainLayout>
@@ -423,296 +573,310 @@ export default function ProduitsPageClient() {
 
   return (
     <MainLayout boutiqueName={boutiqueName}>
-      <div className="bg-gray-50 min-h-screen pt-20 pb-8 sm:pt-24 lg:pt-32">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-6">
-            <h1 className="text-2xl sm:text-3xl font-bold text-black mb-2">
-              Tous les Produits
+      <ToastContainer toasts={toasts} onClose={removeToast} />
+
+      <div className="mx-auto max-w-7xl px-4 sm:px-8">
+        <div className="flex items-end justify-between gap-4 pt-5 pb-4 sm:pt-7">
+          <div>
+            <h1 className="text-xl font-semibold text-[#17181a] sm:text-2xl">
+              Tous les articles
             </h1>
-            <p className="text-gray-600 text-sm sm:text-base">{subtitleParts}</p>
+            <p className="mt-1 text-[13px] text-[#5f6369] sm:text-sm">{subtitleParts}</p>
+          </div>
+          <nav aria-label="Fil d'Ariane" className="hidden shrink-0 text-[13px] text-[#9a9892] sm:block">
+            <Link href={`/${boutiqueName}`} className="transition-colors hover:text-[#17181a]">
+              Accueil
+            </Link>
+            <span className="mx-1.5">/</span>
+            <span className="text-[#5f6369]">Articles</span>
+          </nav>
+        </div>
+
+        {/* Barre de filtres — desktop */}
+        <div className="hidden items-center gap-4 border-b border-[#ececea] pb-4 sm:flex">
+          <div className="relative w-full max-w-[300px]">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9a9892]" />
+            <input
+              type="search"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Rechercher un produit..."
+              aria-label="Rechercher un produit"
+              className="h-10 w-full rounded-[9px] border border-[#e0ded9] bg-white pl-9 pr-8 text-[13.5px] text-[#17181a] placeholder:text-[#9a9892] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#17181a]/20"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                aria-label="Effacer la recherche"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#9a9892] hover:text-[#17181a]"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
-          <div className="mb-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <CategoryChips
+            items={categoryChipItems}
+            activeId={activeCategoryId}
+            onSelect={handleCategoryChipSelect}
+            className="flex-1"
+          />
+
+          <label className="flex shrink-0 items-center gap-1.5 text-[13px] text-[#5f6369]">
+            <span>Trier :</span>
+            <select
+              value={sortBy}
+              onChange={(e) => handleSortChange(e.target.value as SortKey)}
+              aria-label="Trier les produits"
+              className="rounded-[9px] border border-[#e0ded9] bg-white px-2.5 py-1.5 text-[13px] text-[#17181a] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#17181a]/20"
+            >
+              {SORT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        {/* Barre de filtres — mobile */}
+        <div className="flex flex-col gap-3 pb-4 sm:hidden">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9a9892]" />
               <input
                 type="search"
-                placeholder="Rechercher un produit..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Rechercher un produit..."
                 aria-label="Rechercher un produit"
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="h-10 w-full rounded-[9px] border border-[#e0ded9] bg-white pl-9 pr-8 text-[13.5px] text-[#17181a] placeholder:text-[#9a9892] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#17181a]/20"
               />
               {searchTerm && (
                 <button
                   type="button"
                   onClick={() => setSearchTerm('')}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   aria-label="Effacer la recherche"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#9a9892] hover:text-[#17181a]"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-4 w-4" />
                 </button>
               )}
             </div>
+
+            <button
+              type="button"
+              onClick={() => setFiltresOuverts(true)}
+              aria-label="Ouvrir les filtres"
+              className="relative flex h-10 shrink-0 items-center gap-1.5 rounded-[9px] border border-[#e0ded9] bg-white px-3 text-[13px] font-medium text-[#17181a]"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              Filtres
+              {mobileFilterCount > 0 && (
+                <span
+                  className="flex h-4 min-w-4 items-center justify-center rounded-full px-1 font-mono text-[10px] text-white"
+                  style={{ backgroundColor: 'var(--color-shop-primary, var(--primary-color))' }}
+                >
+                  {mobileFilterCount}
+                </span>
+              )}
+            </button>
           </div>
 
-          <div className="lg:hidden mb-6">
-            <div className="bg-white rounded-xl p-4 shadow-sm">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Catégories
-                  </label>
-                  <select
-                    value={selectedCategorieSlug || ''}
-                    onChange={(e) => handleCategorieChange(e.target.value || null)}
-                    aria-label="Filtrer par catégorie"
-                    aria-busy={categoriesLoading}
-                    className="w-full px-2 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  >
-                    <option value="">
-                      Toutes {totalProducts > 0 ? `(${totalProducts})` : ''}
-                      {categoriesLoading ? ' — …' : ''}
-                    </option>
-                    {categories.map((categorie) => (
-                      <option key={categorie.id} value={categorie.slug}>
-                        {categorie.nom} ({categorie.count})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+          <CategoryChips
+            items={categoryChipItems}
+            activeId={activeCategoryId}
+            onSelect={handleCategoryChipSelect}
+          />
+        </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Stock</label>
-                  <select
-                    value={filterStock}
-                    onChange={(e) =>
-                      handleFilterStockChange(e.target.value as 'all' | 'in-stock' | 'out-stock')
-                    }
-                    aria-label="Filtrer par disponibilité"
-                    className="w-full px-2 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  >
-                    <option value="all">Tous</option>
-                    <option value="in-stock">En stock</option>
-                    <option value="out-stock">Épuisés</option>
-                  </select>
-                </div>
+        {/* Filtres actifs */}
+        {activeFilterChips.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 pb-4 pt-4">
+            <span className="font-mono text-[11px] uppercase tracking-[.07em] text-[#8b8f95]">
+              Filtres actifs
+            </span>
+            {activeFilterChips.map((chip) => (
+              <button
+                key={chip.id}
+                type="button"
+                onClick={chip.onRemove}
+                className="flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12.5px] font-medium"
+                style={filtreChipStyle}
+              >
+                {chip.label}
+                <X className="h-3 w-3" />
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={handleClearAllFilters}
+              className="text-[12.5px] font-medium text-[#5f6369] underline underline-offset-2 hover:text-[#17181a]"
+            >
+              Tout effacer
+            </button>
+          </div>
+        )}
 
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Type</label>
-                  <select
-                    value={filterType}
-                    onChange={(e) =>
-                      handleFilterTypeChange(
-                        e.target.value as 'all' | 'nouveau' | 'promo' | 'featured'
-                      )
-                    }
-                    aria-label="Filtrer par type de produit"
-                    className="w-full px-2 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  >
-                    <option value="all">Tous</option>
-                    <option value="nouveau">Nouveautés</option>
-                    <option value="promo">Promos</option>
-                    <option value="featured">Vedettes</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Trier par
-                  </label>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => handleSortChange(e.target.value as SortKey)}
-                    aria-label="Trier les produits"
-                    className="w-full px-2 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  >
-                    <option value="recent">Récents</option>
-                    <option value="price-asc">Prix ↑</option>
-                    <option value="price-desc">Prix ↓</option>
-                    <option value="name">Nom A-Z</option>
-                  </select>
-                </div>
-              </div>
+        {/* Grille produits */}
+        <div className="pb-10 pt-2 sm:pb-14">
+          {produitsAffiche.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 py-16 text-center">
+              <p className="text-[15px] text-[#5f6369]">Aucun produit trouvé</p>
+              {aFiltresLocaux && (
+                <button
+                  type="button"
+                  onClick={handleClearAllFilters}
+                  className="text-[13.5px] font-medium underline underline-offset-2"
+                  style={{ color: 'var(--color-shop-primary, var(--primary-color))' }}
+                >
+                  Réinitialiser les filtres
+                </button>
+              )}
             </div>
-          </div>
-
-          <div className="flex gap-8">
-            <aside className="hidden lg:block w-64 flex-shrink-0">
-              <div className="bg-white rounded-xl p-4 shadow-sm sticky top-32">
-                <div className="mb-4">
-                  <h3 className="text-sm font-semibold text-black mb-2">Catégories</h3>
-                  <select
-                    value={selectedCategorieSlug || ''}
-                    onChange={(e) => handleCategorieChange(e.target.value || null)}
-                    aria-label="Filtrer par catégorie"
-                    aria-busy={categoriesLoading}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  >
-                    <option value="">
-                      Toutes {totalProducts > 0 ? `(${totalProducts})` : ''}
-                      {categoriesLoading ? ' — …' : ''}
-                    </option>
-                    {categories.map((categorie) => (
-                      <option key={categorie.id} value={categorie.slug}>
-                        {categorie.nom} ({categorie.count})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="mb-4">
-                  <h3 className="text-sm font-semibold text-black mb-2">Disponibilité</h3>
-                  <select
-                    value={filterStock}
-                    onChange={(e) =>
-                      handleFilterStockChange(e.target.value as 'all' | 'in-stock' | 'out-stock')
-                    }
-                    aria-label="Filtrer par disponibilité"
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  >
-                    <option value="all">Tous</option>
-                    <option value="in-stock">En stock</option>
-                    <option value="out-stock">Épuisés</option>
-                  </select>
-                </div>
-
-                <div className="mb-4">
-                  <h3 className="text-sm font-semibold text-black mb-2">Type</h3>
-                  <select
-                    value={filterType}
-                    onChange={(e) =>
-                      handleFilterTypeChange(
-                        e.target.value as 'all' | 'nouveau' | 'promo' | 'featured'
-                      )
-                    }
-                    aria-label="Filtrer par type de produit"
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  >
-                    <option value="all">Tous</option>
-                    <option value="nouveau">Nouveautés</option>
-                    <option value="promo">En promotion</option>
-                    <option value="featured">Produits vedettes</option>
-                  </select>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-semibold text-black mb-2">Trier par</h3>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => handleSortChange(e.target.value as SortKey)}
-                    aria-label="Trier les produits"
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  >
-                    <option value="recent">Plus récents</option>
-                    <option value="price-asc">Prix croissant</option>
-                    <option value="price-desc">Prix décroissant</option>
-                    <option value="name">Nom A-Z</option>
-                  </select>
-                </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5">
+                {produitsAffiche.map((produit) => (
+                  <StorefrontCard
+                    key={produit.id}
+                    boutiqueSlug={boutiqueName}
+                    compactCta
+                    produit={produit}
+                    onAddToCart={() => handleAddToCart(produit)}
+                    adding={adding && addingId === produit.id}
+                  />
+                ))}
               </div>
-            </aside>
 
-            <div className="flex-1">
-              {produitsAffiche.length === 0 ? (
-                <div className="bg-white rounded-xl p-12 text-center">
-                  <p className="text-gray-600 text-lg">Aucun produit trouvé</p>
-                  {selectedCategorieSlug && (
-                    <button
-                      type="button"
-                      onClick={() => handleCategorieChange(null)}
-                      className="mt-4 text-primary hover:underline"
-                    >
-                      Voir tous les produits
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-                  {produitsAffiche.map((produit) => (
-                    <Link
-                      key={produit.id}
-                      href={`/${boutiqueName}/produit/${produit.id}`}
-                      className="group bg-white rounded-xl p-4 hover:shadow-lg transition-all duration-300 hover:scale-105"
-                    >
-                      <div className="relative mb-3">
-                        <div className="w-full aspect-square rounded-lg overflow-hidden bg-gray-100">
-                          <SafeImage
-                            src={getProduitImageUrl(produit.image_principale)}
-                            alt={produit.nom}
-                            width={200}
-                            height={200}
-                            className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${
-                              !produit.en_stock ? 'grayscale opacity-50' : ''
-                            }`}
-                          />
-
-                          {!produit.en_stock && (
-                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-lg">
-                              <div className="text-center">
-                                <div className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium mb-2">
-                                  Épuisé
-                                </div>
-                                <p className="text-white text-xs">Stock indisponible</p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {produit.en_stock && (
-                          <div className="absolute top-2 left-2 flex flex-col gap-1">
-                            {produit.est_nouveau && (
-                              <span className="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-                                Nouveau
-                              </span>
-                            )}
-                            {produit.est_en_promotion && (
-                              <span className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-                                Promo
-                              </span>
-                            )}
-                            {produit.est_featured && (
-                              <span className="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-                                Vedette
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      <div>
-                        <h4 className="text-black font-medium text-sm mb-2 line-clamp-2 group-hover:text-secondary transition-colors duration-200">
-                          {produit.nom}
-                        </h4>
-
-                        <div className="flex flex-col gap-1">
-                          <span className="text-black font-semibold text-sm">
-                            {formatPrix(produit.prix)}
-                          </span>
-                          {produit.prix_original && produit.prix_original !== produit.prix && (
-                            <span className="text-gray-medium line-through text-xs">
-                              {formatPrix(produit.prix_original)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
+              {resteAVoir > 0 && (
+                <div className="mt-8 flex flex-col items-center gap-3 sm:mt-10">
+                  <p className="text-[13px] text-[#8b8f95]">
+                    {produitsAffiche.length} article{produitsAffiche.length > 1 ? 's' : ''} sur{' '}
+                    {totalPourPagination}
+                  </p>
+                  <ShopCtaButton
+                    variant="ghost"
+                    fullWidth={false}
+                    className="!w-auto px-6"
+                    onClick={handleVoirPlus}
+                  >
+                    Voir les {prochainLot} suivant{prochainLot > 1 ? 's' : ''}
+                  </ShopCtaButton>
                 </div>
               )}
-
-              <ProduitsPagination
-                currentPage={currentPage}
-                totalPages={pagesPourPagination}
-                totalProducts={totalPourPagination}
-                pageSize={pageSize}
-                onPageChange={setPageInUrl}
-                onPageSizeChange={handlePageSizeChange}
-              />
-            </div>
-          </div>
+            </>
+          )}
         </div>
       </div>
+
+      {/* Panneau de filtres — mobile (bottom sheet) */}
+      {filtresOuverts && (
+        <div className="fixed inset-0 z-50 sm:hidden">
+          <div
+            className="absolute inset-0 bg-[rgba(23,24,26,.42)]"
+            onClick={() => setFiltresOuverts(false)}
+            aria-hidden="true"
+          />
+          <div className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-[20px] bg-white p-5 pb-8">
+            <div className="mx-auto mb-5 h-1 w-[38px] rounded-full bg-[#e0ded9]" />
+            <div className="mb-5 flex items-center justify-between">
+              <h2 className="text-base font-semibold text-[#17181a]">Filtres</h2>
+              <button
+                type="button"
+                onClick={() => setFiltresOuverts(false)}
+                aria-label="Fermer les filtres"
+                className="text-[#8b8f95] hover:text-[#17181a]"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mb-5">
+              <h3 className="mb-2 font-mono text-[11px] uppercase tracking-[.07em] text-[#8b8f95]">
+                Disponibilité
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {STOCK_OPTIONS.map((opt) => {
+                  const active = filterStock === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => handleFilterStockChange(opt.value)}
+                      className="rounded-full px-3.5 py-1.5 text-[13px] font-medium"
+                      style={
+                        active
+                          ? { ...filtreChipStyle, border: '1.5px solid var(--color-shop-primary, var(--primary-color))' }
+                          : { border: '1px solid #e6e4df', color: '#3c4045' }
+                      }
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="mb-5">
+              <h3 className="mb-2 font-mono text-[11px] uppercase tracking-[.07em] text-[#8b8f95]">
+                Type
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {TYPE_OPTIONS.map((opt) => {
+                  const active = filterType === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => handleFilterTypeChange(opt.value)}
+                      className="rounded-full px-3.5 py-1.5 text-[13px] font-medium"
+                      style={
+                        active
+                          ? { ...filtreChipStyle, border: '1.5px solid var(--color-shop-primary, var(--primary-color))' }
+                          : { border: '1px solid #e6e4df', color: '#3c4045' }
+                      }
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <h3 className="mb-2 font-mono text-[11px] uppercase tracking-[.07em] text-[#8b8f95]">
+                Trier par
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {SORT_OPTIONS.map((opt) => {
+                  const active = sortBy === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => handleSortChange(opt.value)}
+                      className="rounded-full px-3.5 py-1.5 text-[13px] font-medium"
+                      style={
+                        active
+                          ? { ...filtreChipStyle, border: '1.5px solid var(--color-shop-primary, var(--primary-color))' }
+                          : { border: '1px solid #e6e4df', color: '#3c4045' }
+                      }
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <ShopCtaButton onClick={() => setFiltresOuverts(false)}>
+              Voir les {totalPourPagination} article{totalPourPagination > 1 ? 's' : ''}
+            </ShopCtaButton>
+          </div>
+        </div>
+      )}
     </MainLayout>
   );
 }

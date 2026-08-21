@@ -1,44 +1,44 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import { Search, Store, ArrowRight, X } from 'lucide-react';
 import { getAllBoutiquesActives } from '@/lib/services/boutiques';
 import { Boutique } from '@/lib/database-types';
-import { Store, MapPin, Package, Search, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LandingHeader } from '@/components/landing/LandingHeader';
+import { BoutiqueCard } from '@/components/landing/BoutiqueCard';
+import { AfficheBoutiquesSkeleton } from '@/components/landing/AfficheBoutiquesSkeleton';
 import { InstallAppButton } from '@/components/InstallAppButton';
+import Footer from '@/components/Footer';
 
 const ITEMS_PER_PAGE = 12;
 
 export default function MarchePage() {
   const [boutiques, setBoutiques] = useState<Boutique[]>([]);
-  const [filteredBoutiques, setFilteredBoutiques] = useState<Boutique[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedVille, setSelectedVille] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
 
   useEffect(() => {
     const loadBoutiques = async () => {
       try {
         setLoading(true);
         const data = await getAllBoutiquesActives();
-        
-        // Filtrer les boutiques avec au moins 1 produit ET avec une photo de profil
-        const boutiquesAvecProduitsEtLogo = data.filter(boutique => 
-          boutique.nombre_produits && 
-          boutique.nombre_produits > 0 &&
-          boutique.logo && 
-          boutique.logo.trim() !== ''
+
+        const boutiquesAvecProduitsEtImage = data.filter(
+          (boutique) =>
+            boutique.nombre_produits &&
+            boutique.nombre_produits > 0 &&
+            (Boolean(boutique.banniere?.trim()) || Boolean(boutique.logo?.trim()))
         );
-        
-        // Trier par nombre de vues (décroissant)
-        const boutiquesTries = boutiquesAvecProduitsEtLogo.sort((a, b) => {
-          return (b.nombre_vues || 0) - (a.nombre_vues || 0);
-        });
-        
+
+        const boutiquesTries = boutiquesAvecProduitsEtImage.sort(
+          (a, b) => (b.nombre_vues || 0) - (a.nombre_vues || 0)
+        );
+
         setBoutiques(boutiquesTries);
-        setFilteredBoutiques(boutiquesTries);
       } catch (err) {
         console.error('Erreur lors du chargement des boutiques:', err);
         setError('Impossible de charger les boutiques');
@@ -50,332 +50,286 @@ export default function MarchePage() {
     loadBoutiques();
   }, []);
 
-  // Filtrer les boutiques par recherche
-  useEffect(() => {
-    if (searchTerm.trim() === '') {
-      setFilteredBoutiques(boutiques);
-    } else {
-      const filtered = boutiques.filter(boutique =>
-        boutique.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        boutique.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        boutique.adresse?.toLowerCase().includes(searchTerm.toLowerCase())
+  const villeFilters = useMemo(() => {
+    const groups = new Map<string, { label: string; count: number; labelCounts: Map<string, number> }>();
+
+    boutiques.forEach((boutique) => {
+      const ville = boutique.ville?.trim();
+      if (!ville) {
+        return;
+      }
+
+      const key = ville.toLowerCase();
+      const existing = groups.get(key);
+
+      if (!existing) {
+        groups.set(key, {
+          label: ville,
+          count: 1,
+          labelCounts: new Map([[ville, 1]]),
+        });
+        return;
+      }
+
+      existing.count += 1;
+      existing.labelCounts.set(ville, (existing.labelCounts.get(ville) || 0) + 1);
+
+      let bestLabel = existing.label;
+      let bestCount = existing.labelCounts.get(existing.label) || 0;
+      existing.labelCounts.forEach((labelCount, label) => {
+        if (labelCount > bestCount) {
+          bestLabel = label;
+          bestCount = labelCount;
+        }
+      });
+      existing.label = bestLabel;
+    });
+
+    return Array.from(groups.values())
+      .map(({ label, count }) => ({ label, count }))
+      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'fr'));
+  }, [boutiques]);
+
+  const filteredBoutiques = useMemo(() => {
+    let result = boutiques;
+
+    if (selectedVille) {
+      result = result.filter(
+        (boutique) => boutique.ville?.trim().toLowerCase() === selectedVille.toLowerCase()
       );
-      setFilteredBoutiques(filtered);
     }
-    // Réinitialiser à la première page lors d'une nouvelle recherche
-    setCurrentPage(1);
-  }, [searchTerm, boutiques]);
 
-  // Calculer la pagination
-  const totalPages = Math.ceil(filteredBoutiques.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const currentBoutiques = filteredBoutiques.slice(startIndex, endIndex);
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(
+        (boutique) =>
+          boutique.nom.toLowerCase().includes(term) ||
+          boutique.description?.toLowerCase().includes(term) ||
+          boutique.adresse?.toLowerCase().includes(term) ||
+          boutique.ville?.toLowerCase().includes(term)
+      );
+    }
 
-  // Fonction pour changer de page
-  const goToPage = (page: number) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return result;
+  }, [boutiques, searchTerm, selectedVille]);
+
+  useEffect(() => {
+    setVisibleCount(ITEMS_PER_PAGE);
+  }, [searchTerm, selectedVille]);
+
+  const visibleBoutiques = filteredBoutiques.slice(0, visibleCount);
+  const remaining = filteredBoutiques.length - visibleCount;
+  const productTotal = boutiques.reduce((sum, b) => sum + (b.nombre_produits || 0), 0);
+
+  const handleLoadMore = () => {
+    setVisibleCount((prev) => prev + ITEMS_PER_PAGE);
   };
 
+  const insertVendorCardAt = Math.min(3, visibleBoutiques.length);
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header avec navigation */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md shadow-sm">
-        <div className="container mx-auto px-4">
-          <nav className="flex items-center justify-between py-4">
-            {/* Logo */}
-            <Link href="/" className="flex items-center">
-              <img 
-                src="/marche241_Web_with_text-01.svg" 
-                alt="Marché241" 
-                className="h-10 w-auto"
-              />
-            </Link>
+    <div className="min-h-screen bg-white">
+      <LandingHeader activePage="boutiques" />
 
-            {/* Navigation */}
-            <div className="flex items-center space-x-6">
-              <Link
-                href="/"
-                className="text-gray-700 hover:bg-gradient-to-r hover:from-[#508e27] hover:to-[#74adaf] hover:bg-clip-text hover:text-transparent transition-colors font-medium"
-              >
-                Accueil
-              </Link>
-              <Link
-                href="/admin/register"
-                className="px-6 py-2 bg-gradient-to-r from-[#508e27] to-[#74adaf] text-white rounded-lg hover:opacity-90 transition-all font-medium"
-              >
-                Créer ma boutique
-              </Link>
-            </div>
-          </nav>
-        </div>
-      </header>
-
-      {/* Hero Section */}
-      <section className="pt-32 pb-12 bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-4">
-              Découvrez nos boutiques
-            </h1>
-            <p className="text-xl text-gray-600 mb-8">
-              Explorez les meilleures boutiques en ligne du Gabon
-            </p>
-            
-            {/* Statistique 
-            <div className="inline-flex items-center gap-2 bg-white px-6 py-3 rounded-full shadow-md">
-              <Store className="h-5 w-5 text-[#508e27]" />
-              <span className="text-2xl font-bold text-gray-900">{boutiques.length}</span>
-              <span className="text-gray-600">boutiques actives</span>
-            </div>*/}
-          </div>
-        </div>
-      </section>
-
-      {/* Barre de recherche */}
-      <div className="bg-white border-b border-gray-200 py-8">
-        <div className="container mx-auto px-4">
-          <div className="relative max-w-2xl mx-auto">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Rechercher une boutique par nom, description ou adresse..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#74adaf] focus:border-[#74adaf] transition-all shadow-sm"
-            />
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Contenu principal */}
-      <div className="container mx-auto px-4 py-12">
-        {loading ? (
-          // État de chargement
-          <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="h-12 w-12 text-[#508e27] animate-spin mb-4" />
-            <p className="text-gray-600 text-lg">Chargement des boutiques...</p>
-          </div>
-        ) : error ? (
-          // État d'erreur
-          <div className="text-center py-20">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-red-100 rounded-full mb-6">
-              <Store className="h-10 w-10 text-red-600" />
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">Erreur</h3>
-            <p className="text-gray-600 text-lg">{error}</p>
-          </div>
-        ) : filteredBoutiques.length === 0 ? (
-          // Aucun résultat
-          <div className="text-center py-20">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gray-100 rounded-full mb-6">
-              <Store className="h-10 w-10 text-gray-400" />
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">
-              {searchTerm ? 'Aucune boutique trouvée' : 'Aucune boutique disponible'}
-            </h3>
-            <p className="text-gray-600 text-lg mb-6">
-              {searchTerm ? 'Essayez avec d\'autres mots-clés' : 'Revenez plus tard'}
-            </p>
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                className="px-6 py-3 bg-gradient-to-r from-[#508e27] to-[#74adaf] text-white rounded-lg hover:opacity-90 transition-all font-medium"
-              >
-                Réinitialiser la recherche
-              </button>
-            )}
-          </div>
-        ) : (
-          <>
-            {/* Résultats de recherche */}
-            {searchTerm && (
-              <div className="mb-6 text-center">
-                <p className="text-gray-600">
-                  <span className="font-semibold text-gray-900">{filteredBoutiques.length}</span> boutique{filteredBoutiques.length > 1 ? 's' : ''} trouvée{filteredBoutiques.length > 1 ? 's' : ''}
-                </p>
-              </div>
-            )}
-            
-            {/* Grille des boutiques */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-            {currentBoutiques.map((boutique) => (
-              <Link
-                key={boutique.id}
-                href={`/${boutique.slug}`}
-                className="group bg-white rounded-2xl shadow-sm hover:shadow-2xl transition-all duration-300 overflow-hidden border-2 border-gray-100 hover:border-[#74adaf] transform hover:-translate-y-1"
-              >
-                {/* Image de la boutique */}
-                <div className="relative h-40 md:h-48 bg-gradient-to-br from-gray-100 to-gray-50 overflow-hidden">
-                  <Image
-                    src={boutique.logo!}
-                    alt={boutique.nom}
-                    fill
-                    className="object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
-                  
-                  {/* Overlay gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  
-                  {/* Badge statut */}
-                  <div className="absolute top-2 right-2 md:top-3 md:right-3 bg-gradient-to-r from-[#508e27] to-[#74adaf] text-white text-xs font-bold px-2 py-1 md:px-3 md:py-1.5 rounded-full shadow-lg">
-                    ● Actif
-                  </div>
-                </div>
-
-                {/* Informations de la boutique */}
-                <div className="p-3 md:p-5">
-                  <h3 className="text-base md:text-lg font-bold text-gray-900 mb-2 group-hover:bg-gradient-to-r group-hover:from-[#508e27] group-hover:to-[#74adaf] group-hover:bg-clip-text group-hover:text-transparent transition-colors line-clamp-1">
-                    {boutique.nom}
-                  </h3>
-                  
-                  {boutique.description && (
-                    <p className="text-gray-600 text-xs md:text-sm mb-3 line-clamp-2 leading-relaxed hidden md:block">
-                      {boutique.description}
-                    </p>
-                  )}
-
-                  {/* Adresse */}
-                  {boutique.adresse && (
-                    <div className="flex items-start gap-2 text-xs md:text-sm text-gray-500 mb-3 md:mb-4">
-                      <MapPin className="h-3 w-3 md:h-4 md:w-4 mt-0.5 flex-shrink-0 text-[#508e27]" />
-                      <span className="line-clamp-1">{boutique.adresse}</span>
-                    </div>
-                  )}
-
-                  {/* Statistiques */}
-                  <div className="flex items-center justify-between pt-3 md:pt-4 border-t border-gray-100">
-                    <div className="flex items-center gap-2 md:gap-4 text-xs md:text-sm">
-                      {boutique.nombre_produits !== undefined && (
-                        <div className="flex items-center gap-1 md:gap-1.5 text-gray-700 font-medium">
-                          <div className="p-0.5 md:p-1 bg-gradient-to-r from-[#508e27]/10 to-[#74adaf]/10 rounded">
-                            <Package className="h-3 w-3 md:h-3.5 md:w-3.5 text-[#508e27]" />
-                          </div>
-                          <span>{boutique.nombre_produits}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-1 bg-gradient-to-r from-[#508e27] to-[#74adaf] bg-clip-text text-transparent font-semibold text-xs md:text-sm group-hover:gap-2 transition-all">
-                      <span className="hidden md:inline">Visiter</span>
-                      <svg className="h-3 w-3 md:h-4 md:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="mt-12 flex flex-col items-center gap-4">
-              <div className="flex items-center gap-2">
-                {/* Bouton précédent */}
-                <button
-                  onClick={() => goToPage(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="p-2 rounded-lg border-2 border-gray-200 hover:border-[#74adaf] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-gray-200 transition-all"
-                >
-                  <ChevronLeft className="h-5 w-5 text-gray-600" />
-                </button>
-
-                {/* Numéros de page */}
-                <div className="flex gap-2">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                    // Afficher seulement quelques pages autour de la page actuelle
-                    if (
-                      page === 1 ||
-                      page === totalPages ||
-                      (page >= currentPage - 1 && page <= currentPage + 1)
-                    ) {
-                      return (
-                        <button
-                          key={page}
-                          onClick={() => goToPage(page)}
-                          className={`min-w-[40px] h-10 rounded-lg font-semibold transition-all ${
-                            page === currentPage
-                              ? 'bg-gradient-to-r from-[#508e27] to-[#74adaf] text-white shadow-lg'
-                              : 'border-2 border-gray-200 text-gray-700 hover:border-[#74adaf]'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      );
-                    } else if (
-                      page === currentPage - 2 ||
-                      page === currentPage + 2
-                    ) {
-                      return (
-                        <span key={page} className="flex items-center px-2 text-gray-400">
-                          ...
-                        </span>
-                      );
-                    }
-                    return null;
-                  })}
-                </div>
-
-                {/* Bouton suivant */}
-                <button
-                  onClick={() => goToPage(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="p-2 rounded-lg border-2 border-gray-200 hover:border-[#74adaf] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-gray-200 transition-all"
-                >
-                  <ChevronRight className="h-5 w-5 text-gray-600" />
-                </button>
-              </div>
-
-              {/* Info pagination */}
-              <p className="text-sm text-gray-600">
-                Page {currentPage} sur {totalPages} • {filteredBoutiques.length} boutique{filteredBoutiques.length > 1 ? 's' : ''}
+      <main className="pt-[68px]">
+        <section className="bg-gray-50 border-b border-gray-200 px-4 lg:px-10 py-6 lg:py-[26px]">
+          <div className="max-w-[1360px] mx-auto flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+            <div className="flex flex-col gap-1.5">
+              <h1 className="text-[26px] lg:text-[30px] font-bold tracking-tight text-gray-900">
+                {boutiques.length > 0 ? boutiques.length : '…'} boutiques, livrées près de chez vous
+              </h1>
+              <p className="text-[15px] text-gray-600">
+                {productTotal > 0 ? `${productTotal}+ produits` : 'Catalogue local'} · Les meilleures affaires
               </p>
             </div>
-          )}
-          </>
-        )}
-      </div>
 
-      {/* Footer CTA */}
-      {!loading && !error && (
-        <section className="bg-gradient-to-br from-gray-50 to-white py-16 border-t border-gray-200">
-          <div className="container mx-auto px-4">
-            <div className="max-w-3xl mx-auto text-center">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-                Vous aussi, créez votre boutique
-              </h2>
-              <p className="text-lg text-gray-600 mb-8">
-                Rejoignez notre communauté de commerçants et développez votre activité en ligne
-              </p>
-              <Link
-                href="/admin/register"
-                className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-[#508e27] to-[#74adaf] text-white rounded-lg hover:opacity-90 transition-all transform hover:scale-105 shadow-lg font-medium text-lg"
+            <div className="flex gap-2.5 w-full lg:w-[560px] shrink-0">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="search"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Cosmétique, chaussures, épicerie, nom de boutique…"
+                  className="w-full h-[50px] pl-11 pr-10 rounded-xl border border-gray-300 bg-white text-[15px] text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#74adaf] focus:border-[#74adaf]"
+                  aria-label="Rechercher une boutique"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    aria-label="Effacer la recherche"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <button
+                type="button"
+                className="hidden sm:flex items-center justify-center w-[120px] h-[50px] rounded-xl bg-gradient-to-r from-[#508e27] to-[#74adaf] text-white text-[15px] font-semibold shadow-[0_6px_16px_rgba(80,142,39,0.28)]"
+                aria-label="Lancer la recherche"
               >
-                Créer ma boutique gratuitement
-                <svg className="ml-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </Link>
+                Rechercher
+              </button>
             </div>
           </div>
         </section>
-      )}
 
-      {/* Bouton d'installation flottant */}
+        {!loading && !error && villeFilters.length > 0 && (
+          <div className="border-b border-gray-200 bg-white px-4 lg:px-10 py-3.5">
+            <div className="max-w-[1360px] mx-auto flex gap-2 overflow-x-auto scrollbar-none">
+              <button
+                onClick={() => setSelectedVille(null)}
+                className={`shrink-0 px-3.5 py-2 rounded-full text-[13px] transition-colors ${
+                  selectedVille === null
+                    ? 'bg-gray-900 text-white font-semibold'
+                    : 'border border-gray-300 text-gray-700 hover:border-gray-400'
+                }`}
+              >
+                Toutes ({boutiques.length})
+              </button>
+              {villeFilters.map((filter) => {
+                const isActive = selectedVille === filter.label;
+                return (
+                  <button
+                    key={filter.label}
+                    onClick={() => setSelectedVille(filter.label)}
+                    className={`shrink-0 px-3.5 py-2 rounded-full text-[13px] transition-colors ${
+                      isActive
+                        ? 'bg-gray-900 text-white font-semibold'
+                        : 'border border-gray-300 text-gray-700 hover:border-gray-400'
+                    }`}
+                  >
+                    {filter.label} ({filter.count})
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {loading ? (
+          <AfficheBoutiquesSkeleton count={8} />
+        ) : (
+          <div className="px-4 lg:px-10 py-7 lg:py-9">
+            <div className="max-w-[1360px] mx-auto">
+              {error ? (
+                <div className="text-center py-20">
+                  <div className="inline-flex items-center justify-center w-20 h-20 bg-red-100 rounded-full mb-6">
+                    <Store className="h-10 w-10 text-red-600" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Erreur</h3>
+                  <p className="text-gray-600 text-lg">{error}</p>
+                </div>
+              ) : filteredBoutiques.length === 0 ? (
+                <div className="text-center py-20">
+                  <div className="inline-flex items-center justify-center w-20 h-20 bg-gray-100 rounded-full mb-6">
+                    <Store className="h-10 w-10 text-gray-400" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                    {searchTerm || selectedVille
+                      ? 'Aucune boutique trouvée'
+                      : 'Aucune boutique disponible'}
+                  </h3>
+                  <p className="text-gray-600 text-lg mb-6">
+                    {searchTerm || selectedVille
+                      ? 'Essayez avec d’autres filtres'
+                      : 'Revenez plus tard'}
+                  </p>
+                  {(searchTerm || selectedVille) && (
+                    <button
+                      onClick={() => {
+                        setSearchTerm('');
+                        setSelectedVille(null);
+                      }}
+                      className="px-6 py-3 bg-gradient-to-r from-[#508e27] to-[#74adaf] text-white rounded-lg hover:opacity-90 transition-all font-medium"
+                    >
+                      Réinitialiser
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
+                    {visibleBoutiques.map((boutique, index) => (
+                      <div key={boutique.id} className="contents">
+                        {index === insertVendorCardAt && (
+                          <Link
+                            href="/admin/register"
+                            className="flex flex-col justify-center gap-3 p-[22px] rounded-[14px] bg-gradient-to-br from-[#508e27] to-[#74adaf] min-h-[280px]"
+                          >
+                            <span className="text-[19px] font-bold leading-snug text-white">
+                              Vous vendez aussi&nbsp;? Votre boutique ici en 5 min
+                            </span>
+                            <span className="text-[13px] leading-relaxed text-white/90">
+                              Gratuit, sans engagement. Vous apparaissez dans cet annuaire dès
+                              votre 1er produit.
+                            </span>
+                            <span className="mt-auto flex items-center justify-center h-11 rounded-[10px] bg-white text-sm font-bold text-[#3f7020]">
+                              Créer ma boutique
+                            </span>
+                          </Link>
+                        )}
+                        <BoutiqueCard boutique={boutique} featured={index === 0} />
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex flex-col items-center gap-2.5 pt-8">
+                    {remaining > 0 && (
+                      <button
+                        onClick={handleLoadMore}
+                        className="flex items-center justify-center w-full max-w-[280px] h-[50px] rounded-xl border border-gray-900 text-[15px] font-semibold text-gray-900 hover:bg-gray-50 transition-colors"
+                      >
+                        Charger {Math.min(remaining, ITEMS_PER_PAGE)} boutique
+                        {Math.min(remaining, ITEMS_PER_PAGE) > 1 ? 's' : ''} de plus
+                      </button>
+                    )}
+                    <p className="text-[13px] text-gray-500">
+                      {Math.min(visibleCount, filteredBoutiques.length)} sur{' '}
+                      {filteredBoutiques.length} boutiques affichées
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {!loading && !error && (
+          <section className="bg-gradient-to-br from-[#508e27] to-[#74adaf] px-4 lg:px-10 py-10">
+            <div className="max-w-[1360px] mx-auto flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+              <div className="flex flex-col gap-2">
+                <h2 className="text-[26px] lg:text-[30px] font-extrabold tracking-tight text-white">
+                  Votre boutique dans cet annuaire dès ce soir
+                </h2>
+                <p className="text-base text-white/90">
+                  {boutiques.length > 0 ? boutiques.length : 'Des'} commerçants reçoivent déjà
+                  leurs commandes ici. Inscription gratuite.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+                <Link
+                  href="/admin/register"
+                  className="inline-flex items-center justify-center gap-2 px-7 py-[17px] rounded-xl bg-white text-[#3f7020] font-bold text-[17px] shadow-[0_12px_30px_rgba(0,0,0,0.2)] hover:bg-gray-50 transition-colors"
+                >
+                  Créer ma boutique
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link
+                  href="/#how-it-works"
+                  className="inline-flex items-center justify-center px-[22px] py-4 rounded-xl border border-white/55 text-white text-[15px] font-medium hover:bg-white/10 transition-colors"
+                >
+                  Comment ça marche
+                </Link>
+              </div>
+            </div>
+          </section>
+        )}
+      </main>
+
+      <Footer />
       <InstallAppButton />
     </div>
   );
 }
-

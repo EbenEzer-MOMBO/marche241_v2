@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import { formatPrice } from '@/lib/utils';
 
 interface FloatingAddToCartButtonProps {
@@ -11,92 +10,92 @@ interface FloatingAddToCartButtonProps {
   /** Supplément personnalisations par unité (inclus dans le total affiché) */
   supplementPerUnit?: number;
   quantity: number;
+  onQuantityChange?: (next: number) => void;
+  canDecrease?: boolean;
+  canIncrease?: boolean;
   onAddToCart: () => void;
+  onBuyNow?: () => void;
   disabled?: boolean;
   loading?: boolean;
+  primaryLabel?: string;
+  hideSecondary?: boolean;
 }
 
-export default function FloatingAddToCartButton({ 
-  productName,
-  productImage,
+export default function FloatingAddToCartButton({
   price,
   supplementPerUnit = 0,
-  quantity, 
+  quantity,
+  onQuantityChange,
+  canDecrease = quantity > 1,
+  canIncrease = true,
   onAddToCart,
+  onBuyNow,
   disabled = false,
-  loading = false
+  loading = false,
+  primaryLabel = 'Acheter',
+  hideSecondary = false,
 }: FloatingAddToCartButtonProps) {
   const totalPrice = (price + supplementPerUnit) * quantity;
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-30 lg:hidden">
-      <button
-        onClick={onAddToCart}
-        disabled={disabled || loading}
-        className="w-full py-3 px-4 rounded-2xl font-medium flex items-center justify-between transition-all duration-200 shadow-lg border-2 text-white disabled:bg-gray-300 disabled:border-gray-300 disabled:cursor-not-allowed"
-        style={{
-          backgroundColor: disabled ? undefined : 'var(--primary-color)',
-          borderColor: disabled ? undefined : 'var(--primary-color)'
-        }}
-        onMouseEnter={(e) => {
-          if (!disabled && !loading) {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.color = 'var(--primary-color)';
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!disabled && !loading) {
-            e.currentTarget.style.backgroundColor = 'var(--primary-color)';
-            e.currentTarget.style.color = 'white';
-          }
-        }}
-      >
-        {loading ? (
-          <div className="flex items-center justify-center w-full space-x-2">
-            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span>Ajout en cours...</span>
-          </div>
-        ) : (
-          <>
-            <div className="flex items-center space-x-3 flex-1">
-              <div className="w-12 h-12 bg-white rounded-lg overflow-hidden flex-shrink-0">
-                <Image
-                  src={productImage}
-                  alt={productName}
-                  width={48}
-                  height={48}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="flex flex-col items-start flex-1 min-w-0">
-                <span className="text-sm font-medium truncate max-w-[100px] w-full text-left">
-                  {productName}
-                </span>
-                <span className="text-xs opacity-90">
-                  Quantité: {quantity}
-                </span>
-              </div>
-            </div>
-            <div className="flex flex-col items-end flex-shrink-0 ml-2">
-              <span className="text-lg font-bold whitespace-nowrap">
-                {formatPrice(totalPrice)}
+    <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-[#ececea] bg-white px-4 py-3 shadow-[0_-8px_24px_rgba(23,24,26,0.08)] lg:hidden">
+      <div className="mx-auto flex max-w-lg flex-col gap-2.5">
+        <div className="flex items-center gap-2.5">
+          {onQuantityChange && (
+            <div className="flex h-12 items-center rounded-[10px] border border-[#e6e4df]">
+              <button
+                type="button"
+                className="h-full w-10 text-lg text-[#17181a] disabled:opacity-40"
+                disabled={!canDecrease || disabled || loading}
+                onClick={() => onQuantityChange(Math.max(1, quantity - 1))}
+                aria-label="Diminuer la quantité"
+              >
+                −
+              </button>
+              <span className="min-w-8 text-center font-mono text-sm font-medium">
+                {quantity}
               </span>
-              {!disabled && supplementPerUnit > 0 ? (
-                <span className="text-[10px] opacity-85 text-right leading-tight">
-                  Pers. +{formatPrice(supplementPerUnit)}/u. · Ajouter
-                </span>
-              ) : (
-                <span className="text-xs opacity-90">
-                  {disabled ? 'Indisponible' : 'Ajouter'}
-                </span>
-              )}
+              <button
+                type="button"
+                className="h-full w-10 text-lg text-[#17181a] disabled:opacity-40"
+                disabled={!canIncrease || disabled || loading}
+                onClick={() => onQuantityChange(quantity + 1)}
+                aria-label="Augmenter la quantité"
+              >
+                +
+              </button>
             </div>
-          </>
+          )}
+          <button
+            type="button"
+            onClick={onBuyNow || onAddToCart}
+            disabled={disabled || loading}
+            className="flex h-12 flex-1 items-center justify-center rounded-[10px] px-3 text-[14.5px] font-semibold disabled:cursor-not-allowed disabled:bg-[#c0beb8] disabled:text-white"
+            style={{
+              backgroundColor: disabled
+                ? undefined
+                : 'var(--color-shop-primary, var(--primary-color))',
+              color: disabled ? undefined : 'var(--shop-cta-fg, #fff)',
+            }}
+            aria-label={primaryLabel}
+          >
+            {loading
+              ? '…'
+              : `${primaryLabel} · ${formatPrice(totalPrice)}`}
+          </button>
+        </div>
+        {!hideSecondary && (
+          <button
+            type="button"
+            onClick={onAddToCart}
+            disabled={disabled || loading}
+            className="flex h-11 w-full items-center justify-center rounded-[10px] border-[1.5px] border-[#17181a] text-[14px] font-semibold text-[#17181a] disabled:opacity-50"
+            aria-label="Ajouter au panier"
+          >
+            Ajouter au panier
+          </button>
         )}
-      </button>
+      </div>
     </div>
   );
 }

@@ -1,212 +1,211 @@
 'use client';
 
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useBoutique } from '@/hooks/useBoutique';
 import { useProduitsParCategorie } from '@/hooks/useProduits';
-import { formatPrix, getProduitImageUrl } from '@/lib/services/produits';
-import SafeImage from './SafeImage';
-import { Skeleton, SkeletonText } from './ui/Skeleton';
+import { useAjoutPanier } from '@/hooks/usePanier';
+import { useToast } from '@/hooks/useToast';
+import { ToastContainer } from './ui/Toast';
+import { CategoryChips } from './storefront/CategoryChips';
+import { StorefrontCard } from './storefront/StorefrontCard';
+import { CategoryChipsSkeleton, ProductCardGridSkeleton, Skeleton } from './ui/Skeleton';
 import { ErrorState } from './LoadingStates';
+import { produitHasRequiredVariants } from '@/lib/utils/shop-theme';
+import type { ProduitDB } from '@/lib/database-types';
 
 interface TrendingByCategoryProps {
   boutiqueName: string;
 }
 
-export default function TrendingByCategory({ boutiqueName }: TrendingByCategoryProps) {
-  const { boutique, loading: boutiqueLoading, error: boutiqueError } = useBoutique(boutiqueName);
-  const { categories, loading: categoriesLoading, error: categoriesError, refetch } = useProduitsParCategorie(boutique?.id || 0);
+export default function TrendingByCategory({
+  boutiqueName,
+}: TrendingByCategoryProps) {
+  const router = useRouter();
+  const { boutique, loading: boutiqueLoading, error: boutiqueError } =
+    useBoutique(boutiqueName);
+  const {
+    categories,
+    loading: categoriesLoading,
+    error: categoriesError,
+    refetch,
+  } = useProduitsParCategorie(boutique?.id || 0);
+  const { ajouterProduit, loading: adding } = useAjoutPanier();
+  const { success, error: showError, toasts, removeToast } = useToast();
+  const [activeChip, setActiveChip] = useState('all');
+  const [addingId, setAddingId] = useState<number | null>(null);
 
-  // Squelette de chargement
+  const chipItems = useMemo(() => {
+    if (!categories) return [];
+    const entries = Object.entries(categories);
+    const total = entries.reduce(
+      (sum, [, data]) => sum + data.produits.length,
+      0
+    );
+    const promoCount = entries.reduce(
+      (sum, [, data]) =>
+        sum + data.produits.filter((p) => p.est_en_promotion).length,
+      0
+    );
+    const chips = [
+      { id: 'all', label: 'Tout', count: total },
+      ...entries.map(([slug, data]) => ({
+        id: slug,
+        label: data.categorie.nom,
+        count: data.produits.length,
+      })),
+    ];
+    if (promoCount > 0) {
+      chips.push({ id: 'promos', label: 'Promos', count: promoCount });
+    }
+    return chips;
+  }, [categories]);
+
+  const visibleSections = useMemo(() => {
+    if (!categories) return [];
+    const entries = Object.entries(categories);
+    if (activeChip === 'all') return entries;
+    if (activeChip === 'promos') {
+      return entries
+        .map(([slug, data]) => [
+          slug,
+          {
+            ...data,
+            produits: data.produits.filter((p) => p.est_en_promotion),
+          },
+        ] as const)
+        .filter(([, data]) => data.produits.length > 0);
+    }
+    return entries.filter(([slug]) => slug === activeChip);
+  }, [categories, activeChip]);
+
+  const handleAddToCart = async (produit: ProduitDB) => {
+    if (!boutique?.id) return;
+
+    if (produitHasRequiredVariants(produit.variants)) {
+      router.push(`/${boutiqueName}/produit/${produit.id}`);
+      return;
+    }
+
+    try {
+      setAddingId(produit.id);
+      const ok = await ajouterProduit(boutique.id, produit.id, 1, {});
+      if (ok) {
+        success(`${produit.nom} ajouté au panier`, 'Succès', 3000);
+      } else {
+        showError("Impossible d'ajouter au panier", 'Erreur', 4000);
+      }
+    } catch {
+      showError("Impossible d'ajouter au panier", 'Erreur', 4000);
+    } finally {
+      setAddingId(null);
+    }
+  };
+
   if (boutiqueLoading || categoriesLoading) {
     return (
-      <section className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <Skeleton className="h-8 w-64 mx-auto mb-4" />
-            <SkeletonText lines={2} className="max-w-2xl mx-auto" />
+      <section>
+        <div className="sticky top-[54px] z-20 border-b border-[#ececea] bg-[#fdfdfc] sm:top-[60px]">
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-2.5 sm:h-[52px] sm:px-8">
+            <CategoryChipsSkeleton count={5} />
+            <Skeleton className="hidden h-3.5 w-28 shrink-0 sm:block" />
           </div>
-
-          <div className="space-y-16">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="shadow-md border border-gray-100 rounded-2xl p-6 lg:p-8">
-                <div className="mb-8">
-                  <Skeleton className="h-6 w-32" />
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-                  {[1, 2, 3, 4].map((j) => (
-                    <div key={j} className="bg-white rounded-xl p-4">
-                      <Skeleton className="w-full aspect-square rounded-lg mb-3" />
-                      <SkeletonText lines={2} />
-                      <Skeleton className="h-4 w-20 mt-2" />
-                    </div>
-                  ))}
-                </div>
-                <div className="text-center">
-                  <Skeleton className="h-10 w-32 mx-auto" />
-                </div>
-              </div>
-            ))}
+        </div>
+        <div className="mx-auto max-w-7xl space-y-8 px-4 py-5 sm:space-y-[34px] sm:px-8 sm:py-[30px]">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-baseline gap-3">
+              <Skeleton className="h-5 w-36 sm:h-6" />
+              <Skeleton className="h-3.5 w-16" />
+              <span className="flex-1" />
+              <Skeleton className="h-3.5 w-16" />
+            </div>
+            <ProductCardGridSkeleton count={8} />
           </div>
         </div>
       </section>
     );
   }
 
-  // Gestion d'erreur
   if (boutiqueError || categoriesError || !boutique || !categories) {
     return (
       <ErrorState
         title="Impossible de charger les produits"
-        message={boutiqueError || categoriesError || "Aucun produit trouvé"}
+        message={boutiqueError || categoriesError || 'Aucun produit trouvé'}
         onRetry={refetch}
       />
     );
   }
 
-  // Pas de catégories
   if (Object.keys(categories).length === 0) {
     return (
-      <section className="py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold text-black mb-4">Produits Tendance</h2>
-          <p className="text-gray-600">Aucun produit disponible pour le moment.</p>
+      <section className="py-12">
+        <div className="mx-auto max-w-7xl px-4 text-center sm:px-8">
+          <h2 className="text-lg font-semibold text-[#17181a]">
+            Aucun produit pour le moment
+          </h2>
+          <p className="mt-2 text-sm text-[#5f6369]">
+            Revenez bientôt pour découvrir les nouveautés.
+          </p>
         </div>
       </section>
     );
   }
 
   return (
-    <section className="py-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* En-tête de section */}
-        
-
-        {/* Sections par catégorie */}
-        <div className="space-y-16">
-          {Object.entries(categories).map(([slug, categorieData]) => (
-            <div key={slug} className="shadow-md border border-gray-100 rounded-2xl p-6 lg:p-8 bg-white">
-              {/* En-tête de la catégorie */}
-              <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center gap-4">
-                  <h3 className="text-2xl font-bold text-black">{categorieData.categorie.nom}</h3>
-                </div>
-              </div>
-
-              {/* Grille des produits */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-                {categorieData.produits.slice(0, 4).map((produit) => (
-                  <Link
-                    key={produit.id}
-                    href={`/${boutiqueName}/produit/${produit.id}`}
-                    className="group bg-white rounded-xl p-4 hover:shadow-lg transition-all duration-300 hover:scale-105"
-                  >
-                    {/* Image du produit */}
-                    <div className="relative mb-3">
-                      <div className="w-full aspect-square rounded-lg overflow-hidden bg-gray-100">
-                        <SafeImage
-                          src={getProduitImageUrl(produit.image_principale)}
-                          alt={produit.nom}
-                          width={200}
-                          height={200}
-                          className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${!produit.en_stock ? 'grayscale opacity-50' : ''
-                            }`}
-                        />
-
-                        {/* Overlay stock épuisé */}
-                        {!produit.en_stock && (
-                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-lg">
-                            <div className="text-center">
-                              <div className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium mb-2">
-                                Épuisé
-                              </div>
-                              <p className="text-white text-xs">
-                                Stock indisponible
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Badges */}
-                      {produit.en_stock && (
-                        <div className="absolute top-2 left-2 flex flex-col gap-1">
-                          {produit.est_nouveau && (
-                            <span className="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-                              Nouveau
-                            </span>
-                          )}
-                          {produit.est_en_promotion && (
-                            <span className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-                              Promo
-                            </span>
-                          )}
-                          {produit.est_featured && (
-                            <span className="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-                              Vedette
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Informations du produit */}
-                    <div>
-                      {/* Nom du produit */}
-                      <h4 className="text-black font-medium text-sm mb-2 line-clamp-2 group-hover:text-secondary transition-colors duration-200">
-                        {produit.nom}
-                      </h4>
-
-                      {/* Prix */}
-                      <div className="flex flex-col gap-1">
-                        <span className="text-black font-semibold text-sm">
-                          {formatPrix(produit.prix)}
-                        </span>
-                        {produit.prix_original && produit.prix_original !== produit.prix && (
-                          <span className="text-gray-medium line-through text-xs">
-                            {formatPrix(produit.prix_original)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-
-              {/* Bouton "Afficher tout" */}
-              <div className="text-center">
-                <Link
-                  href={`/${boutiqueName}/produits?categorie=${categorieData.categorie.slug}`}
-                  className="inline-flex items-center px-6 py-3 rounded-lg font-medium transition-all duration-200 border-2"
-                  style={{ 
-                    borderColor: 'var(--primary-color)',
-                    color: 'var(--primary-color)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--primary-color)';
-                    e.currentTarget.style.color = 'white';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.color = 'var(--primary-color)';
-                  }}
-                >
-                  Afficher tout
-                  <svg
-                    className="ml-2 h-4 w-4"
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path d="M5 12h14M12 5l7 7-7 7"></path>
-                  </svg>
-                </Link>
-              </div>
-            </div>
-          ))}
+    <section>
+      <ToastContainer toasts={toasts} onClose={removeToast} />
+      <div className="sticky top-[54px] z-20 border-b border-[#ececea] bg-[#fdfdfc] sm:top-[60px]">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-2.5 sm:h-[52px] sm:px-8">
+          <CategoryChips
+            items={chipItems}
+            activeId={activeChip}
+            onSelect={setActiveChip}
+            className="flex-1"
+          />
+          <div className="hidden shrink-0 text-[13px] text-[#5f6369] sm:block">
+            Trier : Plus récents
+          </div>
         </div>
+      </div>
+
+      <div className="mx-auto max-w-7xl space-y-8 px-4 py-5 sm:space-y-[34px] sm:px-8 sm:py-[30px]">
+        {visibleSections.map(([slug, categorieData]) => (
+          <div key={slug} className="flex flex-col gap-4">
+            <div className="flex items-baseline gap-3">
+              <h2 className="text-base font-semibold text-[#17181a] sm:text-lg">
+                {categorieData.categorie.nom}
+              </h2>
+              <span className="text-[13px] text-[#9a9892]">
+                {categorieData.produits.length} article
+                {categorieData.produits.length > 1 ? 's' : ''}
+              </span>
+              <span className="flex-1" />
+              <Link
+                href={`/${boutiqueName}/produits?categorie=${categorieData.categorie.slug}`}
+                className="text-[13px] font-medium focus:outline-none focus-visible:underline"
+                style={{
+                  color: 'var(--color-shop-primary, var(--primary-color))',
+                }}
+              >
+                Tout voir
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5">
+              {categorieData.produits.slice(0, 4).map((produit) => (
+                <StorefrontCard
+                  key={produit.id}
+                  boutiqueSlug={boutiqueName}
+                  compactCta
+                  produit={produit}
+                  onAddToCart={() => handleAddToCart(produit)}
+                  adding={adding && addingId === produit.id}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     </section>
   );

@@ -7,6 +7,7 @@ import { ProduitDetail } from '@/lib/database-types';
 import { ShoppingBag } from 'lucide-react';
 import type { PersonnalisationEtatFormulaire, PersonnalisationProduitDef } from '@/lib/types/personnalisations';
 import { ProductPersonnalisationsFields } from './ProductPersonnalisationsFields';
+import { getColorSwatch } from '@/lib/utils/color-swatch';
 
 interface ShoesVariant {
   id: string;
@@ -24,6 +25,7 @@ interface ShoesProductDisplayProps {
   product: ProduitDetail;
   onVariantChange: (variantId: string, pointure: string) => void;
   onAddToCart: () => void;
+  onBuyNow?: () => void;
   quantity: number;
   onQuantityChange: (qty: number) => void;
   isAddingToCart: boolean;
@@ -39,6 +41,7 @@ export function ShoesProductDisplay({
   product,
   onVariantChange,
   onAddToCart,
+  onBuyNow,
   quantity,
   onQuantityChange,
   isAddingToCart,
@@ -131,32 +134,35 @@ export function ShoesProductDisplay({
       
       {/* Sélection de la couleur */}
       <div>
-        <label className="block text-sm font-medium text-gray-900 mb-3">
-          Couleur
-        </label>
-        <div className="flex flex-wrap gap-2">
+        <div className="font-medium text-[13px] text-[#3c4045]">
+            Couleur : <span className="font-semibold text-[#17181a]">{selectedVariant?.couleur}</span>
+          </div>
+        <div className="mt-2 flex flex-wrap gap-2">
           {couleurs.map((couleur) => {
             const variant = variants.find(v => v.couleur === couleur);
             if (!variant) return null;
 
             const isSelected = selectedVariant?.couleur === couleur;
-            const hasImage = !!variant.image;
 
             return (
               <button
                 key={couleur}
+                type="button"
                 onClick={() => handleVariantChange(variant)}
-                className={`relative px-4 py-2 rounded-lg border-2 font-medium transition-all ${
+                aria-pressed={isSelected}
+                aria-label={`Couleur ${couleur}`}
+                className={`inline-flex items-center gap-1.5 rounded-full border-[1.5px] py-1.5 pl-1.5 pr-3 text-[12.5px] font-medium transition-colors ${
                   isSelected
-                    ? 'border-gray-900 bg-gray-900 text-white shadow-md'
-                    : 'border-gray-300 bg-white text-gray-700 hover:border-gray-500'
+                    ? 'border-[var(--color-shop-primary,var(--primary-color))] bg-[color-mix(in_srgb,var(--color-shop-primary,var(--primary-color))_10%,white)] text-[var(--color-shop-primary,var(--primary-color))]'
+                    : 'border-[#e0ded9] bg-white text-[#3c4045] hover:border-[#cfcbc3]'
                 }`}
               >
+                <span
+                  className="h-4 w-4 rounded-full border border-[rgba(23,24,26,.16)]"
+                  style={{ background: getColorSwatch(couleur) }}
+                  aria-hidden
+                />
                 {couleur}
-                {hasImage && (
-                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-gray-900 rounded-full border-2 border-white" 
-                        title="Image disponible" />
-                )}
               </button>
             );
           })}
@@ -166,10 +172,10 @@ export function ShoesProductDisplay({
       {/* Sélection de la pointure */}
       {selectedVariant && (
         <div>
-          <label className="block text-sm font-medium text-gray-900 mb-3">
-            Pointure (EU)
-          </label>
-          <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+          <div className="font-medium text-[13px] text-[#3c4045]">
+            Pointure : <span className="font-semibold text-[#17181a]">{selectedSize}</span>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
             {selectedVariant.pointures.map((pointureObj) => {
               const isSelected = selectedSize === pointureObj.pointure;
               const isOutOfStock = pointureObj.stock === 0;
@@ -177,36 +183,34 @@ export function ShoesProductDisplay({
               return (
                 <button
                   key={pointureObj.pointure}
+                  type="button"
                   onClick={() => !isOutOfStock && handleSizeChange(pointureObj.pointure)}
                   disabled={isOutOfStock}
-                  className={`px-3 py-2 rounded-lg border-2 font-medium transition-all text-center ${
+                  aria-pressed={isSelected}
+                  aria-label={`Pointure ${pointureObj.pointure}`}
+                  className={`inline-flex min-w-12 items-center justify-center rounded-[9px] border-[1.5px] px-3 text-[13.5px] font-semibold h-11 lg:h-[38px] ${
                     isOutOfStock
-                      ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed line-through'
+                      ? 'cursor-not-allowed border-[#f0efec] bg-[#fafaf8] text-[#c0beb8] line-through'
                       : isSelected
-                      ? 'border-gray-900 bg-gray-900 text-white shadow-md'
-                      : 'border-gray-300 bg-white text-gray-700 hover:border-gray-500'
+                      ? 'border-[var(--color-shop-primary,var(--primary-color))] bg-[color-mix(in_srgb,var(--color-shop-primary,var(--primary-color))_10%,white)] text-[var(--color-shop-primary,var(--primary-color))]'
+                      : 'border-[#e0ded9] bg-white text-[#17181a] hover:border-[#cfcbc3]'
                   }`}
                 >
                   {pointureObj.pointure}
-                  {!isOutOfStock && (
-                    <div className="text-xs opacity-70 mt-0.5">
-                      {pointureObj.stock}
-                    </div>
-                  )}
                 </button>
               );
             })}
           </div>
-          {selectedSize && (
-            <p className="mt-3 text-sm text-gray-600">
-              Stock disponible : <span className="font-medium text-gray-900">{maxQuantity} paire(s)</span>
+          {selectedSize && maxQuantity > 0 && maxQuantity <= 3 && (
+            <p className="mt-2 font-mono text-[12.5px] font-medium text-[#d97706]">
+              {selectedVariant.couleur} · {selectedSize} : plus que {maxQuantity} en stock
             </p>
           )}
         </div>
       )}
 
-      {/* Prix */}
-      <div className="border-t border-gray-200 pt-6">
+      {/* Prix — desktop uniquement (mobile : barre collante) */}
+      <div className="hidden border-t border-[#f0efec] pt-6 lg:block">
         <div className="flex items-baseline gap-3">
           <span className="text-3xl font-bold text-gray-900">
             {formatPrice(getCurrentPrice())}
@@ -226,9 +230,9 @@ export function ShoesProductDisplay({
         )}
       </div>
 
-      {/* Quantité */}
-      <div>
-        <label className="block text-sm font-medium text-gray-900 mb-3">
+      {/* Quantité — desktop uniquement (mobile : barre collante) */}
+      <div className="hidden lg:block">
+        <label className="mb-3 block text-sm font-medium text-[#17181a]">
           Quantité
         </label>
         <div className="flex items-center gap-3">
@@ -268,14 +272,32 @@ export function ShoesProductDisplay({
         validationErrors={personnalisationValidationErrors}
       />
 
-      {/* Bouton d'ajout au panier - Masqué sur mobile (utilise le bouton flottant) */}
-      <button
-        onClick={onAddToCart}
-        disabled={isAddingToCart || !selectedVariant || !selectedSize || maxQuantity === 0}
-        className="hidden lg:block w-full py-4 px-6 bg-gray-900 text-white rounded-lg font-medium text-lg hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-      >
-        {isAddingToCart ? 'Ajout en cours...' : 'Ajouter au panier'}
-      </button>
+      {/* Boutons d'action - Masqués sur mobile (barre collante) */}
+      <div className="hidden space-y-2.5 lg:block">
+        <button
+          type="button"
+          onClick={onBuyNow || onAddToCart}
+          disabled={isAddingToCart || !selectedVariant || !selectedSize || maxQuantity === 0}
+          className="flex h-[50px] w-full items-center justify-center rounded-[10px] text-[15px] font-semibold disabled:cursor-not-allowed disabled:bg-[#c0beb8] disabled:text-white"
+          style={{
+            backgroundColor: 'var(--color-shop-primary, var(--primary-color))',
+            color: 'var(--shop-cta-fg, #fff)',
+          }}
+        >
+          {isAddingToCart ? 'Ajout en cours…' : 'Acheter maintenant'}
+        </button>
+        <button
+          type="button"
+          onClick={onAddToCart}
+          disabled={isAddingToCart || !selectedVariant || !selectedSize || maxQuantity === 0}
+          className="flex h-12 w-full items-center justify-center rounded-[10px] border-[1.5px] border-[#17181a] text-[15px] font-semibold text-[#17181a] disabled:opacity-50"
+        >
+          Ajouter au panier
+        </button>
+        <p className="text-center text-[12.5px] text-[#8b8f95]">
+          « Acheter maintenant » vous mène directement au récap commande.
+        </p>
+      </div>
 
       {/* Guide des tailles */}
       <div className="border-t border-gray-200 pt-6">

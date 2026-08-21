@@ -2,43 +2,22 @@
  * Composants d'états de chargement spécialisés pour l'application
  */
 
-import { Skeleton, SkeletonText, SkeletonCircle, SkeletonButton } from './ui/Skeleton';
+import { Skeleton, SkeletonText, SkeletonCircle } from './ui/Skeleton';
 
 /**
  * Squelette pour le Header
  */
 export function HeaderSkeleton() {
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm shadow-sm border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Section gauche */}
-          <div className="flex items-center">
-            {/* Menu hamburger (mobile/tablet) */}
-            <div className="lg:hidden mr-3">
-              <Skeleton className="h-6 w-6" />
-            </div>
-
-            {/* Logo desktop */}
-            <div className="hidden lg:flex items-center space-x-2">
-              <SkeletonCircle size="w-10 h-10" />
-              <Skeleton className="h-6 w-24" />
-            </div>
-          </div>
-
-          {/* Logo mobile centré */}
-          <div className="lg:hidden flex-1 flex justify-center">
-            <div className="flex items-center space-x-2 opacity-50">
-              <SkeletonCircle size="w-8 h-8" />
-              <Skeleton className="h-4 w-20" />
-            </div>
-          </div>
-
-          {/* Actions à droite */}
-          <div className="flex items-center space-x-3">
-            <Skeleton className="h-5 w-5" />
-            <Skeleton className="h-5 w-5" />
-          </div>
+    <header className="fixed top-0 left-0 right-0 z-50 border-b border-[#ececea] bg-white/95 backdrop-blur-sm">
+      <div className="mx-auto flex h-[54px] max-w-7xl items-center justify-between px-4 sm:h-[60px] sm:px-8">
+        <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:gap-3">
+          <SkeletonCircle size="h-8 w-8 sm:h-[30px] sm:w-[30px]" />
+          <Skeleton className="h-4 w-28 sm:h-5 sm:w-36" />
+        </div>
+        <div className="flex items-center gap-4 sm:gap-5">
+          <Skeleton className="h-[18px] w-[18px] sm:h-4 sm:w-20" />
+          <Skeleton className="h-4 w-14" />
         </div>
       </div>
     </header>
@@ -50,49 +29,42 @@ export function HeaderSkeleton() {
  */
 export function HeroSkeleton() {
   return (
-    <section className="relative pt-10 pb-10">
-      <div className="relative">
-        {/* Bloc de fond */}
-        <div className="bg-gray-900 h-70 sm:h-70 relative">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-center">
-            <div className="text-center">
-              {/* Titre principal */}
-              <div className="mb-4">
-                <Skeleton className="h-10 w-96 mx-auto mb-2 bg-white/20" />
-                <Skeleton className="h-10 w-72 mx-auto bg-white/10" />
-              </div>
-              
-              {/* Sous-titre */}
-              <div className="max-w-2xl mx-auto">
-                <Skeleton className="h-6 w-full mb-2 bg-white/10" />
-                <Skeleton className="h-6 w-3/4 mx-auto bg-white/10" />
-              </div>
-            </div>
+    <section className="border-b border-[#ececea]">
+      <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-8 sm:pt-6">
+        <div className="relative">
+          <div
+            className="relative w-full overflow-hidden rounded-2xl bg-gray-200 sm:rounded-3xl"
+            style={{ paddingBottom: 'clamp(28%, 26vw, 26%)' }}
+          >
+            <Skeleton className="absolute inset-0 h-full w-full rounded-none" />
           </div>
-          
-          {/* Logo rond centré */}
-          <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2">
-            <div className="w-28 h-28 bg-white rounded-full shadow-lg flex items-center justify-center border-4 border-gray-200">
-              <SkeletonCircle size="w-20 h-20" className="bg-gray-200" />
+          <div className="absolute -bottom-10 left-1/2 z-10 -translate-x-1/2 sm:-bottom-12">
+            <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-white shadow-xl sm:h-24 sm:w-24 lg:h-28 lg:w-28">
+              <SkeletonCircle size="h-full w-full" />
             </div>
           </div>
         </div>
 
-        {/* Section claire */}
-        <div className="bg-background pt-16 pb-8">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center">
-              {/* Description */}
-              <div className="max-w-3xl mx-auto mb-8">
-                <SkeletonText lines={2} />
+        <div className="mt-14 pb-5 text-center sm:mt-16 sm:pb-7">
+          <Skeleton className="mx-auto mb-2 h-8 w-48 sm:mb-3 sm:h-9 sm:w-64" />
+          <div className="mx-auto max-w-3xl px-1">
+            <SkeletonText lines={2} />
+          </div>
+          <div className="mx-auto mt-4 hidden max-w-3xl justify-center gap-x-6 sm:mt-5 sm:flex">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-start gap-6">
+                {i > 1 && <div className="hidden min-h-[36px] w-px bg-[#ececea] sm:block" />}
+                <div className="space-y-1.5">
+                  <Skeleton className="h-3.5 w-28" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
               </div>
-              
-              {/* Boutons */}
-              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <SkeletonButton className="w-full sm:w-auto" />
-                <SkeletonButton className="w-full sm:w-auto" />
-              </div>
-            </div>
+            ))}
+          </div>
+          <div className="mx-auto mt-4 flex max-w-3xl justify-center gap-2 sm:hidden">
+            <Skeleton className="h-7 w-28 rounded-[7px]" />
+            <Skeleton className="h-7 w-24 rounded-[7px]" />
+            <Skeleton className="h-7 w-20 rounded-[7px]" />
           </div>
         </div>
       </div>

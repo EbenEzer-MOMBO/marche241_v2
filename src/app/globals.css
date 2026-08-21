@@ -28,6 +28,13 @@
   --primary-color: #10b981;
   --secondary-color: #059669;
   --accent-color: #34d399;
+  --color-shop-primary: var(--primary-color);
+  --shop-cta-fg: #ffffff;
+  --shop-primary-tint: color-mix(in oklab, var(--color-shop-primary) 9%, #fff);
+  --shop-primary-dark: color-mix(in oklab, var(--color-shop-primary) 84%, #000);
+  background-color: #fff;
+  color: #17181a;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 /* Styles personnalisés pour les boutiques */

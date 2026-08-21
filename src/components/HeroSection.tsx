@@ -1,139 +1,145 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useBoutique } from '@/hooks/useBoutique';
 import { HeroSkeleton, ErrorState } from './LoadingStates';
 import SafeImage from './SafeImage';
+import { BoutiqueTrustSignals } from './storefront/BoutiqueTrustSignals';
 
 interface HeroSectionProps {
   boutiqueName: string;
 }
 
-/**
- * Utilitaire pour obtenir l'URL du logo de la boutique
- */
-function getBoutiqueLogo(logoUrl?: string | null): string {
+const getBoutiqueLogo = (logoUrl?: string | null): string => {
   if (logoUrl && logoUrl.trim() !== '') {
-    // Vérifier si l'URL est valide
     try {
       new URL(logoUrl);
       return logoUrl;
     } catch {
-      // Si l'URL n'est pas valide, utiliser l'image par défaut
-      console.warn('URL de logo invalide:', logoUrl);
       return '/default-shop.png';
     }
   }
   return '/default-shop.png';
-}
+};
 
-const DESCRIPTION_PREVIEW_MAX = 200;
+const DESCRIPTION_PREVIEW_MAX = 160;
 
 export default function HeroSection({ boutiqueName }: HeroSectionProps) {
   const { boutique, config, loading, error, refetch } = useBoutique(boutiqueName);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
-  // Afficher le squelette pendant le chargement
+  const trustItems = useMemo(() => {
+    return [
+      {
+        title: 'Livraison 24–48 h',
+        subtitle: boutique?.adresse
+          ? boutique.adresse
+          : 'Libreville et environs',
+      },
+      {
+        title: 'Moov · Airtel · Visa',
+        subtitle: 'ou paiement à la livraison',
+      },
+      {
+        title: boutique?.nom || 'Boutique',
+        subtitle: boutique?.ville || boutique?.adresse || 'Libreville',
+      },
+    ];
+  }, [boutique?.adresse, boutique?.nom, boutique?.ville]);
+
   if (loading) {
     return <HeroSkeleton />;
   }
 
-  // En cas d'erreur, afficher l'état d'erreur
   if (error || !config) {
     return (
-      <ErrorState 
+      <ErrorState
         title="Boutique introuvable"
-        message={error || "Impossible de charger les informations de la boutique"}
+        message={error || 'Impossible de charger les informations de la boutique'}
         onRetry={refetch}
       />
     );
   }
 
   const fullDescription = (config.description ?? '').trim();
-  const isDescriptionExpandable = fullDescription.length > DESCRIPTION_PREVIEW_MAX;
+  const isExpandable = fullDescription.length > DESCRIPTION_PREVIEW_MAX;
+  const preview = isExpandable
+    ? `${fullDescription.slice(0, DESCRIPTION_PREVIEW_MAX).trim()}…`
+    : fullDescription;
 
   return (
-    <section className="relative py-6 sm:py-8 mt-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Container principal */}
+    <section className="border-b border-[#ececea]">
+      <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-8 sm:pt-6">
         <div className="relative">
-          {/* Bannière avec hauteur adaptative (plus haute sur mobile) */}
-          <div 
-            className="relative w-full rounded-3xl overflow-hidden" 
-            style={{ 
-              paddingBottom: 'clamp(30%, 28.125vw, 28.125%)' 
-            }}
+          <div
+            className="relative w-full overflow-hidden rounded-2xl sm:rounded-3xl"
+            style={{ paddingBottom: 'clamp(28%, 26vw, 26%)' }}
           >
-            {/* Image de bannière */}
             {boutique?.banniere ? (
               <SafeImage
                 src={boutique.banniere}
-                alt={`${config.name} Bannière`}
+                alt={`${config.name} bannière`}
                 fill
                 className="object-cover"
                 priority
               />
             ) : (
-              // Fallback avec dégradé si pas de bannière
               <div className="absolute inset-0 bg-gradient-to-br from-gray-800 via-gray-700 to-gray-900" />
             )}
-            
-            {/* Overlay léger pour améliorer le contraste */}
             <div className="absolute inset-0 bg-black/5" />
           </div>
-          
-          {/* Logo rond centré sur la bordure inférieure de la bannière */}
-          <div className="absolute -bottom-12 sm:-bottom-14 left-1/2 transform -translate-x-1/2 z-10">
-            <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 bg-white rounded-full shadow-xl flex items-center justify-center border-4 border-white overflow-hidden">
+
+          <div className="absolute -bottom-10 left-1/2 z-10 -translate-x-1/2 sm:-bottom-12">
+            <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-white shadow-xl sm:h-24 sm:w-24 lg:h-28 lg:w-28">
               <SafeImage
                 src={getBoutiqueLogo(boutique?.logo)}
-                alt={`${config.name} Logo`}
-                width={100}
-                height={100}
-                className="w-full h-full rounded-full object-cover aspect-square"
+                alt={`${config.name} logo`}
+                width={112}
+                height={112}
+                className="h-full w-full rounded-full object-cover"
                 priority
               />
             </div>
           </div>
         </div>
-        
-        {/* Contenu texte en dessous du logo */}
-        <div className="mt-16 sm:mt-20 text-center">
-          {/* Titre principal */}
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-gray-900 mb-3 sm:mb-4">
+
+        <div className="mt-14 pb-5 text-center sm:mt-16 sm:pb-7">
+          <h1 className="mb-2 text-2xl font-bold text-[#17181a] sm:mb-3 sm:text-3xl lg:text-4xl">
             {config.name}
           </h1>
-          
-          {/* Description (tronquée puis expansible au clic) */}
+
           {fullDescription ? (
-            <div
-              role={isDescriptionExpandable ? 'button' : undefined}
-              tabIndex={isDescriptionExpandable ? 0 : undefined}
-              aria-expanded={isDescriptionExpandable ? descriptionExpanded : undefined}
-              onClick={() =>
-                isDescriptionExpandable &&
-                setDescriptionExpanded((prev) => !prev)
-              }
-              onKeyDown={(e) => {
-                if (!isDescriptionExpandable) return;
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  setDescriptionExpanded((prev) => !prev);
-                }
-              }}
-              className={
-                isDescriptionExpandable
-                  ? 'text-base sm:text-md lg:text-xl text-gray-600 leading-relaxed max-w-3xl mx-auto cursor-pointer rounded-xl px-3 py-2 -mx-3 transition-colors hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-300'
-                  : 'text-base sm:text-md lg:text-xl text-gray-600 leading-relaxed max-w-3xl mx-auto'
-              }
-            >
-              <p className="">
-                {isDescriptionExpandable && !descriptionExpanded
-                  ? `${fullDescription.slice(0, DESCRIPTION_PREVIEW_MAX)}…`
-                  : fullDescription}
+            <div className="mx-auto max-w-3xl px-1 text-[14.5px] leading-relaxed text-[#5f6369] sm:text-base">
+              <p>
+                {descriptionExpanded || !isExpandable ? fullDescription : preview}{' '}
+                {isExpandable && (
+                  <button
+                    type="button"
+                    onClick={() => setDescriptionExpanded((v) => !v)}
+                    className="font-medium focus:outline-none focus-visible:underline"
+                    style={{
+                      color: 'var(--color-shop-primary, var(--primary-color))',
+                    }}
+                    aria-expanded={descriptionExpanded}
+                  >
+                    {descriptionExpanded ? 'Réduire' : 'En savoir plus'}
+                  </button>
+                )}
               </p>
             </div>
           ) : null}
+
+          <div className="mx-auto mt-4 max-w-3xl sm:mt-5">
+            <BoutiqueTrustSignals
+              items={trustItems}
+              className="hidden justify-center sm:flex"
+            />
+            <BoutiqueTrustSignals
+              items={trustItems}
+              variant="pills"
+              className="justify-center sm:hidden"
+            />
+          </div>
         </div>
       </div>
     </section>

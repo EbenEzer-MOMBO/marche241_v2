@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { useParams } from 'next/navigation';
+import { useState, useRef, useEffect } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import Script from 'next/script';
 import Image from 'next/image';
 import { formatPrice } from '@/lib/utils';
@@ -10,7 +11,6 @@ import { BoutiqueConfig } from '@/lib/boutiques';
 import { usePanier } from '@/hooks/usePanier';
 import { useToast } from '@/hooks/useToast';
 import { creerCommande, CreerCommandeData } from '@/lib/services/commandes';
-import { useEffect } from 'react';
 import { getCommunesActives } from '@/lib/services/communes';
 import { initierPaiementMobile, verifierPaiementEnBoucle, type PaiementMobileData } from '@/lib/services/paiements';
 import { creerTransaction, type CreerTransactionData } from '@/lib/services/transactions';
@@ -21,7 +21,10 @@ import PaymentCountdown from '@/components/ui/PaymentCountdown';
 import { ToastContainer } from '@/components/ui/Toast';
 import { normalizeMsisdnInput, validateMsisdn, msisdnPlaceholder, type MobileMoneyOperator } from '@/lib/utils/mobileMoneyMsisdn';
 import type { PersonnalisationSelectionPanier } from '@/lib/types/personnalisations';
-import { Trash, Check } from '@phosphor-icons/react';
+import { Trash, Check, Minus, Plus, CheckCircle } from '@phosphor-icons/react';
+
+const fieldClass =
+  'h-11 w-full rounded-[9px] border border-[#e0ded9] px-3 text-sm focus:outline-none focus:border-[var(--color-shop-primary)] focus:ring-1 focus:ring-[var(--color-shop-primary)]';
 
 interface OrderSummaryProps {
   boutiqueConfig: BoutiqueConfig;
@@ -81,7 +84,9 @@ const formatVariantsString = (variants_selectionnes: any): string | undefined =>
 
 export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, boutiqueData }: OrderSummaryProps) {
   const params = useParams();
+  const searchParams = useSearchParams();
   const boutiqueSlug = params.boutique as string;
+  const isAchatDirect = searchParams.get('direct') === '1';
 
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>(null);
   const [paymentPhone, setPaymentPhone] = useState('');
@@ -120,8 +125,9 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
   const [whatsAppExists, setWhatsAppExists] = useState<boolean | null>(null);
 
   // Utilisation du hook panier pour récupérer les vraies données avec isolation par boutique
-  const { panier, totalItems, totalPrix, loading, supprimerItem, viderLePanier } = usePanier(boutiqueId);
+  const { panier, totalItems, totalPrix, loading, supprimerItem, viderLePanier, mettreAJourQuantite } = usePanier(boutiqueId);
   const [itemsToDelete, setItemsToDelete] = useState<Set<number>>(new Set());
+  const [showDeliveryNotes, setShowDeliveryNotes] = useState(false);
 
   const handleDeleteClick = (itemId: number) => {
     if (itemsToDelete.has(itemId)) {
@@ -715,6 +721,14 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
     }, 2000);
   };
 
+  // --- Valeurs dérivées purement pour l'affichage (aucun impact sur la logique de paiement) ---
+  const selectedCommune = communes.find((commune) => commune.nom_commune === deliveryAddress.city);
+  const transactionRate = 0.10;
+  const fullTransactionFee = Math.round((subtotal + deliveryFee) * transactionRate);
+  const fullTotal = subtotal + deliveryFee + fullTransactionFee;
+  const deliveryOnlyFee = Math.round(deliveryFee * transactionRate);
+  const deliveryOnlyTotal = deliveryFee + deliveryOnlyFee;
+
   return (
     <div className="w-full">
       {/* Script de Cloudflare Turnstile */}
@@ -746,82 +760,106 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
         />
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Colonne gauche - Résumé du panier et adresse */}
-        <div className="lg:col-span-2">
-          {/* Articles du panier */}
-          <div className="bg-white rounded-lg shadow-md mb-6 border border-gray-100">
-            <div className="px-6 py-4 border-b border-gray-100">
-              <h3 className="text-lg font-semibold text-black">
-                Votre commande ({totalItems} articles)
-              </h3>
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 pb-28 lg:grid-cols-[1fr_380px] lg:pb-8">
+        {/* Colonne gauche */}
+        <div className="space-y-5">
+          {/* Carte 1 — Votre commande */}
+          <div className="rounded-[12px] border border-[#ececea] bg-white p-5">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-base font-semibold text-[#17181a]">
+                  Votre commande
+                  {totalItems > 0 && (
+                    <span className="ml-1 font-normal text-[#8b8f95]">
+                      ({totalItems} article{totalItems > 1 ? 's' : ''})
+                    </span>
+                  )}
+                </h2>
+                {isAchatDirect && (
+                  <span
+                    className="rounded-full px-2 py-0.5 font-mono text-[11px] uppercase tracking-[.05em]"
+                    style={{ background: 'var(--shop-primary-tint)', color: 'var(--shop-primary-dark)' }}
+                  >
+                    Achat direct
+                  </span>
+                )}
+              </div>
+              <Link
+                href={`/${boutiqueSlug}`}
+                className="text-[13px] font-medium hover:underline"
+                style={{ color: 'var(--color-shop-primary)' }}
+              >
+                + Ajouter d&apos;autres articles
+              </Link>
             </div>
-            <div className="p-6">
-              {loading ? (
-                <div className="flex justify-center items-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-                  <span className="ml-2 text-gray-600">Chargement du panier...</span>
-                </div>
-              ) : panier.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">Votre panier est vide</p>
-                </div>
-              ) : (
-                panier.map((item, index) => {
+
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-[#17181a]"></div>
+                <span className="ml-2 text-sm text-[#6b6f76]">Chargement du panier...</span>
+              </div>
+            ) : panier.length === 0 ? (
+              <div className="py-8 text-center">
+                <p className="text-sm text-[#8b8f95]">Votre panier est vide</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-[#ececea]">
+                {panier.map((item) => {
                   // Utiliser l'image du variant si disponible, sinon l'image du produit
-                  const imageUrl = item.variants_selectionnes?.variant?.image 
-                    || item.produit.image_principale 
+                  const imageUrl = item.variants_selectionnes?.variant?.image
+                    || item.produit.image_principale
                     || '/article1.webp';
 
                   return (
-                    <div key={item.id} className={`flex items-start py-4 ${index < panier.length - 1 ? 'border-b border-gray-200' : ''}`}>
-                      <div className="w-20 h-20 relative flex-shrink-0">
+                    <div key={item.id} className="flex gap-3 py-4 first:pt-0 last:pb-0">
+                      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-[9px] bg-[#f6f5f3]">
                         <Image
                           src={imageUrl}
                           alt={item.produit.nom}
                           fill
-                          className="rounded-lg object-cover"
+                          className="object-cover"
                         />
                       </div>
-                      <div className="flex-1 ml-4 min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
-                          <h4 className="font-medium text-gray-900 mb-1 min-w-0 truncate">{item.produit.nom}</h4>
+                          <h4 className="min-w-0 truncate text-sm font-medium text-[#17181a]">{item.produit.nom}</h4>
                           <button
                             onClick={() => handleDeleteClick(item.id)}
-                            className={`shrink-0 transition-all duration-300 ${itemsToDelete.has(item.id) ? 'text-green-500 hover:text-green-600' : 'text-gray-400 hover:text-red-500'}`}
+                            className={`shrink-0 transition-all duration-300 ${itemsToDelete.has(item.id) ? 'text-green-500 hover:text-green-600' : 'text-[#9a9892] hover:text-red-500'}`}
                             aria-label={itemsToDelete.has(item.id) ? "Confirmer la suppression" : "Supprimer l'article"}
                           >
                             {itemsToDelete.has(item.id) ? <Check size={18} className="animate-pulse" /> : <Trash size={18} />}
                           </button>
                         </div>
 
-                        {/* Affichage du variant */}
-                        {item.variants_selectionnes?.variant && (
-                          <div className="text-sm text-gray-600 mb-1">
-                            {item.variants_selectionnes.variant.nom}
-                          </div>
-                        )}
-
-                        {/* Affichage des options */}
-                        {item.variants_selectionnes?.options && Object.keys(item.variants_selectionnes.options).length > 0 && (
-                          <div className="text-xs text-gray-600 mb-2 space-y-0.5">
-                            {Object.entries(item.variants_selectionnes.options).map(([key, value]) => (
-                              <div key={key}>
-                                <span className="font-medium">{key}:</span> {value}
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                        {/* Variant + options + lien modifier */}
+                        <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[12.5px] text-[#6b6f76]">
+                          {item.variants_selectionnes?.variant && (
+                            <span>{item.variants_selectionnes.variant.nom}</span>
+                          )}
+                          {item.variants_selectionnes?.options && Object.keys(item.variants_selectionnes.options).length > 0 && (
+                            <span>
+                              {Object.entries(item.variants_selectionnes.options).map(([key, value]) => `${key}: ${value}`).join(', ')}
+                            </span>
+                          )}
+                          <Link
+                            href={`/${boutiqueSlug}/produit/${item.produit_id}`}
+                            className="font-medium hover:underline"
+                            style={{ color: 'var(--color-shop-primary)' }}
+                          >
+                            Modifier
+                          </Link>
+                        </div>
 
                         {/* Personnalisations */}
                         {Array.isArray(item.variants_selectionnes?.personnalisations) &&
                           item.variants_selectionnes.personnalisations.length > 0 && (
-                            <div className="text-xs text-gray-600 mb-2 space-y-0.5">
+                            <div className="mt-1 space-y-0.5 text-[12.5px] text-[#6b6f76]">
                               {item.variants_selectionnes.personnalisations.map((ligne: PersonnalisationSelectionPanier) => (
                                 <div key={ligne.id}>
                                   <span className="font-medium">{ligne.libelle}:</span> {ligne.valeur}
                                   {ligne.prix_supplementaire > 0 ? (
-                                    <span className="text-gray-500">
+                                    <span className="text-[#9a9892]">
                                       {' '}
                                       (+{formatPrice(ligne.prix_supplementaire)})
                                     </span>
@@ -831,393 +869,378 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
                             </div>
                           )}
 
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-600">Quantité: {item.quantite}</span>
-                          <span className="font-semibold text-lg text-black">
+                        <div className="mt-2 flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <button
+                              type="button"
+                              onClick={() => mettreAJourQuantite(item.id, item.quantite - 1)}
+                              disabled={item.quantite <= 1}
+                              className="flex h-7 w-7 items-center justify-center rounded-full border border-[#e0ded9] text-[#3c4045] transition-colors hover:bg-[#f6f5f3] disabled:cursor-not-allowed disabled:opacity-30"
+                              aria-label="Diminuer la quantité"
+                            >
+                              <Minus size={12} />
+                            </button>
+                            <span className="w-5 text-center text-sm font-medium text-[#17181a]">{item.quantite}</span>
+                            <button
+                              type="button"
+                              onClick={() => mettreAJourQuantite(item.id, item.quantite + 1)}
+                              disabled={item.quantite >= item.produit.quantite_stock}
+                              className="flex h-7 w-7 items-center justify-center rounded-full border border-[#e0ded9] text-[#3c4045] transition-colors hover:bg-[#f6f5f3] disabled:cursor-not-allowed disabled:opacity-30"
+                              aria-label="Augmenter la quantité"
+                            >
+                              <Plus size={12} />
+                            </button>
+                          </div>
+                          <span className="font-mono text-sm font-semibold text-[#17181a]">
                             {formatPrice(getSousTotalLignePanier(item))}
                           </span>
                         </div>
                       </div>
                     </div>
                   );
-                })
-              )}
-            </div>
+                })}
+              </div>
+            )}
           </div>
 
-          {/* Adresse de livraison */}
-          <div className="bg-white rounded-lg shadow-md border border-gray-100">
-            <div className="px-6 py-4 border-b border-gray-100">
-              <h3 className="text-lg font-semibold text-black">
-                Adresse de livraison
-              </h3>
-            </div>
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Nom complet *</label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-opacity-50"
+          {/* Carte 2 — Livraison */}
+          <div className="rounded-[12px] border border-[#ececea] bg-white p-5">
+            <h2 className="mb-4 text-base font-semibold text-[#17181a]">Livraison</h2>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-[13px] font-medium text-[#3c4045]">Nom complet *</label>
+                <input
+                  type="text"
+                  className={fieldClass}
+                  value={deliveryAddress.fullName}
+                  onChange={(e) => handleAddressChange('fullName', e.target.value)}
+                  placeholder="Votre nom complet"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-[13px] font-medium text-[#3c4045]">WhatsApp *</label>
+                <PhoneNumberInput
+                  value={deliveryAddress.phone}
+                  onChange={(value) => handleAddressChange('phone', value)}
+                  onValidationChange={setIsPhoneValid}
+                  placeholder="6XXXXXXX"
+                  required
+                  className="w-full"
+                />
 
-                    value={deliveryAddress.fullName}
-                    onChange={(e) => handleAddressChange('fullName', e.target.value)}
-                    placeholder="Votre nom complet"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">WhatsApp (pour recevoir les mises à jour)*</label>
-                  <PhoneNumberInput
-                    value={deliveryAddress.phone}
-                    onChange={(value) => handleAddressChange('phone', value)}
-                    onValidationChange={setIsPhoneValid}
-                    placeholder="6XXXXXXX"
-                    required
-                    className="w-full"
-                  />
+                {/* Statut de vérification WhatsApp */}
+                {isPhoneValid && (
+                  <div className="mt-2">
+                    {isCheckingWhatsApp && (
+                      <div className="flex items-center text-[12.5px] text-[#6b6f76]">
+                        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-[#c7c5bf] border-t-transparent"></div>
+                        Vérification du numéro WhatsApp...
+                      </div>
+                    )}
 
-                  {/* Statut de vérification WhatsApp */}
-                  {isPhoneValid && (
-                    <div className="mt-2">
-                      {isCheckingWhatsApp && (
-                        <div className="flex items-center text-sm text-gray-600">
-                          <div className="animate-spin mr-2 h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full"></div>
-                          Vérification du numéro WhatsApp...
-                        </div>
-                      )}
+                    {!isCheckingWhatsApp && whatsAppExists === true && (
+                      <div className="flex items-center text-[12.5px] text-green-600">
+                        <svg className="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Numéro WhatsApp vérifié
+                      </div>
+                    )}
 
-                      {!isCheckingWhatsApp && whatsAppExists === true && (
-                        <div className="flex items-center text-sm text-green-600">
-                          <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          Numéro WhatsApp vérifié ✓
-                        </div>
-                      )}
-
-                      {!isCheckingWhatsApp && whatsAppExists === false && (
-                        <div className="flex items-center text-sm text-red-600">
-                          <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          {whatsAppError || 'Numéro non enregistré sur WhatsApp'}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <div className="md:col-span-2 space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Adresse complète *</label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-opacity-50"
-
-                    value={deliveryAddress.address}
-                    onChange={(e) => handleAddressChange('address', e.target.value)}
-                    placeholder="Numéro, rue, quartier"
-                    required
-                  />
-                </div>
-                <div className="md:col-span-2 space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Commune *</label>
-                  <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-opacity-50"
-                    value={deliveryAddress.city}
-                    onChange={(e) => handleAddressChange('city', e.target.value)}
-                    required
-                    disabled={communesLoading}
-                  >
-                    <option value="">
-                      {communesLoading ? 'Chargement des communes...' : 'Sélectionner une commune'}
+                    {!isCheckingWhatsApp && whatsAppExists === false && (
+                      <div className="flex items-center text-[12.5px] text-red-600">
+                        <svg className="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {whatsAppError || 'Numéro non enregistré sur WhatsApp'}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-1.5 block text-[13px] font-medium text-[#3c4045]">Adresse complète *</label>
+                <input
+                  type="text"
+                  className={fieldClass}
+                  value={deliveryAddress.address}
+                  onChange={(e) => handleAddressChange('address', e.target.value)}
+                  placeholder="Numéro, rue, quartier"
+                  required
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-1.5 block text-[13px] font-medium text-[#3c4045]">Commune *</label>
+                <select
+                  className={fieldClass}
+                  style={deliveryAddress.city ? { borderColor: 'var(--color-shop-primary)' } : undefined}
+                  value={deliveryAddress.city}
+                  onChange={(e) => handleAddressChange('city', e.target.value)}
+                  required
+                  disabled={communesLoading}
+                >
+                  <option value="">
+                    {communesLoading ? 'Chargement des communes...' : 'Sélectionner une commune'}
+                  </option>
+                  {communes.map((commune) => (
+                    <option key={commune.id} value={commune.nom_commune}>
+                      {commune.nom_commune} ({formatPrice(commune.tarif_livraison)})
                     </option>
-                    {communes.map((commune) => (
-                      <option key={commune.id} value={commune.nom_commune}>
-                        {commune.nom_commune} ({formatPrice(commune.tarif_livraison)})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="md:col-span-2 space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Informations supplémentaires</label>
-                  <textarea
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-opacity-50"
-
-                    rows={3}
-                    value={deliveryAddress.additionalInfo}
-                    onChange={(e) => handleAddressChange('additionalInfo', e.target.value)}
-                    placeholder="Instructions de livraison, points de repère..."
-                  />
-                </div>
+                  ))}
+                </select>
+                {selectedCommune && (
+                  <p className="mt-1.5 text-[12.5px] font-medium text-green-600">
+                    {selectedCommune.tarif_livraison === 0 ? 'Livraison gratuite' : `Livraison ${formatPrice(selectedCommune.tarif_livraison)}`}
+                    {' · '}
+                    {selectedCommune.delai_livraison_min}–{selectedCommune.delai_livraison_max} h
+                  </p>
+                )}
+              </div>
+              <div className="sm:col-span-2">
+                {!showDeliveryNotes ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowDeliveryNotes(true)}
+                    className="text-[13px] font-medium hover:underline"
+                    style={{ color: 'var(--color-shop-primary)' }}
+                  >
+                    + Ajouter des instructions de livraison
+                  </button>
+                ) : (
+                  <div>
+                    <label className="mb-1.5 block text-[13px] font-medium text-[#3c4045]">Informations supplémentaires</label>
+                    <textarea
+                      className={`${fieldClass} h-auto py-2`}
+                      rows={3}
+                      value={deliveryAddress.additionalInfo}
+                      onChange={(e) => handleAddressChange('additionalInfo', e.target.value)}
+                      placeholder="Instructions de livraison, points de repère..."
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>
+
+          {/* Carte 3 — Moyen de paiement */}
+          <div className="rounded-[12px] border border-[#ececea] bg-white p-5">
+            <h2 className="mb-4 text-base font-semibold text-[#17181a]">Moyen de paiement</h2>
+            <div className="grid grid-cols-2 gap-3">
+              {(['moov', 'airtel'] as const).map((method) => {
+                const isSelected = selectedPayment === method;
+                return (
+                  <button
+                    key={method}
+                    type="button"
+                    onClick={() => handlePaymentChange(method)}
+                    className="relative flex flex-col items-center gap-2 rounded-[9px] border-[1.5px] p-4 text-center transition-colors"
+                    style={{
+                      borderColor: isSelected ? 'var(--color-shop-primary)' : '#e0ded9',
+                      backgroundColor: isSelected ? 'var(--shop-primary-tint)' : '#fff',
+                    }}
+                  >
+                    {isSelected && (
+                      <CheckCircle
+                        size={18}
+                        weight="fill"
+                        className="absolute right-2 top-2"
+                        style={{ color: 'var(--color-shop-primary)' }}
+                      />
+                    )}
+                    <Image
+                      src={method === 'moov' ? '/moov_money.png' : '/airtel_money.png'}
+                      alt={method === 'moov' ? 'Moov Money' : 'Airtel Money'}
+                      width={40}
+                      height={40}
+                      className="rounded"
+                    />
+                    <span className="text-sm font-semibold text-[#17181a]">
+                      {method === 'moov' ? 'Moov Money' : 'Airtel Money'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Champ numéro de téléphone qui apparaît après sélection */}
+            {selectedPayment && (
+              <div className="mt-4">
+                <label className="mb-1.5 block text-[13px] font-medium text-[#3c4045]">
+                  Numéro {selectedPayment === 'moov' ? 'Moov Money' : 'Airtel Money'} *
+                </label>
+                <input
+                  type="tel"
+                  className={`${fieldClass} ${paymentPhoneError
+                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                    : paymentPhone.length === 9 && !paymentPhoneError
+                      ? 'border-green-500 focus:border-green-500 focus:ring-green-500'
+                      : ''
+                    }`}
+                  value={paymentPhone}
+                  onChange={(e) => handlePaymentPhoneChange(e.target.value)}
+                  placeholder={getPhonePlaceholder()}
+                  maxLength={9}
+                  required
+                />
+                {paymentPhoneError ? (
+                  <p className="mt-1.5 text-[12.5px] text-red-600">{paymentPhoneError}</p>
+                ) : paymentPhone.length === 9 && !paymentPhoneError ? (
+                  <p className="mt-1.5 text-[12.5px] text-green-600">Numéro valide</p>
+                ) : (
+                  <p className="mt-1.5 text-[12.5px] text-[#8b8f95]">
+                    Vous recevrez une demande de confirmation sur ce numéro. Aucun code à saisir ici.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Carte 4 — Montant à régler maintenant */}
+          {paymentRestrictionMode === 'les_deux' && deliveryFee > 0 && (
+            <div className="rounded-[12px] border border-[#ececea] bg-white p-5">
+              <h2 className="mb-4 text-base font-semibold text-[#17181a]">Montant à régler maintenant</h2>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setPayOnDelivery(false)}
+                  className="rounded-[9px] border-[1.5px] p-4 text-left transition-colors"
+                  style={{
+                    borderColor: !payOnDelivery ? 'var(--color-shop-primary)' : '#e0ded9',
+                    backgroundColor: !payOnDelivery ? 'var(--shop-primary-tint)' : '#fff',
+                  }}
+                >
+                  <span className="block text-sm font-semibold text-[#17181a]">Tout payer maintenant</span>
+                  <span className="mt-1 block font-mono text-base font-bold" style={{ color: 'var(--color-shop-primary)' }}>
+                    {formatPrice(fullTotal)}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPayOnDelivery(true)}
+                  className="rounded-[9px] border-[1.5px] p-4 text-left transition-colors"
+                  style={{
+                    borderColor: payOnDelivery ? 'var(--color-shop-primary)' : '#e0ded9',
+                    backgroundColor: payOnDelivery ? 'var(--shop-primary-tint)' : '#fff',
+                  }}
+                >
+                  <span className="block text-sm font-semibold text-[#17181a]">Payer la livraison seulement</span>
+                  <span className="mt-1 block text-[12.5px] text-[#6b6f76]">
+                    <span className="font-mono font-semibold text-[#17181a]">{formatPrice(deliveryOnlyTotal)}</span> maintenant · {formatPrice(subtotal)} à la réception
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Colonne droite - Modes de paiement et total */}
-        <div className="space-y-6">
-          {/* Modes de paiement */}
-          <div className="bg-white rounded-lg shadow-md border border-gray-100">
-            <div className="px-6 py-4 border-b border-gray-100">
-              <h3 className="text-lg font-semibold text-black">
-                Mode de paiement
-              </h3>
-            </div>
-            <div className="p-6 space-y-4">
+        {/* Colonne droite — Récapitulatif */}
+        <div className="lg:sticky lg:top-24 lg:self-start">
+          <div className="rounded-[12px] border border-[#ececea] bg-white p-5">
+            <h2 className="mb-4 text-base font-semibold text-[#17181a]">Récapitulatif</h2>
+
+            <div className="space-y-2.5 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-[#6b6f76]">Sous-total ({totalItems} article{totalItems > 1 ? 's' : ''})</span>
+                <span className="font-mono font-medium text-[#17181a]">{formatPrice(subtotal)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#6b6f76]">Livraison</span>
+                <span className="font-mono font-medium text-[#17181a]">
+                  {deliveryAddress.city ? formatPrice(deliveryFee) : (communesLoading ? '—' : 'Sélectionnez une commune')}
+                </span>
+              </div>
               <div>
-                <div
-                  className={`border rounded-lg p-4 cursor-pointer transition-all duration-200 ${selectedPayment === 'moov'
-                    ? 'border-2 bg-blue-50'
-                    : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  style={{
-                    borderColor: selectedPayment === 'moov' ? boutiqueConfig.theme.primary : undefined,
-                    backgroundColor: selectedPayment === 'moov' ? `${boutiqueConfig.theme.primary}10` : undefined
-                  }}
-                  onClick={() => handlePaymentChange('moov')}
-                >
-                  <div className="flex items-center">
-                    <input
-                      type="radio"
-                      name="payment"
-                      checked={selectedPayment === 'moov'}
-                      onChange={() => handlePaymentChange('moov')}
-                      className="mr-3 w-4 h-4"
-                      style={{ accentColor: boutiqueConfig.theme.primary }}
-                    />
-                    <Image
-                      src="/moov_money.png"
-                      alt="Moov Money"
-                      width={40}
-                      height={40}
-                      className="mr-3 rounded"
-                    />
-                    <div>
-                      <div className="font-semibold text-gray-900">Moov Money</div>
-                      <div className="text-sm text-gray-600">Paiement mobile sécurisé</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <div
-                  className={`border rounded-lg p-4 cursor-pointer transition-all duration-200 ${selectedPayment === 'airtel'
-                    ? 'border-2 bg-blue-50'
-                    : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  style={{
-                    borderColor: selectedPayment === 'airtel' ? boutiqueConfig.theme.primary : undefined,
-                    backgroundColor: selectedPayment === 'airtel' ? `${boutiqueConfig.theme.primary}10` : undefined
-                  }}
-                  onClick={() => handlePaymentChange('airtel')}
-                >
-                  <div className="flex items-center">
-                    <input
-                      type="radio"
-                      name="payment"
-                      checked={selectedPayment === 'airtel'}
-                      onChange={() => handlePaymentChange('airtel')}
-                      className="mr-3 w-4 h-4"
-                      style={{ accentColor: boutiqueConfig.theme.primary }}
-                    />
-                    <Image
-                      src="/airtel_money.png"
-                      alt="Airtel Money"
-                      width={40}
-                      height={40}
-                      className="mr-3 rounded"
-                    />
-                    <div>
-                      <div className="font-semibold text-gray-900">Airtel Money</div>
-                      <div className="text-sm text-gray-600">Paiement mobile sécurisé</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Champ numéro de téléphone qui apparaît après sélection */}
-              {selectedPayment && (
-                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Numéro {selectedPayment === 'moov' ? 'Moov Money' : 'Airtel Money'} *
-                  </label>
-                  <input
-                    type="tel"
-                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-opacity-50 ${paymentPhoneError
-                      ? 'border-red-500 focus:ring-red-500'
-                      : paymentPhone.length === 9 && !paymentPhoneError
-                        ? 'border-green-500 focus:ring-green-500'
-                        : 'border-gray-300 focus:ring-blue-500'
-                      }`}
-
-                    value={paymentPhone}
-                    onChange={(e) => handlePaymentPhoneChange(e.target.value)}
-                    placeholder={getPhonePlaceholder()}
-                    maxLength={9}
-                    required
-                  />
-                  {paymentPhoneError ? (
-                    <p className="text-xs text-red-600 mt-1 flex items-center">
-                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                      </svg>
-                      {paymentPhoneError}
-                    </p>
-                  ) : paymentPhone.length === 9 && !paymentPhoneError ? (
-                    <p className="text-xs text-green-600 mt-1 flex items-center">
-                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                      Numéro valide
-                    </p>
-                  ) : (
-                    <p className="text-xs text-gray-500 mt-1">
-                      Saisissez le numéro de téléphone associé à votre compte {selectedPayment === 'moov' ? 'Moov Money' : 'Airtel Money'}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Récapitulatif des prix */}
-          <div className="bg-white rounded-lg shadow-md sticky top-24 border border-gray-100">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold mb-6 text-black">
-                Récapitulatif de la commande
-              </h3>
-
-              <div className="space-y-3 mb-4">
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-gray-600">Sous-total ({totalItems} articles)</span>
-                  <span className="font-medium">{formatPrice(subtotal)}</span>
-                </div>
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-gray-600">
-                    Frais de livraison
-                    {deliveryAddress.city && (
-                      <span className="text-xs text-gray-500 block">({deliveryAddress.city})</span>
-                    )}
-                  </span>
-                  <span className="font-medium">
-                    {deliveryAddress.city ? formatPrice(deliveryFee) : 'Sélectionnez une commune'}
+                <div className="flex items-center justify-between">
+                  <span className="text-[#6b6f76]">Frais de service</span>
+                  <span className="font-mono font-medium text-[#17181a]">
+                    {getTransactionFee() > 0 ? formatPrice(getTransactionFee()) : '—'}
                   </span>
                 </div>
-                {getTransactionFee() > 0 && (
-                  <div className="flex justify-between items-center py-2">
-                    <span className="text-gray-600">
-                      Frais de commodité
-                      <span className="text-xs text-gray-500 block">
-                        (Frais de service non remboursable)
-                      </span>
-                    </span>
-                    <span className="font-medium">{formatPrice(getTransactionFee())}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Option paiement à la livraison */}
-              <div className="border-t border-b py-4 border-gray-200">
-                <label className={`flex items-center ${paymentRestrictionMode !== 'les_deux' || deliveryFee === 0
-                  ? 'cursor-not-allowed opacity-50'
-                  : 'cursor-pointer'
-                  }`}>
-                  <input
-                    type="checkbox"
-                    checked={payOnDelivery}
-                    onChange={(e) => paymentRestrictionMode === 'les_deux' && deliveryFee > 0 && setPayOnDelivery(e.target.checked)}
-                    disabled={paymentRestrictionMode !== 'les_deux' || deliveryFee === 0}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:cursor-not-allowed"
-                  />
-                  <span className="ml-3 text-sm font-medium text-gray-700">
-                    Je paie à la livraison
-                  </span>
-                </label>
-                {paymentRestrictionMode === 'livraison_uniquement' && deliveryFee > 0 && (
-                  <p className="text-xs text-amber-600 mt-2 ml-7 font-medium">
-                    Seul le paiement des frais de livraison est requis en ligne pour cette boutique
-                  </p>
-                )}
-                {paymentRestrictionMode === 'livraison_uniquement' && deliveryFee === 0 && deliveryAddress.city && (
-                  <p className="text-xs text-amber-600 mt-2 ml-7 font-medium">
-                    Livraison gratuite : paiement complet en ligne requis (pas de frais de livraison à payer)
-                  </p>
-                )}
-                {paymentRestrictionMode === 'complet_uniquement' && (
-                  <p className="text-xs text-blue-600 mt-2 ml-7 font-medium">
-                    Le paiement complet en ligne est obligatoire pour cette boutique
-                  </p>
-                )}
-                {paymentRestrictionMode === 'les_deux' && deliveryFee === 0 && deliveryAddress.city && (
-                  <p className="text-xs text-gray-500 mt-2 ml-7">
-                    Non disponible pour les livraisons gratuites
-                  </p>
-                )}
-                {paymentRestrictionMode === 'les_deux' && payOnDelivery && deliveryFee > 0 && (
-                  <p className="text-xs text-gray-500 mt-2 ml-7">
-                    Vous payez les frais de livraison + frais de transaction maintenant. Le reste sera payé à la réception.
-                  </p>
-                )}
-              </div>
-
-              <div className="pt-4 mb-6">
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-semibold">
-                    {payOnDelivery ? 'À payer maintenant' : 'Total à payer'}
-                  </span>
-                  <span className="text-2xl font-bold" style={{ color: boutiqueConfig.theme.primary }}>
-                    {formatPrice(totalToPay)}
-                  </span>
-                </div>
-                {payOnDelivery && remainingAmount > 0 && (
-                  <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-200">
-                    <span className="text-sm text-gray-600">Reste à payer à la livraison</span>
-                    <span className="text-lg font-semibold text-gray-700">
-                      {formatPrice(remainingAmount)}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Widget Cloudflare Turnstile */}
-              {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && (
-                <div className="mb-4 flex justify-center">
-                  <div ref={turnstileContainerRef} />
-                </div>
-              )}
-
-              <button
-                onClick={handleSubmitOrder}
-                disabled={!isFormValid() || isSubmitting}
-                className={`w-full py-4 px-6 font-semibold rounded-lg transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-opacity-50 ${!isFormValid() || isSubmitting
-                  ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                  : 'text-white hover:opacity-90'
-                  }`}
-                style={{
-                  backgroundColor: (!isFormValid() || isSubmitting) ? undefined : boutiqueConfig.theme.primary
-                }}
-              >
-                {isSubmitting ? (
-                  <div className="flex items-center justify-center">
-                    <svg className="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    {payOnDelivery ? 'Création en cours...' : 'Traitement en cours...'}
-                  </div>
-                ) : (
-                  getButtonMessage()
-                )}
-              </button>
-
-              <div className="text-center mt-4">
-                <p className="text-sm text-gray-500">
-                  🔒 Paiement sécurisé • En confirmant, vous acceptez nos conditions
+                <p className="mt-0.5 text-[11px] text-[#9a9892]">
+                  Protection de la commande et frais de transaction Marché241, non remboursables.
                 </p>
               </div>
             </div>
+
+            {payOnDelivery && remainingAmount > 0 && (
+              <div
+                className="mt-3 rounded-[9px] p-3 text-[12.5px]"
+                style={{ backgroundColor: 'var(--shop-primary-tint)', color: 'var(--shop-primary-dark)' }}
+              >
+                Vous payez la livraison + frais maintenant. {formatPrice(remainingAmount)} restant à régler à la réception.
+              </div>
+            )}
+
+            <div className="mt-4 flex items-baseline justify-between border-t border-[#ececea] pt-4">
+              <span className="text-sm font-semibold text-[#17181a]">
+                {payOnDelivery ? 'À payer maintenant' : 'Total à payer'}
+              </span>
+              <span className="font-mono text-xl font-bold" style={{ color: 'var(--color-shop-primary)' }}>
+                {formatPrice(totalToPay)}
+              </span>
+            </div>
+
+            {/* Widget Cloudflare Turnstile */}
+            {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && (
+              <div className="mt-3 flex origin-top scale-90 justify-center">
+                <div ref={turnstileContainerRef} />
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={handleSubmitOrder}
+              disabled={!isFormValid() || isSubmitting}
+              className="mt-4 hidden h-12 w-full items-center justify-center rounded-[9px] text-sm font-semibold transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 lg:flex"
+              style={{ backgroundColor: 'var(--color-shop-primary)', color: 'var(--shop-cta-fg, #fff)' }}
+            >
+              {isSubmitting ? (
+                <span className="flex items-center justify-center">
+                  <svg className="mr-2 h-5 w-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  {payOnDelivery ? 'Création en cours...' : 'Traitement en cours...'}
+                </span>
+              ) : (
+                getButtonMessage()
+              )}
+            </button>
+
+            <p className="mt-3 text-center text-[11px] text-[#9a9892]">
+              Paiement sécurisé · vérification anti-robot automatique
+            </p>
+
+            <div className="mt-4 space-y-1.5 text-[12.5px] text-[#6b6f76]">
+              {selectedCommune && (
+                <p>Livraison à {selectedCommune.nom_commune} en {selectedCommune.delai_livraison_min}–{selectedCommune.delai_livraison_max} h</p>
+              )}
+              <p>Suivi de votre commande par WhatsApp</p>
+              <p>Réponse du vendeur sous peu</p>
+            </div>
           </div>
+        </div>
+      </div>
+
+      {/* Barre sticky mobile */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#ececea] bg-white p-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] lg:hidden">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] text-[#8b8f95]">{payOnDelivery ? 'À payer maintenant' : 'Total'}</p>
+            <p className="font-mono text-base font-bold" style={{ color: 'var(--color-shop-primary)' }}>
+              {formatPrice(totalToPay)}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleSubmitOrder}
+            disabled={!isFormValid() || isSubmitting}
+            className="h-12 max-w-[200px] flex-1 rounded-[9px] text-sm font-semibold transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+            style={{ backgroundColor: 'var(--color-shop-primary)', color: 'var(--shop-cta-fg, #fff)' }}
+          >
+            {isSubmitting ? 'Traitement...' : 'Payer maintenant'}
+          </button>
         </div>
       </div>
     </div>

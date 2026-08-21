@@ -421,7 +421,30 @@ export default function ProductsPage() {
                     })),
                     personnalisations: productData.personnalisations || []
                 };
-            } 
+            }
+            // Événement : billets dans variants + meta dates/lieu
+            else if (productData.category === 'evenement' && productData.variants && Array.isArray(productData.variants)) {
+                variantsFormatted = {
+                    type: 'evenement',
+                    meta: productData.meta || {},
+                    variants: productData.variants.map((v: any) => ({
+                        id: v.id,
+                        nom: v.nom,
+                        prix: v.prix,
+                        prix_promo: v.prix_promo,
+                        stock: v.stock || 0,
+                        image: v.image
+                    }))
+                };
+            }
+            // Service : meta prestation, variants vides (créneaux = V2)
+            else if (productData.category === 'service') {
+                variantsFormatted = {
+                    type: 'service',
+                    meta: productData.meta || {},
+                    variants: []
+                };
+            }
             else if (productData.variants && typeof productData.variants === 'object') {
                 variantsFormatted = {
                     type: productData.category || 'generic',
@@ -443,6 +466,10 @@ export default function ProductsPage() {
                 }, 0);
             } else if (productData.category === 'autres' && productData.variants && Array.isArray(productData.variants)) {
                 stockTotal = productData.variants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0);
+            } else if (productData.category === 'evenement' && productData.variants && Array.isArray(productData.variants)) {
+                stockTotal = productData.variants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0);
+            } else if (productData.category === 'service') {
+                stockTotal = productData.meta?.sur_devis ? 999 : 1;
             } else {
                 stockTotal = parseInt(productData.quantite_stock) || 0;
             }
@@ -461,6 +488,26 @@ export default function ProductsPage() {
                     if (variantAvecPrixMin.prix_promo > 0) {
                         prixOriginal = variantAvecPrixMin.prix;
                     }
+                }
+            } else if (productData.category === 'evenement' && productData.variants && Array.isArray(productData.variants)) {
+                const ticketsAvecPrix = productData.variants.filter((v: any) => v.prix > 0);
+                if (ticketsAvecPrix.length > 0) {
+                    const prixMin = Math.min(...ticketsAvecPrix.map((v: any) =>
+                        v.prix_promo > 0 ? v.prix_promo : v.prix
+                    ));
+                    const ticket = ticketsAvecPrix.find((v: any) =>
+                        (v.prix_promo > 0 ? v.prix_promo : v.prix) === prixMin
+                    );
+                    prixPrincipal = ticket.prix_promo > 0 ? ticket.prix_promo : ticket.prix;
+                    if (ticket.prix_promo > 0) {
+                        prixOriginal = ticket.prix;
+                    }
+                }
+            } else if (productData.category === 'service') {
+                prixPrincipal = productData.meta?.sur_devis ? 0 : (parseInt(productData.prix) || 0);
+                if (productData.prix_promo > 0) {
+                    prixOriginal = prixPrincipal;
+                    prixPrincipal = productData.prix_promo;
                 }
             } else {
                 prixPrincipal = parseInt(productData.prix) || 0;
@@ -714,6 +761,45 @@ export default function ProductsPage() {
             // Ouvrir le modal simplifié en mode édition
             setProductToEdit(productData as any);
             setSelectedCategory('autres');
+            setShowSimplifiedModal(true);
+            return;
+        }
+
+        if (productType === 'evenement') {
+            const productData = {
+                id: product.id,
+                nom: product.nom,
+                description: product.description,
+                categorie_id: product.categorie?.id || 0,
+                statut: product.actif ? 'actif' as const : 'inactif' as const,
+                images: product.images || [],
+                meta: product.variants?.meta || {},
+                tickets: product.variants?.variants || [],
+                variants: product.variants?.variants || [],
+            };
+
+            setProductToEdit(productData as any);
+            setSelectedCategory('evenement');
+            setShowSimplifiedModal(true);
+            return;
+        }
+
+        if (productType === 'service') {
+            const productData = {
+                id: product.id,
+                nom: product.nom,
+                description: product.description,
+                categorie_id: product.categorie?.id || 0,
+                statut: product.actif ? 'actif' as const : 'inactif' as const,
+                images: product.images || [],
+                prix: product.prix,
+                prix_promo: product.prix_original,
+                meta: product.variants?.meta || {},
+                variants: [],
+            };
+
+            setProductToEdit(productData as any);
+            setSelectedCategory('service');
             setShowSimplifiedModal(true);
             return;
         }

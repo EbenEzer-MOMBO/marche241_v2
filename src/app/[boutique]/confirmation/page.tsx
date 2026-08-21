@@ -1,165 +1,256 @@
 'use client';
 
+import { useMemo, useState } from 'react';
 import { useSearchParams, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { CheckCircle, Mail, MessageSquare, Package, ArrowLeft } from 'lucide-react';
+import { useBoutique } from '@/hooks/useBoutique';
+import SafeImage from '@/components/SafeImage';
+
+const getBoutiqueLogo = (logoUrl?: string | null): string => {
+  if (logoUrl && logoUrl.trim() !== '') {
+    try {
+      new URL(logoUrl);
+      return logoUrl;
+    } catch {
+      return '/default-shop.png';
+    }
+  }
+  return '/default-shop.png';
+};
 
 export default function ConfirmationPage() {
   const searchParams = useSearchParams();
   const params = useParams();
   const boutiqueSlug = params.boutique as string;
   const numeroCommande = searchParams.get('commande');
-  const typePaiement = searchParams.get('type'); // 'partiel' ou 'complet'
+  const typePaiement = searchParams.get('type');
+  const { boutique, config } = useBoutique(boutiqueSlug);
+  const [copied, setCopied] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+
+  const isPartiel = typePaiement === 'partiel';
+  const boutiqueName = config?.name || boutique?.nom || 'la boutique';
+  const whatsappNumber = (boutique?.telephone || '').replace(/\D/g, '');
+  const whatsappHref = whatsappNumber
+    ? `https://wa.me/${whatsappNumber.startsWith('241') ? whatsappNumber : `241${whatsappNumber}`}?text=${encodeURIComponent(
+        `Bonjour, je souhaite suivre ma commande ${numeroCommande || ''}`
+      )}`
+    : `https://wa.me/?text=${encodeURIComponent(`Commande ${numeroCommande || ''}`)}`;
+
+  const timeline = useMemo(
+    () => [
+      {
+        id: 'confirmed',
+        label: 'Commande confirmée',
+        detail: 'à l’instant',
+        done: true,
+      },
+      {
+        id: 'prep',
+        label: 'En préparation chez le vendeur',
+        detail: 'sous 24 h · vous serez notifié sur WhatsApp',
+        done: false,
+      },
+      {
+        id: 'ship',
+        label: 'Livraison',
+        detail: '24–48 h · suivi par WhatsApp',
+        done: false,
+      },
+    ],
+    []
+  );
+
+  const handleCopy = async () => {
+    if (!numeroCommande) return;
+    try {
+      await navigator.clipboard.writeText(numeroCommande);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // ignore
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center p-4">
-      <div className="max-w-2xl w-full">
-        {/* Card principale */}
-        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-          {/* Header avec animation de succès */}
-          <div className="bg-black p-8 text-center">
-            <div className="inline-flex items-center justify-center w-24 h-24 bg-white rounded-full mb-4 animate-bounce">
-              <CheckCircle className="w-16 h-16 text-green-500" />
+    <div className="min-h-screen bg-white text-[#17181a]">
+      <header className="border-b border-[#ececea]">
+        <div className="mx-auto flex h-[58px] max-w-2xl items-center justify-between px-4 sm:px-6">
+          <Link
+            href={`/${boutiqueSlug}`}
+            className="flex items-center gap-2.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#17181a]/30 rounded"
+          >
+            <div className="h-7 w-7 overflow-hidden rounded-lg bg-[#17181a]">
+              <SafeImage
+                src={getBoutiqueLogo(boutique?.logo)}
+                alt=""
+                width={28}
+                height={28}
+                className="h-full w-full object-cover"
+              />
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">
-              Commande confirmée !
+            <span className="text-sm font-semibold">{boutiqueName}</span>
+          </Link>
+          <span className="text-[13px] text-[#5f6369]">Commande confirmée</span>
+        </div>
+      </header>
+
+      <main className="mx-auto flex max-w-[640px] flex-col gap-5 px-4 py-8 sm:px-6 sm:py-10">
+        {/* Succès */}
+        <section className="flex flex-col items-start gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-full border border-[#bfe6cd] bg-[#eaf7ee]">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#16a34a"
+              strokeWidth="2.5"
+              aria-hidden
+            >
+              <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-[24px] font-semibold leading-tight sm:text-[26px]">
+              Commande confirmée
             </h1>
-            <p className="text-green-100 text-lg">
-              Votre paiement a été reçu avec succès
+            <p className="mt-1.5 text-[14.5px] leading-[1.55] text-[#5f6369]">
+              Merci. {boutiqueName} a reçu votre commande et la prépare.
             </p>
           </div>
-
-          {/* Corps du message */}
-          <div className="p-8">
-            {/* Numéro de commande */}
-            <div className="bg-gray-50 rounded-lg p-6 mb-6 border-2 border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Package className="w-6 h-6 text-gray-600 mr-3" />
-                  <div>
-                    <p className="text-sm text-gray-600">Numéro de commande</p>
-                    <p className="text-xl font-bold text-gray-900">{numeroCommande}</p>
-                  </div>
+          {numeroCommande && (
+            <div className="flex w-full items-center justify-between gap-3 rounded-[10px] border border-[#e6e4df] bg-[#fafaf8] px-4 py-3">
+              <div>
+                <div className="text-[11px] font-medium uppercase tracking-wider text-[#9a9892]">
+                  N° de commande
                 </div>
+                <div className="mt-0.5 font-mono text-[15px] font-medium">{numeroCommande}</div>
               </div>
-            </div>
-
-            {/* Type de paiement */}
-            {typePaiement === 'partiel' ? (
-              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-yellow-800">
-                      Paiement partiel - Frais de livraison payés
-                    </h3>
-                    <div className="mt-2 text-sm text-yellow-700">
-                      <p>
-                        Vous avez payé les frais de livraison. Le reste du montant sera à régler à la réception de votre commande.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-green-50 border-l-4 border-green-400 p-4 mb-6">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <CheckCircle className="h-5 w-5 text-green-400" />
-                  </div>
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-green-800">
-                      Paiement complet effectué
-                    </h3>
-                    <div className="mt-2 text-sm text-green-700">
-                      <p>
-                        Votre commande est entièrement payée. Elle sera préparée et expédiée dans les plus brefs délais.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Instructions de vérification */}
-            <div className="space-y-4 mb-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                Prochaines étapes
-              </h2>
-
-              <div className="flex items-start space-x-3">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-blue-600 font-semibold text-sm">1</span>
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <p className="text-gray-700">
-                    <strong>Vérifiez vos notifications</strong> - Un email de confirmation vous a été envoyé avec tous les détails de votre commande.
-                  </p>
-                </div>
-                <Mail className="w-5 h-5 text-blue-500 flex-shrink-0" />
-              </div>
-
-              <div className="flex items-start space-x-3">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                    <span className="text-green-600 font-semibold text-sm">2</span>
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <p className="text-gray-700">
-                    <strong>WhatsApp</strong> - Vous recevrez également un message WhatsApp avec le suivi de votre commande.
-                  </p>
-                </div>
-                <MessageSquare className="w-5 h-5 text-green-500 flex-shrink-0" />
-              </div>
-
-              <div className="flex items-start space-x-3">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                    <span className="text-purple-600 font-semibold text-sm">3</span>
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <p className="text-gray-700">
-                    <strong>Préparation</strong> - Votre commande sera préparée et vous serez notifié de l'expédition.
-                  </p>
-                </div>
-                <Package className="w-5 h-5 text-purple-500 flex-shrink-0" />
-              </div>
-            </div>
-
-            {/* Note importante */}
-            <div className="bg-blue-50 rounded-lg p-4 mb-6">
-              <p className="text-sm text-blue-800">
-                <strong>Note :</strong> Si vous ne recevez pas d'email dans les prochaines minutes, vérifiez votre dossier spam ou contactez le support.
-              </p>
-            </div>
-
-            {/* Boutons d'action */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Link
-                href={`/${boutiqueSlug}`}
-                className="flex-1 flex items-center justify-center px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="rounded-lg border border-[#e6e4df] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[#3c4045] hover:bg-[#f6f5f3] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#17181a]/30"
+                aria-label="Copier le numéro de commande"
               >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Retour à la boutique
-              </Link>
+                {copied ? 'Copié' : 'Copier'}
+              </button>
+            </div>
+          )}
+        </section>
+
+        {/* Paiement */}
+        <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="rounded-[12px] border border-[#e6e4df] bg-white p-4">
+            <div className="font-mono text-[10.5px] font-medium uppercase tracking-wider text-[#9a9892]">
+              Déjà payé
+            </div>
+            <div className="mt-2 font-mono text-[19px] font-semibold text-[#16a34a]">
+              {isPartiel ? 'Frais de livraison' : 'Paiement complet'}
+            </div>
+            <div className="mt-1 text-[12.5px] text-[#8b8f95]">
+              {isPartiel
+                ? 'Livraison + frais de service'
+                : 'Commande entièrement réglée'}
             </div>
           </div>
-        </div>
+          {isPartiel && (
+            <div className="rounded-[12px] border border-[#e6e4df] bg-white p-4">
+              <div className="font-mono text-[10.5px] font-medium uppercase tracking-wider text-[#9a9892]">
+                À régler à la réception
+              </div>
+              <div className="mt-2 font-mono text-[19px] font-semibold text-[#17181a]">
+                Solde commande
+              </div>
+              <div className="mt-1 text-[12.5px] text-[#8b8f95]">
+                En espèces au livreur, montant exact conseillé
+              </div>
+            </div>
+          )}
+        </section>
 
-        {/* Footer info */}
-        <div className="text-center mt-6 text-gray-600 text-sm">
-          <p>Besoin d'aide ? Contactez notre support client</p>
-        </div>
-      </div>
+        {/* Timeline */}
+        <section className="rounded-[12px] border border-[#e6e4df] bg-white p-5">
+          <h2 className="mb-4 text-[15.5px] font-semibold">Suivi</h2>
+          <ol className="relative space-y-0">
+            {timeline.map((step, index) => (
+              <li key={step.id} className="relative flex gap-3 pb-5 last:pb-0">
+                {index < timeline.length - 1 && (
+                  <span className="absolute left-[11px] top-6 h-[calc(100%-12px)] w-px bg-[#e0ded9]" />
+                )}
+                <span
+                  className={`relative z-10 mt-0.5 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full text-[11px] ${
+                    step.done
+                      ? 'bg-[#16a34a] text-white'
+                      : 'border border-[#e0ded9] bg-white text-transparent'
+                  }`}
+                  aria-hidden
+                >
+                  {step.done ? '✓' : ''}
+                </span>
+                <div>
+                  <div className="text-[14px] font-medium text-[#3c4045]">
+                    {step.label}
+                  </div>
+                  <div className="mt-0.5 font-mono text-[12.5px] text-[#8b8f95]">
+                    {step.detail}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        {/* CTAs */}
+        <section className="flex flex-col gap-3 sm:flex-row">
+          <a
+            href={whatsappHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-[50px] flex-1 items-center justify-center rounded-[10px] px-4 text-[15px] font-semibold hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+            style={{
+              backgroundColor: 'var(--color-shop-primary, var(--primary-color, #2f5fd8))',
+              color: 'var(--shop-cta-fg, #fff)',
+            }}
+            aria-label="Suivre ma commande sur WhatsApp"
+          >
+            <span className="sm:hidden">Suivre sur WhatsApp</span>
+            <span className="hidden sm:inline">Suivre ma commande sur WhatsApp</span>
+          </a>
+          <Link
+            href={`/${boutiqueSlug}`}
+            className="inline-flex h-[50px] items-center justify-center rounded-[10px] border-[1.5px] border-[#17181a] bg-white px-4 text-[15px] font-semibold text-[#17181a] hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#17181a]/30 sm:w-[230px]"
+          >
+            Continuer mes achats
+          </Link>
+        </section>
+
+        {/* Détail replié */}
+        <section className="border-t border-[#ececea] pt-4">
+          <button
+            type="button"
+            onClick={() => setDetailOpen((v) => !v)}
+            className="flex w-full items-center justify-between text-[14px] font-medium text-[#3c4045] focus:outline-none focus-visible:underline"
+            aria-expanded={detailOpen}
+          >
+            Détail de la commande
+            <span className="text-[#8b8f95]">{detailOpen ? '▴' : '▾'}</span>
+          </button>
+          {detailOpen && (
+            <p className="mt-3 text-[13px] leading-relaxed text-[#5f6369]">
+              Votre commande {numeroCommande ? (
+                <span className="font-mono">{numeroCommande}</span>
+              ) : null}{' '}
+              est enregistrée. Le suivi se fait uniquement par WhatsApp — aucun
+              email ne sera envoyé.
+            </p>
+          )}
+          <p className="mt-3 text-center text-[12.5px] leading-[1.6] text-[#8b8f95]">
+            Un souci avec cette commande ? Écrivez au vendeur sur WhatsApp —
+            réponse sous 1 h.
+          </p>
+        </section>
+      </main>
     </div>
   );
 }
-

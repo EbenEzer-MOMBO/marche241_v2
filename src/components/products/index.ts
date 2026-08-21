@@ -2,3 +2,8 @@ export { ClothingProductDisplay } from './ClothingProductDisplay';
 export { ProductPersonnalisationsFields } from './ProductPersonnalisationsFields';
 export { ShoesProductDisplay } from './ShoesProductDisplay';
 export { GenericProductDisplay } from './GenericProductDisplay';
+export { EventProductDisplay } from './EventProductDisplay';
+export { ServiceProductDisplay } from './ServiceProductDisplay';
+export { ProductGallery } from './ProductGallery';
+export { ProductDetailsAccordion } from './ProductDetailsAccordion';
+export { RelatedProducts } from './RelatedProducts';

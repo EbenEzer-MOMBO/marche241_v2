@@ -51,7 +51,7 @@ interface FormData {
 }
 
 const SECTIONS = [
-  { id: 1, label: 'Infos de base' },
+  { id: 1, label: 'Infos' },
   { id: 2, label: 'Images' },
   { id: 3, label: 'Variants' },
   { id: 4, label: 'Personnalisations' }
@@ -867,7 +867,7 @@ export function GenericProductForm({
           type="text"
           value={formData.nom}
           onChange={(e) => handleInputChange('nom', e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
           placeholder="Ex: iPhone 15 Pro"
         />
         {errors.nom && <p className="mt-1 text-sm text-red-600">{errors.nom}</p>}
@@ -881,7 +881,7 @@ export function GenericProductForm({
           value={formData.description}
           onChange={(e) => handleInputChange('description', e.target.value)}
           rows={4}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
           placeholder="Décrivez les caractéristiques et avantages de votre produit..."
         />
       </div>
@@ -893,7 +893,7 @@ export function GenericProductForm({
         <select
           value={formData.categorie_id}
           onChange={(e) => handleInputChange('categorie_id', parseInt(e.target.value))}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
         >
           <option value={0}>Sélectionner une catégorie</option>
           {categories.map(cat => (
@@ -910,7 +910,7 @@ export function GenericProductForm({
         <select
           value={formData.statut}
           onChange={(e) => handleInputChange('statut', e.target.value as 'actif' | 'inactif' | 'brouillon')}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
         >
           <option value="actif">Actif</option>
           <option value="inactif">Inactif</option>
@@ -923,7 +923,7 @@ export function GenericProductForm({
     <div className="space-y-6">
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-start space-x-3">
-          <ImageIcon className="h-6 w-6 text-blue-600 flex-shrink-0 mt-0.5" />
+          <ImageIcon className="h-6 w-6 text-gray-700 flex-shrink-0 mt-0.5" />
           <div>
             <h3 className="font-semibold text-gray-900">Images du produit</h3>
             <p className="text-sm text-gray-600 mt-1">
@@ -935,7 +935,7 @@ export function GenericProductForm({
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-3">
-          Images * {isUploadingImages && <span className="text-blue-600">(Upload en cours...)</span>}
+          Images * {isUploadingImages && <span className="text-gray-700">(Upload en cours...)</span>}
         </label>
         
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
@@ -979,7 +979,7 @@ export function GenericProductForm({
               </div>
               
               {index === 0 && (
-                <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">
+                <div className="absolute top-2 left-2 bg-black text-white text-xs px-2 py-1 rounded">
                   Principale
                 </div>
               )}
@@ -1009,7 +1009,7 @@ export function GenericProductForm({
     <div className="space-y-6">
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-start space-x-3">
-          <Plus className="h-6 w-6 text-blue-600 flex-shrink-0 mt-0.5" />
+          <Plus className="h-6 w-6 text-gray-700 flex-shrink-0 mt-0.5" />
           <div>
             <h3 className="font-semibold text-gray-900">Variants du produit</h3>
             <p className="text-sm text-gray-600 mt-1">
@@ -1070,7 +1070,7 @@ export function GenericProductForm({
                           className="object-cover"
                         />
                         {isSelected && (
-                          <div className="absolute inset-0 bg-blue-600/30 flex items-center justify-center">
+                          <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
                             <Check className="h-6 w-6 text-white drop-shadow-lg" strokeWidth={3} />
                           </div>
                         )}
@@ -1094,7 +1094,7 @@ export function GenericProductForm({
                   <button
                     type="button"
                     onClick={() => addAttribute(variantIndex)}
-                    className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                    className="text-sm text-gray-700 hover:text-black flex items-center gap-1"
                   >
                     <Plus className="h-4 w-4" />
                     Ajouter un attribut
@@ -1125,7 +1125,7 @@ export function GenericProductForm({
                               updateAttribute(variantIndex, attrIndex, 'type', e.target.value)
                             }
                             aria-label={`Type d'attribut ${attrIndex + 1}`}
-                            className={`px-3 py-2 ${borderTone(false)} rounded-lg focus:ring-2 focus:ring-blue-500 w-40`}
+                            className={`px-3 py-2 ${borderTone(false)} rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black w-40`}
                           >
                             {ATTRIBUTE_TYPES.map((type) => (
                               <option key={type.value} value={type.value}>
@@ -1159,7 +1159,7 @@ export function GenericProductForm({
                                   }
                                   className={`w-full px-3 py-2 ${borderTone(
                                     Boolean(errCustom)
-                                  )} rounded-lg focus:ring-2 focus:ring-blue-500`}
+                                  )} rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black`}
                                 />
                                 {errCustom ? (
                                   <p
@@ -1193,7 +1193,7 @@ export function GenericProductForm({
                                   }
                                   className={`w-full px-3 py-2 ${borderTone(
                                     Boolean(errValue)
-                                  )} rounded-lg focus:ring-2 focus:ring-blue-500`}
+                                  )} rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black`}
                                 />
                                 {errValue ? (
                                   <p
@@ -1222,7 +1222,7 @@ export function GenericProductForm({
                                 }
                                 className={`flex-1 px-3 py-2 ${borderTone(
                                   Boolean(errValue)
-                                )} rounded-lg focus:ring-2 focus:ring-blue-500`}
+                                )} rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black`}
                               >
                                 <option value="">Sélectionner une valeur… *</option>
                                 {presets.map((preset) => (
@@ -1256,7 +1256,7 @@ export function GenericProductForm({
                                     }
                                   }}
                                   aria-label="Liste de poids"
-                                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
                                 >
                                   <option value="">Sélectionner…</option>
                                   {presets.map((preset) => (
@@ -1286,7 +1286,7 @@ export function GenericProductForm({
                                   aria-required
                                   className={`w-32 px-3 py-2 ${borderTone(
                                     Boolean(errValue)
-                                  )} rounded-lg focus:ring-2 focus:ring-blue-500`}
+                                  )} rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black`}
                                 />
                               </div>
                               {errValue ? (
@@ -1312,7 +1312,7 @@ export function GenericProductForm({
                                 }
                                 className={`flex-1 px-3 py-2 ${borderTone(
                                   Boolean(errValue)
-                                )} rounded-lg focus:ring-2 focus:ring-blue-500`}
+                                )} rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black`}
                               />
                               {errValue ? (
                                 <p
@@ -1359,7 +1359,7 @@ export function GenericProductForm({
                     min="0"
                     value={variant.stock}
                     onChange={(e) => updateVariant(variantIndex, 'stock', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
                     placeholder="10"
                   />
                   {errors[`variant_${variantIndex}_stock`] && (
@@ -1376,7 +1376,7 @@ export function GenericProductForm({
                     min="0"
                     value={variant.prix || ''}
                     onChange={(e) => updateVariant(variantIndex, 'prix', parseFloat(e.target.value) || 0)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
                     placeholder="5000"
                   />
                   {errors[`variant_${variantIndex}_prix`] && (
@@ -1393,7 +1393,7 @@ export function GenericProductForm({
                     min="0"
                     value={variant.prix_promo || ''}
                     onChange={(e) => updateVariant(variantIndex, 'prix_promo', parseFloat(e.target.value) || undefined)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
                     placeholder="4000"
                   />
                   {errors[`variant_${variantIndex}_prix_promo`] && (
@@ -1410,7 +1410,7 @@ export function GenericProductForm({
       <button
         type="button"
         onClick={addVariant}
-        className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all flex items-center justify-center gap-2 font-medium"
+        className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-gray-500 hover:text-black hover:bg-gray-50 transition-all flex items-center justify-center gap-2 font-medium"
       >
         <Plus className="h-5 w-5" />
         Ajouter un autre variant
@@ -1423,7 +1423,7 @@ export function GenericProductForm({
     <div className="space-y-6">
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-start space-x-3">
-          <Plus className="h-6 w-6 text-blue-600 flex-shrink-0 mt-0.5" />
+          <Plus className="h-6 w-6 text-gray-700 flex-shrink-0 mt-0.5" />
           <div>
             <h3 className="font-semibold text-gray-900">Personnalisations (optionnel)</h3>
             <p className="text-sm text-gray-600 mt-1">
@@ -1456,7 +1456,7 @@ export function GenericProductForm({
                   type="text"
                   value={custom.libelle}
                   onChange={(e) => updateCustomization(index, 'libelle', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
                   placeholder="Ex: Gravure du nom"
                 />
                 {errors[`custom_${index}_libelle`] && (
@@ -1471,7 +1471,7 @@ export function GenericProductForm({
                 <select
                   value={custom.type}
                   onChange={(e) => updateCustomization(index, 'type', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
                 >
                   <option value="text">Texte</option>
                   <option value="number">Nombre</option>
@@ -1487,7 +1487,7 @@ export function GenericProductForm({
                   min="0"
                   value={custom.prix_supplementaire || ''}
                   onChange={(e) => updateCustomization(index, 'prix_supplementaire', parseFloat(e.target.value) || 0)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
                   placeholder="0"
                 />
               </div>
@@ -1497,7 +1497,7 @@ export function GenericProductForm({
                   type="checkbox"
                   checked={custom.obligatoire}
                   onChange={(e) => updateCustomization(index, 'obligatoire', e.target.checked)}
-                  className="h-4 w-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                  className="h-4 w-4 text-gray-700 rounded focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
                 />
                 <label className="ml-2 text-sm text-gray-700">
                   Personnalisation obligatoire
@@ -1511,7 +1511,7 @@ export function GenericProductForm({
       <button
         type="button"
         onClick={addCustomization}
-        className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-colors flex items-center justify-center gap-2"
+        className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-500 hover:text-gray-700 transition-colors flex items-center justify-center gap-2"
       >
         <Plus className="h-5 w-5" />
         <span className="hidden sm:inline">Ajouter une personnalisation</span>
@@ -1531,103 +1531,63 @@ export function GenericProductForm({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-        <div className={`${categoryInfo.bgColor} ${categoryInfo.color} px-6 py-4 flex justify-between items-center rounded-t-xl`}>
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={onBack}
-              className="p-1 hover:bg-white/20 rounded transition-colors"
-            >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={onBack} className="rounded-lg p-2 hover:bg-gray-100" aria-label="Retour">
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">
-                {productToEdit ? 'Modifier' : 'Ajouter'} un produit
+              <h2 className="text-lg font-semibold text-gray-900">
+                {productToEdit ? 'Modifier le produit' : 'Nouveau produit'}
               </h2>
-              <p className="text-sm opacity-90 mt-1">
-                Étape {currentSection} sur {SECTIONS.length}
-              </p>
+              <p className="text-xs text-gray-500">Étape {currentSection} / 4 — {SECTIONS[currentSection - 1].label}</p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-          >
-            <X className="h-6 w-6" />
+          <button type="button" onClick={onClose} className="rounded-lg p-2 hover:bg-gray-100" aria-label="Fermer">
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            {SECTIONS.map((section, index) => (
-              <div key={section.id} className="flex items-center">
-                <div className={`flex items-center ${index > 0 ? 'ml-2' : ''}`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${
-                    currentSection === section.id
-                      ? `${categoryInfo.bgColor} ${categoryInfo.color}`
-                      : currentSection > section.id
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-gray-100 text-gray-400'
-                  }`}>
-                    {section.id}
-                  </div>
-                  <span className={`ml-2 text-sm font-medium hidden sm:inline ${
-                    currentSection === section.id ? 'text-gray-900' : 'text-gray-500'
-                  }`}>
-                    {section.label}
-                  </span>
-                </div>
-                {index < SECTIONS.length - 1 && (
-                  <div className="w-8 sm:w-16 h-0.5 bg-gray-200 mx-2" />
-                )}
-              </div>
-            ))}
-          </div>
+        <div className="flex gap-2 border-b border-gray-100 px-5 py-3">
+          {SECTIONS.map((s) => (
+            <div
+              key={s.id}
+              className={`h-1.5 flex-1 rounded-full ${s.id <= currentSection ? 'bg-black' : 'bg-gray-200'}`}
+            />
+          ))}
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-6">
+        <div className="flex-1 overflow-y-auto px-5 py-5">
           {renderCurrentSection()}
         </div>
 
-        <div className={`px-6 py-4 border-t border-gray-200 flex justify-between items-center ${categoryInfo.bgColor} bg-opacity-10`}>
+        <div className="flex items-center justify-between border-t border-gray-200 px-5 py-4">
           <button
             type="button"
             onClick={handlePrevious}
             disabled={currentSection === 1}
-            className={`px-4 sm:px-6 py-2.5 border-2 rounded-lg font-medium flex items-center gap-2 ${
-              currentSection === 1
-                ? 'border-gray-200 text-gray-400 cursor-not-allowed'
-                : `border-current ${categoryInfo.color} hover:bg-white/50 transition-colors`
-            }`}
+            className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 disabled:opacity-40"
           >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">Précédent</span>
-            <span className="sm:hidden">Préc.</span>
+            Précédent
           </button>
-
           {currentSection < SECTIONS.length ? (
             <button
               type="button"
               onClick={handleNext}
               disabled={isUploadingImages}
-              className={`px-4 sm:px-6 py-2.5 ${categoryInfo.bgColor} ${categoryInfo.color} border-2 border-current rounded-lg hover:opacity-90 transition-opacity font-medium flex items-center gap-2 ${
-                isUploadingImages ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
+              className="inline-flex items-center gap-2 rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
             >
-              <span className="hidden sm:inline">Suivant</span>
-              <span className="sm:hidden">Suiv.</span>
-              <ArrowRight className="h-4 w-4" />
+              {isUploadingImages ? 'Upload…' : 'Suivant'} <ArrowRight className="h-4 w-4" />
             </button>
           ) : (
             <button
               type="button"
               onClick={handleSubmit}
-              className={`px-4 sm:px-6 py-2.5 ${categoryInfo.bgColor} ${categoryInfo.color} border-2 border-current rounded-lg hover:opacity-90 transition-opacity font-medium flex items-center gap-2`}
+              className="inline-flex items-center gap-2 rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
             >
-              <Check className="h-4 w-4" />
-              <span className="hidden sm:inline">{productToEdit ? 'Enregistrer les modifications' : 'Enregistrer le produit'}</span>
-              <span className="sm:hidden">Enregistrer</span>
+              <Check className="h-4 w-4" /> Enregistrer
             </button>
           )}
         </div>

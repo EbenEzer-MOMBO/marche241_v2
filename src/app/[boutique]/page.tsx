@@ -1,7 +1,7 @@
 import MainLayout from '@/components/MainLayout';
 import HeroSection from '@/components/HeroSection';
 import TrendingByCategory from '@/components/TrendingByCategory';
-import SocialShareSection from '@/components/SocialShareSection';
+import { BoutiqueShareBar } from '@/components/storefront/BoutiqueShareBar';
 import { getBoutiqueConfig, getBoutiqueBySlug, type BoutiqueConfig } from '@/lib/boutiques';
 import { notFound } from 'next/navigation';
 
@@ -51,7 +51,7 @@ export default async function BoutiquePage({ params }: BoutiquePageProps) {
     <MainLayout boutiqueName={boutique}>
       <HeroSection boutiqueName={boutique} />
       <TrendingByCategory boutiqueName={boutique} />
-      <SocialShareSection 
+      <BoutiqueShareBar
         boutiqueName={boutique}
         boutiqueTitle={boutiqueConfig.name}
         boutiqueDescription={boutiqueData.description || `Découvrez ${boutiqueConfig.name}`}

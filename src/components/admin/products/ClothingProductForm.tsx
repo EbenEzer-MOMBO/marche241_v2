@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, ArrowLeft, ArrowRight, Check, Upload, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
 import Image from 'next/image';
-import { ProductCategory, getCategoryInfo } from '@/lib/constants/product-categories';
+import { ProductCategory } from '@/lib/constants/product-categories';
 
 interface ClothingProductFormProps {
   isOpen: boolean;
@@ -52,7 +52,7 @@ interface FormData {
 }
 
 const SECTIONS = [
-  { id: 1, label: 'Infos de base' },
+  { id: 1, label: 'Infos' },
   { id: 2, label: 'Images' },
   { id: 3, label: 'Variants' },
   { id: 4, label: 'Personnalisations' }
@@ -223,8 +223,6 @@ export function ClothingProductForm({
   }, [isOpen, categories, productToEdit]);
 
   if (!isOpen || !category) return null;
-
-  const categoryInfo = getCategoryInfo(category);
 
   const validateSection = (section: number): boolean => {
     const newErrors: Record<string, string> = {};
@@ -422,135 +420,63 @@ export function ClothingProductForm({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full my-8">
-        {/* En-tête */}
-        <div className={`${categoryInfo.bgColor} ${categoryInfo.color} p-6 border-b border-gray-200`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                type="button"
-                onClick={onBack}
-                className="p-2 hover:bg-white/50 rounded-lg transition-colors"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </button>
-              <div>
-                <div className="flex items-center gap-3">
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    {productToEdit ? 'Modifier' : 'Ajouter'} un vêtement
-                  </h2>
-                </div>
-                <p className="text-sm text-gray-600 mt-1 ml-12">
-                  {SECTIONS[currentSection - 1].label}
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={handleClose}
-              className="p-2 hover:bg-white/50 rounded-lg transition-colors"
-            >
-              <X className="h-5 w-5 text-gray-600" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={onBack} className="rounded-lg p-2 hover:bg-gray-100" aria-label="Retour">
+              <ArrowLeft className="h-5 w-5" />
             </button>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">
+                {productToEdit ? 'Modifier le vêtement' : 'Nouveau vêtement'}
+              </h2>
+              <p className="text-xs text-gray-500">Étape {currentSection} / 4 — {SECTIONS[currentSection - 1].label}</p>
+            </div>
           </div>
-
-          {/* Indicateur de progression */}
-          <div className="mt-6 flex items-center justify-between">
-            {SECTIONS.map((section, index) => (
-              <div key={section.id} className="flex items-center flex-1">
-                <div className="flex items-center gap-2">
-                  <div
-                    className={`flex items-center justify-center w-8 h-8 rounded-full font-bold transition-all ${
-                      currentSection === section.id
-                        ? 'bg-white text-purple-600 shadow-sm ring-2 ring-white'
-                        : currentSection > section.id
-                        ? 'bg-white/70 text-purple-800'
-                        : 'bg-white/30 text-purple-200'
-                    }`}
-                  >
-                    {currentSection > section.id ? (
-                      <Check className="h-5 w-5" />
-                    ) : (
-                      section.id
-                    )}
-                  </div>
-                  <span className={`text-sm font-medium hidden sm:inline ${
-                    currentSection === section.id
-                      ? 'text-purple-800'
-                      : 'text-purple-300'
-                  }`}>
-                    {section.label}
-                  </span>
-                </div>
-                {index < SECTIONS.length - 1 && (
-                  <div className={`h-0.5 flex-1 mx-2 ${
-                    currentSection > section.id ? 'bg-white' : 'bg-white/30'
-                  }`} />
-                )}
-              </div>
-            ))}
-          </div>
+          <button type="button" onClick={handleClose} className="rounded-lg p-2 hover:bg-gray-100" aria-label="Fermer">
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
-        {/* Contenu de la section */}
-        <div className="p-6 max-h-[60vh] overflow-y-auto">
+        <div className="flex gap-2 border-b border-gray-100 px-5 py-3">
+          {SECTIONS.map((s) => (
+            <div
+              key={s.id}
+              className={`h-1.5 flex-1 rounded-full ${s.id <= currentSection ? 'bg-black' : 'bg-gray-200'}`}
+            />
+          ))}
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-5">
           {renderSection()}
         </div>
 
-        {/* Footer avec navigation */}
-        <div className="p-6 border-t border-gray-200 bg-gray-50 flex gap-3">
-          {currentSection > 1 && (
-            <button
-              type="button"
-              onClick={handlePrevious}
-              className="px-3 sm:px-4 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium flex items-center gap-2"
-            >
-              <ArrowLeft className="h-4 w-4 hidden sm:block" />
-              <span className="hidden sm:inline">Précédent</span>
-              <span className="sm:hidden">←</span>
-            </button>
-          )}
-          
+        <div className="flex items-center justify-between border-t border-gray-200 px-5 py-4">
           <button
             type="button"
-            onClick={handleClose}
-            className="px-4 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+            onClick={handlePrevious}
+            disabled={currentSection === 1}
+            className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 disabled:opacity-40"
           >
-            Annuler
+            Précédent
           </button>
-          
-          <div className="flex-1" />
-          
           {currentSection < 4 ? (
             <button
               type="button"
               onClick={handleNext}
               disabled={isUploadingImages}
-              className={`px-3 sm:px-4 py-2.5 ${categoryInfo.bgColor} ${categoryInfo.color} border-2 border-current rounded-lg hover:opacity-90 transition-opacity font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed`}
+              className="inline-flex items-center gap-2 rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
             >
-              {isUploadingImages ? (
-                <>
-                  <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
-                  <span className="hidden sm:inline">Upload...</span>
-                </>
-              ) : (
-                <>
-                  <span className="hidden sm:inline">Suivant</span>
-                  <span className="sm:hidden">→</span>
-                  <ArrowRight className="h-4 w-4 hidden sm:block" />
-                </>
-              )}
+              {isUploadingImages ? 'Upload…' : 'Suivant'} <ArrowRight className="h-4 w-4" />
             </button>
           ) : (
             <button
               type="button"
               onClick={handleSubmit}
-              className={`px-4 sm:px-6 py-2.5 ${categoryInfo.bgColor} ${categoryInfo.color} border-2 border-current rounded-lg hover:opacity-90 transition-opacity font-medium flex items-center gap-2`}
+              className="inline-flex items-center gap-2 rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
             >
-              <Check className="h-4 w-4" />
-              <span className="hidden sm:inline">{productToEdit ? 'Enregistrer les modifications' : 'Enregistrer le produit'}</span>
-              <span className="sm:hidden">Enregistrer</span>
+              <Check className="h-4 w-4" /> Enregistrer
             </button>
           )}
         </div>
@@ -568,7 +494,7 @@ function Section1BasicInfo({ formData, setFormData, errors, categories }: any) {
   return (
     <div className="space-y-4">
       <h3 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
-        <span className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-600 font-bold text-sm">1</span>
+        <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 text-gray-900 font-bold text-sm">1</span>
         Informations de base
       </h3>
 
@@ -581,7 +507,7 @@ function Section1BasicInfo({ formData, setFormData, errors, categories }: any) {
           value={formData.nom}
           onChange={(e) => handleChange('nom', e.target.value)}
           placeholder="Ex: T-shirt en coton bio"
-          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+          className={`w-full px-4 py-2 border rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black ${
             errors.nom ? 'border-red-500' : 'border-gray-300'
           }`}
         />
@@ -597,7 +523,7 @@ function Section1BasicInfo({ formData, setFormData, errors, categories }: any) {
           onChange={(e) => handleChange('description', e.target.value)}
           placeholder="Décrivez votre produit..."
           rows={4}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black resize-none"
         />
       </div>
 
@@ -609,7 +535,7 @@ function Section1BasicInfo({ formData, setFormData, errors, categories }: any) {
           <select
             value={formData.categorie_id}
             onChange={(e) => handleChange('categorie_id', parseInt(e.target.value))}
-            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+            className={`w-full px-4 py-2 border rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black ${
               errors.categorie_id ? 'border-red-500' : 'border-gray-300'
             }`}
           >
@@ -630,7 +556,7 @@ function Section1BasicInfo({ formData, setFormData, errors, categories }: any) {
           <select
             value={formData.statut}
             onChange={(e) => handleChange('statut', e.target.value as any)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
           >
             <option value="actif">Actif</option>
             <option value="inactif">Inactif</option>
@@ -694,7 +620,7 @@ function Section2Images({ formData, setFormData, errors }: any) {
   return (
     <div className="space-y-4">
       <h3 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
-        <span className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-600 font-bold text-sm">2</span>
+        <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 text-gray-900 font-bold text-sm">2</span>
         Images du produit
       </h3>
 
@@ -721,7 +647,7 @@ function Section2Images({ formData, setFormData, errors }: any) {
                 className="object-cover"
               />
               {index === 0 && (
-                <div className="absolute top-2 left-2 px-2 py-1 bg-purple-600 text-white text-xs rounded-md font-medium">
+                <div className="absolute top-2 left-2 px-2 py-1 bg-black text-white text-xs rounded-md font-medium">
                   Principale
                 </div>
               )}
@@ -841,13 +767,13 @@ function Section3Variants({ formData, setFormData, errors, uploadedImageUrls }: 
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
-          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-600 font-bold text-sm">3</span>
+          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 text-gray-900 font-bold text-sm">3</span>
           Variants du produit
         </h3>
         <button
           type="button"
           onClick={addVariant}
-          className="px-3 sm:px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 text-sm font-medium"
+          className="px-3 sm:px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2 text-sm font-medium"
         >
           <Plus className="h-4 w-4" />
           <span className="hidden sm:inline">Ajouter un variant</span>
@@ -868,7 +794,7 @@ function Section3Variants({ formData, setFormData, errors, uploadedImageUrls }: 
           <button
             type="button"
             onClick={addVariant}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors inline-flex items-center gap-2"
+            className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors inline-flex items-center gap-2"
           >
             <Plus className="h-4 w-4" />
             Ajouter votre premier variant
@@ -927,8 +853,8 @@ function Section3Variants({ formData, setFormData, errors, uploadedImageUrls }: 
                                 className="object-cover"
                               />
                               {isSelectedByCurrentVariant && (
-                                <div className="absolute inset-0 bg-purple-600/20 flex items-center justify-center">
-                                  <div className="bg-purple-600 rounded-full p-1">
+                                <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                                  <div className="bg-black rounded-full p-1">
                                     <Check className="h-6 w-6 text-white stroke-[3]" />
                                   </div>
                                 </div>
@@ -970,7 +896,7 @@ function Section3Variants({ formData, setFormData, errors, uploadedImageUrls }: 
                   <select
                     value={variant.couleur}
                     onChange={(e) => updateVariant(index, 'couleur', e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 ${
+                    className={`w-full px-3 py-2 border rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black ${
                       errors[`variant_${index}_couleur`] ? 'border-red-500' : 'border-gray-300'
                     }`}
                   >
@@ -999,7 +925,7 @@ function Section3Variants({ formData, setFormData, errors, uploadedImageUrls }: 
                           onClick={() => toggleTaille(index, taille)}
                           className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                             isSelected
-                              ? 'bg-purple-600 text-white border-2 border-purple-600'
+                              ? 'bg-black text-white border-2 border-black'
                               : 'bg-white text-gray-700 border-2 border-gray-300 hover:border-purple-400'
                           }`}
                         >
@@ -1031,7 +957,7 @@ function Section3Variants({ formData, setFormData, errors, uploadedImageUrls }: 
                             onChange={(e) => updateTailleStock(index, tailleObj.taille, parseInt(e.target.value) || 0)}
                             min="0"
                             placeholder="0"
-                            className={`px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 ${
+                            className={`px-3 py-2 border rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black ${
                               errors[`variant_${index}_taille_${tIndex}_stock`] ? 'border-red-500' : 'border-gray-300'
                             }`}
                           />
@@ -1057,7 +983,7 @@ function Section3Variants({ formData, setFormData, errors, uploadedImageUrls }: 
                     value={variant.prix}
                     onChange={(e) => updateVariant(index, 'prix', parseInt(e.target.value) || 0)}
                     min="0"
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 ${
+                    className={`w-full px-3 py-2 border rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black ${
                       errors[`variant_${index}_prix`] ? 'border-red-500' : 'border-gray-300'
                     }`}
                   />
@@ -1077,7 +1003,7 @@ function Section3Variants({ formData, setFormData, errors, uploadedImageUrls }: 
                     onChange={(e) => updateVariant(index, 'prix_promo', e.target.value ? parseInt(e.target.value) : undefined)}
                     min="0"
                     placeholder="Laisser vide si pas de promotion"
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 ${
+                    className={`w-full px-3 py-2 border rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black ${
                       errors[`variant_${index}_prix_promo`] ? 'border-red-500' : 'border-gray-300'
                     }`}
                   />
@@ -1093,7 +1019,7 @@ function Section3Variants({ formData, setFormData, errors, uploadedImageUrls }: 
           <button
             type="button"
             onClick={addVariant}
-            className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-purple-400 hover:text-purple-600 hover:bg-purple-50 transition-all flex items-center justify-center gap-2 font-medium"
+            className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-gray-500 hover:text-black hover:bg-gray-50 transition-all flex items-center justify-center gap-2 font-medium"
           >
             <Plus className="h-5 w-5" />
             Ajouter un autre variant
@@ -1137,7 +1063,7 @@ function Section4Customizations({ formData, setFormData, errors }: any) {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h3 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
-            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-600 font-bold text-sm">4</span>
+            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 text-gray-900 font-bold text-sm">4</span>
             Personnalisations (optionnel)
           </h3>
           <p className="text-sm text-gray-600 mt-1">
@@ -1147,7 +1073,7 @@ function Section4Customizations({ formData, setFormData, errors }: any) {
         <button
           type="button"
           onClick={addCustomization}
-          className="px-3 sm:px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 text-sm font-medium self-start sm:self-auto"
+          className="px-3 sm:px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2 text-sm font-medium self-start sm:self-auto"
         >
           <Plus className="h-4 w-4" />
           Ajouter
@@ -1160,7 +1086,7 @@ function Section4Customizations({ formData, setFormData, errors }: any) {
           <button
             type="button"
             onClick={addCustomization}
-            className="px-3 sm:px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors inline-flex items-center gap-2 text-sm"
+            className="px-3 sm:px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors inline-flex items-center gap-2 text-sm"
           >
             <Plus className="h-4 w-4" />
             <span className="hidden sm:inline">Ajouter une personnalisation</span>
@@ -1183,7 +1109,7 @@ function Section4Customizations({ formData, setFormData, errors }: any) {
                         value={custom.libelle}
                         onChange={(e) => updateCustomization(index, 'libelle', e.target.value)}
                         placeholder="Ex: Broderie, Gravure..."
-                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 ${
+                        className={`w-full px-3 py-2 border rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black ${
                           errors[`custom_${index}_libelle`] ? 'border-red-500' : 'border-gray-300'
                         }`}
                       />
@@ -1196,7 +1122,7 @@ function Section4Customizations({ formData, setFormData, errors }: any) {
                       <select
                         value={custom.type}
                         onChange={(e) => updateCustomization(index, 'type', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
                       >
                         <option value="text">Texte</option>
                         <option value="number">Nombre</option>
@@ -1215,7 +1141,7 @@ function Section4Customizations({ formData, setFormData, errors }: any) {
                         onChange={(e) => updateCustomization(index, 'prix_supplementaire', e.target.value ? parseInt(e.target.value) : undefined)}
                         min="0"
                         placeholder="0"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
                       />
                     </div>
 
@@ -1225,7 +1151,7 @@ function Section4Customizations({ formData, setFormData, errors }: any) {
                           type="checkbox"
                           checked={custom.obligatoire}
                           onChange={(e) => updateCustomization(index, 'obligatoire', e.target.checked)}
-                          className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                          className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
                         />
                         <span className="text-sm font-medium text-gray-700">Obligatoire</span>
                       </label>
