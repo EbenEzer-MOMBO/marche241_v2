@@ -10,7 +10,7 @@ CREATE TYPE statut_categorie AS ENUM ('active', 'inactive');
 CREATE TYPE statut_produit AS ENUM ('actif', 'inactif', 'brouillon', 'archive');
 CREATE TYPE statut_commande AS ENUM ('en_attente', 'confirmee', 'en_preparation', 'expedie', 'livree', 'annulee', 'remboursee');
 CREATE TYPE statut_paiement AS ENUM ('en_attente', 'paye', 'echec', 'rembourse');
-CREATE TYPE methode_paiement AS ENUM ('mobile_money', 'airtel_money', 'moov_money', 'especes', 'virement');
+CREATE TYPE methode_paiement AS ENUM ('mobile_money', 'airtel_money', 'moov_money', 'carte_bancaire', 'especes', 'virement');
 CREATE TYPE statut_avis AS ENUM ('en_attente', 'approuve', 'rejete');
 
 -- Table des vendeurs

@@ -64,7 +64,10 @@ export async function getCommunesParBoutique(boutiqueId: number): Promise<Commun
       throw new Error(response.message || 'Erreur lors de la récupération des communes');
     }
 
-    return response.communes || [];
+    return (response.communes || []).map((commune) => ({
+      ...commune,
+      tarif_livraison: Number(commune.tarif_livraison) || 0,
+    }));
   } catch (error: any) {
     console.error('Erreur lors de la récupération des communes:', error);
     throw new Error(error.message || 'Erreur lors de la récupération des communes');

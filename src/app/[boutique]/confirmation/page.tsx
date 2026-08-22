@@ -1,10 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useBoutique } from '@/hooks/useBoutique';
+import { usePanier } from '@/hooks/usePanier';
 import SafeImage from '@/components/SafeImage';
+import { verifierPaiementEnBoucle } from '@/lib/services/paiements';
 
 const getBoutiqueLogo = (logoUrl?: string | null): string => {
   if (logoUrl && logoUrl.trim() !== '') {
@@ -18,15 +20,24 @@ const getBoutiqueLogo = (logoUrl?: string | null): string => {
   return '/default-shop.png';
 };
 
+type VisaVerificationState = 'idle' | 'verifying' | 'success' | 'failed';
+
 export default function ConfirmationPage() {
   const searchParams = useSearchParams();
   const params = useParams();
   const boutiqueSlug = params.boutique as string;
   const numeroCommande = searchParams.get('commande');
   const typePaiement = searchParams.get('type');
+  const billId = searchParams.get('bill_id');
   const { boutique, config } = useBoutique(boutiqueSlug);
+  const { viderLePanier } = usePanier(boutique?.id);
+  const viderLePanierRef = useRef(viderLePanier);
+  viderLePanierRef.current = viderLePanier;
   const [copied, setCopied] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [visaState, setVisaState] = useState<VisaVerificationState>(billId ? 'verifying' : 'idle');
+  const [visaMessage, setVisaMessage] = useState('Vérification du paiement par carte…');
+  const cartClearedRef = useRef(false);
 
   const isPartiel = typePaiement === 'partiel';
   const boutiqueName = config?.name || boutique?.nom || 'la boutique';
@@ -37,13 +48,58 @@ export default function ConfirmationPage() {
       )}`
     : `https://wa.me/?text=${encodeURIComponent(`Commande ${numeroCommande || ''}`)}`;
 
+  useEffect(() => {
+    if (!billId) {
+      return;
+    }
+
+    const cancelSignal = { cancelled: false };
+
+    verifierPaiementEnBoucle(billId, 90000, 5000, cancelSignal)
+      .then(async (result) => {
+        const status = (result.status || '').toLowerCase();
+        if (status === 'paye' || status === 'paid' || status === 'processed') {
+          setVisaState('success');
+          if (!cartClearedRef.current) {
+            cartClearedRef.current = true;
+            await viderLePanierRef.current();
+          }
+          return;
+        }
+
+        if (status === 'echec' || status === 'failed' || status === 'rembourse' || status === 'refunded') {
+          setVisaState('failed');
+          setVisaMessage(result.message || 'Le paiement par carte a échoué. Vous pouvez réessayer depuis le checkout.');
+          return;
+        }
+
+        setVisaState('failed');
+        setVisaMessage(
+          result.message ||
+            'Le paiement n’est pas encore confirmé. S’il a bien été débité, la commande sera validée automatiquement.'
+        );
+      })
+      .catch((verificationError) => {
+        if (cancelSignal.cancelled) {
+          return;
+        }
+        console.error('Erreur vérification Visa:', verificationError);
+        setVisaState('failed');
+        setVisaMessage('Impossible de vérifier le paiement pour le moment. Réessayez ou contactez le vendeur.');
+      });
+
+    return () => {
+      cancelSignal.cancelled = true;
+    };
+  }, [billId]);
+
   const timeline = useMemo(
     () => [
       {
         id: 'confirmed',
         label: 'Commande confirmée',
         detail: 'à l’instant',
-        done: true,
+        done: visaState !== 'verifying' && visaState !== 'failed',
       },
       {
         id: 'prep',
@@ -58,7 +114,7 @@ export default function ConfirmationPage() {
         done: false,
       },
     ],
-    []
+    [visaState]
   );
 
   const handleCopy = async () => {
@@ -71,6 +127,8 @@ export default function ConfirmationPage() {
       // ignore
     }
   };
+
+  const showSuccess = visaState === 'idle' || visaState === 'success';
 
   return (
     <div className="min-h-screen bg-white text-[#17181a]">
@@ -91,11 +149,78 @@ export default function ConfirmationPage() {
             </div>
             <span className="text-sm font-semibold">{boutiqueName}</span>
           </Link>
-          <span className="text-[13px] text-[#5f6369]">Commande confirmée</span>
+          <span className="text-[13px] text-[#5f6369]">
+            {visaState === 'verifying'
+              ? 'Paiement en cours'
+              : visaState === 'failed'
+                ? 'Paiement non confirmé'
+                : 'Commande confirmée'}
+          </span>
         </div>
       </header>
 
       <main className="mx-auto flex max-w-[640px] flex-col gap-5 px-4 py-8 sm:px-6 sm:py-10">
+        {visaState === 'verifying' && (
+          <section className="flex flex-col items-start gap-3" aria-live="polite">
+            <div className="flex h-11 w-11 items-center justify-center rounded-full border border-[#e0ded9] bg-[#fafaf8]">
+              <span className="h-5 w-5 animate-spin rounded-full border-2 border-[#17181a] border-t-transparent" />
+            </div>
+            <div>
+              <h1 className="text-[24px] font-semibold leading-tight sm:text-[26px]">
+                Vérification du paiement
+              </h1>
+              <p className="mt-1.5 text-[14.5px] leading-[1.55] text-[#5f6369]">
+                {visaMessage} Merci de patienter quelques instants.
+              </p>
+            </div>
+            {numeroCommande && (
+              <div className="w-full rounded-[10px] border border-[#e6e4df] bg-[#fafaf8] px-4 py-3">
+                <div className="text-[11px] font-medium uppercase tracking-wider text-[#9a9892]">
+                  N° de commande
+                </div>
+                <div className="mt-0.5 font-mono text-[15px] font-medium">{numeroCommande}</div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {visaState === 'failed' && (
+          <section className="flex flex-col items-start gap-3" aria-live="polite">
+            <div className="flex h-11 w-11 items-center justify-center rounded-full border border-[#f5c2c7] bg-[#fdecee]">
+              <span className="text-lg font-semibold text-[#dc2626]" aria-hidden>
+                !
+              </span>
+            </div>
+            <div>
+              <h1 className="text-[24px] font-semibold leading-tight sm:text-[26px]">
+                Paiement non confirmé
+              </h1>
+              <p className="mt-1.5 text-[14.5px] leading-[1.55] text-[#5f6369]">
+                {visaMessage}
+              </p>
+            </div>
+            <div className="flex w-full flex-col gap-3 sm:flex-row">
+              <Link
+                href={`/${boutiqueSlug}/commande`}
+                className="inline-flex h-[50px] flex-1 items-center justify-center rounded-[10px] px-4 text-[15px] font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                style={{
+                  backgroundColor: 'var(--color-shop-primary, var(--primary-color, #2f5fd8))',
+                }}
+              >
+                Réessayer le paiement
+              </Link>
+              <Link
+                href={`/${boutiqueSlug}`}
+                className="inline-flex h-[50px] items-center justify-center rounded-[10px] border-[1.5px] border-[#17181a] bg-white px-4 text-[15px] font-semibold text-[#17181a] sm:w-[230px]"
+              >
+                Retour à la boutique
+              </Link>
+            </div>
+          </section>
+        )}
+
+        {showSuccess && (
+          <>
         {/* Succès */}
         <section className="flex flex-col items-start gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-full border border-[#bfe6cd] bg-[#eaf7ee]">
@@ -202,21 +327,7 @@ export default function ConfirmationPage() {
         </section>
 
         {/* CTAs */}
-        <section className="flex flex-col gap-3 sm:flex-row">
-          <a
-            href={whatsappHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-[50px] flex-1 items-center justify-center rounded-[10px] px-4 text-[15px] font-semibold hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-            style={{
-              backgroundColor: 'var(--color-shop-primary, var(--primary-color, #2f5fd8))',
-              color: 'var(--shop-cta-fg, #fff)',
-            }}
-            aria-label="Suivre ma commande sur WhatsApp"
-          >
-            <span className="sm:hidden">Suivre sur WhatsApp</span>
-            <span className="hidden sm:inline">Suivre ma commande sur WhatsApp</span>
-          </a>
+        <section className="text-center">
           <Link
             href={`/${boutiqueSlug}`}
             className="inline-flex h-[50px] items-center justify-center rounded-[10px] border-[1.5px] border-[#17181a] bg-white px-4 text-[15px] font-semibold text-[#17181a] hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#17181a]/30 sm:w-[230px]"
@@ -250,6 +361,8 @@ export default function ConfirmationPage() {
             réponse sous 1 h.
           </p>
         </section>
+          </>
+        )}
       </main>
     </div>
   );

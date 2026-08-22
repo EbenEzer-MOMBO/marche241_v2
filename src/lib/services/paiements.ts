@@ -31,6 +31,23 @@ interface VerificationPaiementResponse {
   amount?: number;
 }
 
+interface PaiementVisaData {
+  transaction_id: number;
+  return_url: string;
+  email?: string;
+  msisdn?: string;
+  lastname?: string;
+  firstname?: string;
+}
+
+interface PaiementVisaResponse {
+  success: boolean;
+  redirect?: boolean;
+  url?: string;
+  bill_id?: string;
+  message?: string;
+}
+
 /**
  * Initier un paiement mobile (USSD push côté API ; confirmation via poll / réconciliation cron)
  */
@@ -42,6 +59,17 @@ export async function initierPaiementMobile(
   } catch (error) {
     console.error('Erreur lors de l\'initiation du paiement:', error);
     throw new Error('Impossible d\'initier le paiement. Veuillez réessayer.');
+  }
+}
+
+export async function initierPaiementVisa(
+  paiementData: PaiementVisaData
+): Promise<PaiementVisaResponse> {
+  try {
+    return await api.post<PaiementVisaResponse>('/paiements/visa', paiementData);
+  } catch (error) {
+    console.error('Erreur lors de l\'initiation du paiement Visa:', error);
+    throw new Error('Impossible d\'initier le paiement par carte. Veuillez réessayer.');
   }
 }
 
@@ -170,4 +198,4 @@ export async function verifierPaiementEnBoucle(
   });
 }
 
-export type { PaiementMobileData, PaiementMobileResponse, VerificationPaiementResponse };
+export type { PaiementMobileData, PaiementMobileResponse, PaiementVisaData, PaiementVisaResponse, VerificationPaiementResponse };

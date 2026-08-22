@@ -21,7 +21,7 @@ export interface PanierItemPricingShape {
 }
 
 export const getPrixVariantOuProduit = (item: PanierItemPricingShape): number =>
-  item.variants_selectionnes?.variant?.prix ?? item.produit.prix;
+  Number(item.variants_selectionnes?.variant?.prix ?? item.produit.prix) || 0;
 
 export const getPrixUnitairePanier = (item: PanierItemPricingShape): number =>
   getPrixVariantOuProduit(item) +

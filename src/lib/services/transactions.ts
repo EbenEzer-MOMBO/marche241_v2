@@ -8,7 +8,7 @@ interface CreerTransactionData {
   reference_transaction: string;
   commande_id: number;
   montant: number;
-  methode_paiement: 'mobile_money' | 'airtel_money' | 'moov_money' | 'especes' | 'virement';
+  methode_paiement: 'mobile_money' | 'airtel_money' | 'moov_money' | 'carte_bancaire' | 'especes' | 'virement';
   type_paiement: 'paiement_complet' | 'acompte' | 'frais_livraison' | 'solde_apres_livraison' | 'complement';
   numero_telephone?: string;
   reference_operateur?: string;

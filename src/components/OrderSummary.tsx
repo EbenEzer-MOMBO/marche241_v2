@@ -12,7 +12,7 @@ import { usePanier } from '@/hooks/usePanier';
 import { useToast } from '@/hooks/useToast';
 import { creerCommande, CreerCommandeData } from '@/lib/services/commandes';
 import { getCommunesActives } from '@/lib/services/communes';
-import { initierPaiementMobile, verifierPaiementEnBoucle, type PaiementMobileData } from '@/lib/services/paiements';
+import { initierPaiementMobile, initierPaiementVisa, verifierPaiementEnBoucle, type PaiementMobileData } from '@/lib/services/paiements';
 import { creerTransaction, type CreerTransactionData } from '@/lib/services/transactions';
 import { checkWhatsAppNumber } from '@/lib/services/whatsapp';
 import PhoneNumberInput from '@/components/ui/PhoneNumberInput';
@@ -33,7 +33,19 @@ interface OrderSummaryProps {
   boutiqueData: any; // Données complètes de la boutique
 }
 
-type PaymentMethod = 'moov' | 'airtel' | null;
+type PaymentMethod = 'moov' | 'airtel' | 'visa' | null;
+
+const PAYMENT_METHOD_OPTIONS: Array<{
+  id: Exclude<PaymentMethod, null>;
+  label: string;
+  subtitle?: string;
+  src: string;
+  alt: string;
+}> = [
+  { id: 'moov', label: 'Moov Money', src: '/moov_money.png', alt: 'Moov Money' },
+  { id: 'airtel', label: 'Airtel Money', src: '/airtel_money.png', alt: 'Airtel Money' },
+  { id: 'visa', label: 'Carte bancaire', subtitle: 'Visa, Mastercard', src: '/visa.png', alt: 'Visa Mastercard' },
+];
 
 interface DeliveryAddress {
   fullName: string;
@@ -253,7 +265,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
     return () => clearTimeout(timer);
   }, [deliveryAddress.phone, isPhoneValid]);
 
-  const subtotal = totalPrix;
+  const subtotal = Number(totalPrix) || 0;
 
   // Calcul des frais de livraison basé sur la commune sélectionnée
   const getDeliveryFee = () => {
@@ -261,7 +273,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
 
     // Trouver la commune sélectionnée dans la liste
     const selectedCommune = communes.find(commune => commune.nom_commune === deliveryAddress.city);
-    return selectedCommune ? selectedCommune.tarif_livraison : 0;
+    return selectedCommune ? Number(selectedCommune.tarif_livraison) || 0 : 0;
   };
 
   const deliveryFee = getDeliveryFee();
@@ -323,10 +335,11 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
     // Vérifier qu'un mode de paiement est sélectionné
     const isPaymentSelected = selectedPayment !== null;
 
-    // Vérifier que le numéro de paiement est valide
-    const isPaymentPhoneValid = paymentPhone.length === 9 &&
+    const isPaymentPhoneValid = selectedPayment === 'visa' || (
+      paymentPhone.length === 9 &&
       paymentPhoneError === '' &&
-      selectedPayment !== null;
+      selectedPayment !== null
+    );
 
     // Vérifier qu'une commune est sélectionnée (même si les frais sont à 0)
     const isCommuneSelected = deliveryAddress.city.trim() !== '';
@@ -356,7 +369,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
     if (!selectedPayment) {
       return 'Sélectionnez un mode de paiement';
     }
-    if (!paymentPhone || paymentPhoneError) {
+    if (selectedPayment !== 'visa' && (!paymentPhone || paymentPhoneError)) {
       return 'Saisissez un numéro de paiement valide';
     }
     if (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && !turnstileToken) {
@@ -467,6 +480,64 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
       console.log('Données de la commande:', commandeData);
 
       console.log('Réponse complète de la commande:', commande);
+
+      const typePaiementTransaction = payOnDelivery ? 'frais_livraison' : 'paiement_complet';
+      const confirmationType = payOnDelivery ? 'partiel' : 'complet';
+
+      if (selectedPayment === 'visa') {
+        setShowProgressBar(true);
+
+        const digits = deliveryAddress.phone.replace(/\D/g, '');
+        const visaMsisdn = digits.length >= 8 && digits.length <= 15
+          ? (digits.startsWith('241') ? `+${digits}` : digits)
+          : undefined;
+
+        const transactionVisaData: CreerTransactionData = {
+          reference_transaction: commande.commande.numero_commande,
+          commande_id: commande.commande.id,
+          montant: totalToPay,
+          methode_paiement: 'carte_bancaire',
+          type_paiement: typePaiementTransaction,
+          numero_telephone: visaMsisdn,
+          note: `${payOnDelivery ? 'Paiement des frais de livraison' : 'Paiement complet'} - Commande ${commande.commande.numero_commande}`
+        };
+
+        try {
+          const transactionVisa = await creerTransaction(transactionVisaData);
+          if (!transactionVisa.transaction?.id) {
+            setShowProgressBar(false);
+            error('Erreur lors de la création de la transaction.');
+            setIsSubmitting(false);
+            return;
+          }
+
+          const returnUrl = `${window.location.origin}/${boutiqueSlug}/confirmation?commande=${encodeURIComponent(commande.commande.numero_commande)}&type=${confirmationType}`;
+
+          const paiementVisa = await initierPaiementVisa({
+            transaction_id: transactionVisa.transaction.id,
+            return_url: returnUrl,
+            msisdn: visaMsisdn,
+            lastname: deliveryAddress.fullName,
+            firstname: deliveryAddress.fullName
+          });
+
+          if (paiementVisa.success && paiementVisa.url) {
+            window.location.href = paiementVisa.url;
+            return;
+          }
+
+          setShowProgressBar(false);
+          error(paiementVisa.message || 'Erreur lors de l\'initiation du paiement par carte');
+          setIsSubmitting(false);
+          return;
+        } catch (visaError) {
+          console.error('Erreur paiement Visa:', visaError);
+          setShowProgressBar(false);
+          error('Impossible d\'initier le paiement par carte. Veuillez réessayer.');
+          setIsSubmitting(false);
+          return;
+        }
+      }
 
       // Étape 2: Gestion du paiement selon le mode choisi
       if (payOnDelivery) {
@@ -1026,19 +1097,21 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
           {/* Carte 3 — Moyen de paiement */}
           <div className="rounded-[12px] border border-[#ececea] bg-white p-5">
             <h2 className="mb-4 text-base font-semibold text-[#17181a]">Moyen de paiement</h2>
-            <div className="grid grid-cols-2 gap-3">
-              {(['moov', 'airtel'] as const).map((method) => {
-                const isSelected = selectedPayment === method;
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {PAYMENT_METHOD_OPTIONS.map((method) => {
+                const isSelected = selectedPayment === method.id;
                 return (
                   <button
-                    key={method}
+                    key={method.id}
                     type="button"
-                    onClick={() => handlePaymentChange(method)}
+                    onClick={() => handlePaymentChange(method.id)}
                     className="relative flex flex-col items-center gap-2 rounded-[9px] border-[1.5px] p-4 text-center transition-colors"
                     style={{
                       borderColor: isSelected ? 'var(--color-shop-primary)' : '#e0ded9',
                       backgroundColor: isSelected ? 'var(--shop-primary-tint)' : '#fff',
                     }}
+                    aria-pressed={isSelected}
+                    aria-label={method.alt}
                   >
                     {isSelected && (
                       <CheckCircle
@@ -1049,22 +1122,30 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
                       />
                     )}
                     <Image
-                      src={method === 'moov' ? '/moov_money.png' : '/airtel_money.png'}
-                      alt={method === 'moov' ? 'Moov Money' : 'Airtel Money'}
+                      src={method.src}
+                      alt={method.alt}
                       width={40}
                       height={40}
-                      className="rounded"
+                      className="rounded object-contain"
                     />
                     <span className="text-sm font-semibold text-[#17181a]">
-                      {method === 'moov' ? 'Moov Money' : 'Airtel Money'}
+                      {method.label}
                     </span>
+                    {method.subtitle ? (
+                      <span className="text-[11px] text-[#8b8f95]">{method.subtitle}</span>
+                    ) : null}
                   </button>
                 );
               })}
             </div>
 
-            {/* Champ numéro de téléphone qui apparaît après sélection */}
-            {selectedPayment && (
+            {selectedPayment === 'visa' && (
+              <p className="mt-3 text-[12.5px] text-[#8b8f95]">
+                Vous serez redirigé vers une page sécurisée Orabank pour payer par Visa ou Mastercard.
+              </p>
+            )}
+
+            {selectedPayment && selectedPayment !== 'visa' && (
               <div className="mt-4">
                 <label className="mb-1.5 block text-[13px] font-medium text-[#3c4045]">
                   Numéro {selectedPayment === 'moov' ? 'Moov Money' : 'Airtel Money'} *

@@ -337,6 +337,8 @@ export default function PaymentsPage() {
         return 'Espèces';
       case 'virement':
         return 'Virement';
+      case 'carte_bancaire':
+        return 'Carte bancaire';
       default:
         return methode;
     }

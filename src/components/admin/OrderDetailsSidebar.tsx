@@ -255,6 +255,14 @@ const OrderDetailsSidebar = ({ commandeId, isOpen, onClose, onStatusUpdate }: Or
                           width={40}
                           height={40}
                         />
+                      ) : commandeInfo.methode_paiement === 'carte_bancaire' ? (
+                        <Image
+                          className="rounded-md object-contain"
+                          src="/visa.png"
+                          alt="Carte bancaire"
+                          width={40}
+                          height={40}
+                        />
                       ) : (
                         <span className="text-sm font-medium text-gray-900">
                           {commandeInfo.methode_paiement}
@@ -501,7 +509,13 @@ const OrderDetailsSidebar = ({ commandeId, isOpen, onClose, onStatusUpdate }: Or
                           <div className="flex items-center justify-between">
                             <span className="text-gray-600">Méthode</span>
                             <span className="font-medium text-gray-900">
-                              {transaction.methode_paiement}
+                              {transaction.methode_paiement === 'carte_bancaire'
+                                ? 'Carte bancaire'
+                                : transaction.methode_paiement === 'airtel_money'
+                                  ? 'Airtel Money'
+                                  : transaction.methode_paiement === 'moov_money'
+                                    ? 'Moov Money'
+                                    : transaction.methode_paiement}
                             </span>
                           </div>
                           {transaction.numero_telephone && (
