@@ -93,6 +93,8 @@ const OrderDetailsSidebar = ({ commandeId, isOpen, onClose, onStatusUpdate }: Or
         return 'En attente';
       case 'paye':
         return 'Payé';
+      case 'partiellement_paye':
+        return 'Partiellement payé';
       case 'echoue':
         return 'Échoué';
       case 'rembourse':

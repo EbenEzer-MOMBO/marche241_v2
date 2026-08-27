@@ -9,7 +9,7 @@ export interface Commune {
   id: number;
   boutique_id: number;
   nom_commune: string;
-  code_postal: string | null;
+  delimitation: string | null;
   tarif_livraison: number;
   delai_livraison_min: number;
   delai_livraison_max: number;
@@ -22,7 +22,7 @@ export interface Commune {
 export interface CreerCommuneData {
   boutique_id: number;
   nom_commune: string;
-  code_postal?: string;
+  delimitation?: string;
   tarif_livraison: number;
   delai_livraison_min: number;
   delai_livraison_max: number;
@@ -31,7 +31,7 @@ export interface CreerCommuneData {
 // Interface pour modifier une commune
 export interface ModifierCommuneData {
   nom_commune?: string;
-  code_postal?: string | null;
+  delimitation?: string | null;
   tarif_livraison?: number;
   delai_livraison_min?: number;
   delai_livraison_max?: number;

@@ -12,6 +12,7 @@ import { usePanier } from '@/hooks/usePanier';
 import { useToast } from '@/hooks/useToast';
 import { creerCommande, CreerCommandeData } from '@/lib/services/commandes';
 import { getCommunesActives } from '@/lib/services/communes';
+import { formatDureeLivraison } from '@/lib/utils/delai-livraison';
 import { initierPaiementMobile, initierPaiementVisa, verifierPaiementEnBoucle, type PaiementMobileData } from '@/lib/services/paiements';
 import { creerTransaction, type CreerTransactionData } from '@/lib/services/transactions';
 import { checkWhatsAppNumber } from '@/lib/services/whatsapp';
@@ -60,7 +61,7 @@ interface Commune {
   id: number;
   boutique_id: number;
   nom_commune: string;
-  code_postal?: string | null;
+  delimitation?: string | null;
   tarif_livraison: number;
   delai_livraison_min: number;
   delai_livraison_max: number;
@@ -113,7 +114,9 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
   // - complet_uniquement : paiement complet obligatoire en ligne.
   // - livraison_uniquement : paiement des frais de livraison uniquement en ligne.
   // - les_deux : l'utilisateur peut choisir entre les deux.
+  // - acompte_50 : acompte de 50% obligatoire en ligne, solde en espèces à la livraison.
   const paymentRestrictionMode = boutiqueData?.payment_restriction_mode || 'les_deux';
+  const isAcompte50 = paymentRestrictionMode === 'acompte_50';
   const [payOnDelivery, setPayOnDelivery] = useState(() => {
     if (paymentRestrictionMode === 'livraison_uniquement') return true;
     return false;
@@ -287,15 +290,28 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
         // Si livraison gratuite, on ne peut pas payer uniquement les frais de livraison (qui sont de 0) en ligne
         setPayOnDelivery(false);
       }
-    } else if (paymentRestrictionMode === 'complet_uniquement') {
+    } else if (paymentRestrictionMode === 'complet_uniquement' || isAcompte50) {
       setPayOnDelivery(false);
     } else if (deliveryFee === 0) {
       setPayOnDelivery(false);
     }
-  }, [paymentRestrictionMode, deliveryFee]);
+  }, [paymentRestrictionMode, isAcompte50, deliveryFee]);
+
+  // Calcul de l'acompte (mode acompte_50) : 50% du total (sous-total + livraison), + frais de
+  // service 10% sur cette moitié. Formule identique à verifierMontantTransaction côté serveur
+  // (paiement.controller.ts) — ne pas modifier l'une sans l'autre.
+  const ACOMPTE_POURCENTAGE = 0.50;
+  const getAcompteMontant = () => Math.round((subtotal + deliveryFee) * ACOMPTE_POURCENTAGE);
+  const getAcompteTransactionFee = () => Math.round(getAcompteMontant() * 0.10);
+  const getAcompteTotalToPay = () => getAcompteMontant() + getAcompteTransactionFee();
+  const getAcompteRestant = () => Math.max(0, subtotal + deliveryFee - getAcompteMontant());
 
   // Calcul des frais de transaction (10%)
   const getTransactionFee = () => {
+    if (isAcompte50) {
+      return getAcompteTransactionFee();
+    }
+
     const transactionRate = 0.10; // 10%
 
     if (payOnDelivery) {
@@ -312,6 +328,9 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
 
   // Calcul du total selon le mode de paiement
   const getTotalToPay = () => {
+    if (isAcompte50) {
+      return getAcompteTotalToPay();
+    }
     const total = payOnDelivery
       ? deliveryFee + getTransactionFee()
       : subtotal + deliveryFee + getTransactionFee();
@@ -319,7 +338,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
   };
 
   const totalToPay = getTotalToPay();
-  const remainingAmount = payOnDelivery ? subtotal : 0;
+  const remainingAmount = isAcompte50 ? getAcompteRestant() : (payOnDelivery ? subtotal : 0);
 
   // Vérification si toutes les conditions sont remplies pour activer le bouton
   const isFormValid = () => {
@@ -376,6 +395,9 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
       return 'Validation de sécurité requise';
     }
 
+    if (isAcompte50) {
+      return `Payer l'acompte (${formatPrice(totalToPay)})`;
+    }
     if (payOnDelivery) {
       return `Payer les frais (${formatPrice(totalToPay)})`;
     }
@@ -395,8 +417,8 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
         } else if (paymentRestrictionMode === 'livraison_uniquement') {
           // Si mode livraison uniquement, forcer le paiement à la livraison
           setPayOnDelivery(true);
-        } else if (paymentRestrictionMode === 'complet_uniquement') {
-          // Si mode complet uniquement, désactiver le paiement à la livraison
+        } else if (paymentRestrictionMode === 'complet_uniquement' || isAcompte50) {
+          // Si mode complet uniquement ou acompte 50%, désactiver le paiement à la livraison
           setPayOnDelivery(false);
         }
       }
@@ -481,8 +503,10 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
 
       console.log('Réponse complète de la commande:', commande);
 
-      const typePaiementTransaction = payOnDelivery ? 'frais_livraison' : 'paiement_complet';
-      const confirmationType = payOnDelivery ? 'partiel' : 'complet';
+      const typePaiementTransaction = isAcompte50
+        ? 'acompte'
+        : (payOnDelivery ? 'frais_livraison' : 'paiement_complet');
+      const confirmationType = (payOnDelivery || isAcompte50) ? 'partiel' : 'complet';
 
       if (selectedPayment === 'visa') {
         setShowProgressBar(true);
@@ -499,7 +523,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
           methode_paiement: 'carte_bancaire',
           type_paiement: typePaiementTransaction,
           numero_telephone: visaMsisdn,
-          note: `${payOnDelivery ? 'Paiement des frais de livraison' : 'Paiement complet'} - Commande ${commande.commande.numero_commande}`
+          note: `${isAcompte50 ? 'Acompte 50%' : (payOnDelivery ? 'Paiement des frais de livraison' : 'Paiement complet')} - Commande ${commande.commande.numero_commande}`
         };
 
         try {
@@ -642,11 +666,12 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
 
       } else if (selectedPayment) {
         // ============================================
-        // MODE: Paiement complet immédiat
+        // MODE: Paiement complet immédiat (ou acompte 50%)
         // ============================================
 
         const nameParts = deliveryAddress.fullName;
         const paymentSystem = selectedPayment === 'moov' ? 'moovmoney' : 'airtelmoney';
+        const modeLabel = isAcompte50 ? 'Acompte 50%' : 'Paiement complet';
 
         const paiementData: PaiementMobileData = {
           email: 'ebenezermombo@gmail.com',
@@ -654,7 +679,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
           amount: totalToPay,
           reference: commande.commande.numero_commande,
           payment_system: paymentSystem,
-          description: `Paiement complet - Commande ${commande.commande.numero_commande}`,
+          description: `${modeLabel} - Commande ${commande.commande.numero_commande}`,
           lastname: nameParts,
           firstname: nameParts
         };
@@ -677,10 +702,10 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
               commande_id: commande.commande.id,
               montant: totalToPay,
               methode_paiement: selectedPayment === 'moov' ? 'moov_money' : 'airtel_money',
-              type_paiement: 'paiement_complet',
+              type_paiement: typePaiementTransaction,
               numero_telephone: paymentPhone,
               reference_operateur: paiement.bill_id || '',
-              note: 'Paiement complet de la commande - Commande ' + commande.commande.numero_commande
+              note: `${modeLabel} de la commande - Commande ${commande.commande.numero_commande}`
             };
 
             try {
@@ -708,7 +733,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
                     2000
                   );
 
-                  await handleSuccessfulPayment('complet', commande.commande.numero_commande);
+                  await handleSuccessfulPayment(confirmationType, commande.commande.numero_commande);
                 } else if (verificationResult.status === 'echec' || verificationResult.status === 'failed') {
                   error(verificationResult.message || 'Le paiement a échoué. Veuillez réessayer.');
                   setShowCountdown(false);
@@ -1064,7 +1089,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
                   <p className="mt-1.5 text-[12.5px] font-medium text-green-600">
                     {selectedCommune.tarif_livraison === 0 ? 'Livraison gratuite' : `Livraison ${formatPrice(selectedCommune.tarif_livraison)}`}
                     {' · '}
-                    {selectedCommune.delai_livraison_min}–{selectedCommune.delai_livraison_max} h
+                    {formatDureeLivraison(selectedCommune.delai_livraison_min, selectedCommune.delai_livraison_max)}
                   </p>
                 )}
               </div>
@@ -1253,9 +1278,18 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
               </div>
             )}
 
+            {isAcompte50 && remainingAmount > 0 && (
+              <div
+                className="mt-3 rounded-[9px] p-3 text-[12.5px]"
+                style={{ backgroundColor: 'var(--shop-primary-tint)', color: 'var(--shop-primary-dark)' }}
+              >
+                Vous payez 50% maintenant ({formatPrice(totalToPay)}). {formatPrice(remainingAmount)} restant à régler en espèces à la livraison.
+              </div>
+            )}
+
             <div className="mt-4 flex items-baseline justify-between border-t border-[#ececea] pt-4">
               <span className="text-sm font-semibold text-[#17181a]">
-                {payOnDelivery ? 'À payer maintenant' : 'Total à payer'}
+                {(payOnDelivery || isAcompte50) ? 'À payer maintenant' : 'Total à payer'}
               </span>
               <span className="font-mono text-xl font-bold" style={{ color: 'var(--color-shop-primary)' }}>
                 {formatPrice(totalToPay)}
@@ -1282,7 +1316,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  {payOnDelivery ? 'Création en cours...' : 'Traitement en cours...'}
+                  {(payOnDelivery || isAcompte50) ? 'Création en cours...' : 'Traitement en cours...'}
                 </span>
               ) : (
                 getButtonMessage()
@@ -1295,7 +1329,11 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
 
             <div className="mt-4 space-y-1.5 text-[12.5px] text-[#6b6f76]">
               {selectedCommune && (
-                <p>Livraison à {selectedCommune.nom_commune} en {selectedCommune.delai_livraison_min}–{selectedCommune.delai_livraison_max} h</p>
+                <p>
+                  {selectedCommune.delai_livraison_min === 0 && selectedCommune.delai_livraison_max === 0
+                    ? `Livraison immédiate à ${selectedCommune.nom_commune}`
+                    : `Livraison à ${selectedCommune.nom_commune} en ${formatDureeLivraison(selectedCommune.delai_livraison_min, selectedCommune.delai_livraison_max)}`}
+                </p>
               )}
               <p>Suivi de votre commande par WhatsApp</p>
               <p>Réponse du vendeur sous peu</p>
@@ -1308,7 +1346,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#ececea] bg-white p-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] lg:hidden">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
           <div>
-            <p className="text-[11px] text-[#8b8f95]">{payOnDelivery ? 'À payer maintenant' : 'Total'}</p>
+            <p className="text-[11px] text-[#8b8f95]">{(payOnDelivery || isAcompte50) ? 'À payer maintenant' : 'Total'}</p>
             <p className="font-mono text-base font-bold" style={{ color: 'var(--color-shop-primary)' }}>
               {formatPrice(totalToPay)}
             </p>

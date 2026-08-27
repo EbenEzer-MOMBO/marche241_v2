@@ -52,7 +52,7 @@ export default function SettingsPage() {
     banniere: '',
     couleur_primaire: '#000000',
     couleur_secondaire: '#ffffff',
-    payment_restriction_mode: 'les_deux' as 'complet_uniquement' | 'livraison_uniquement' | 'les_deux'
+    payment_restriction_mode: 'les_deux' as 'complet_uniquement' | 'livraison_uniquement' | 'les_deux' | 'acompte_50'
   });
 
   // États pour la sécurité

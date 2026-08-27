@@ -25,16 +25,18 @@ import {
   Package,
   Clock
 } from 'lucide-react';
-import ShippingZoneModal from '@/components/admin/ShippingZoneModal';
+import ShippingZoneModal, { ShippingZoneFormData } from '@/components/admin/ShippingZoneModal';
 import ConfirmationModal from '@/components/ui/ConfirmationModal';
+import { formatDureeLivraison } from '@/lib/utils/delai-livraison';
 
 // Interface locale pour l'affichage (adaptée depuis Commune)
 interface ZoneLivraison {
   id: number;
   nom: string;
-  description?: string;
+  delimitation?: string;
   prix: number;
-  delai_livraison?: string;
+  delai_livraison_min: number;
+  delai_livraison_max: number;
   actif: boolean;
 }
 
@@ -62,24 +64,15 @@ export default function ShippingPage() {
       const communesData = await getCommunesParBoutique(boutiqueId);
 
       // Adapter les données de l'API vers le format d'affichage
-      const zonesAffichage: ZoneLivraison[] = communesData.map(commune => {
-        // Formater le délai de livraison
-        let delai = '';
-        if (commune.delai_livraison_min === commune.delai_livraison_max) {
-          delai = `${commune.delai_livraison_min} jour${commune.delai_livraison_min > 1 ? 's' : ''}`;
-        } else {
-          delai = `${commune.delai_livraison_min}-${commune.delai_livraison_max} jours`;
-        }
-
-        return {
-          id: commune.id,
-          nom: commune.nom_commune,
-          description: commune.code_postal ? `Code postal: ${commune.code_postal}` : undefined,
-          prix: commune.tarif_livraison,
-          delai_livraison: delai,
-          actif: commune.est_active
-        };
-      });
+      const zonesAffichage: ZoneLivraison[] = communesData.map(commune => ({
+        id: commune.id,
+        nom: commune.nom_commune,
+        delimitation: commune.delimitation || undefined,
+        prix: commune.tarif_livraison,
+        delai_livraison_min: commune.delai_livraison_min,
+        delai_livraison_max: commune.delai_livraison_max,
+        actif: commune.est_active
+      }));
 
       setZones(zonesAffichage);
     } catch (error) {
@@ -128,45 +121,31 @@ export default function ShippingPage() {
 
   const filteredZones = zones.filter(zone =>
     zone.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    zone.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    zone.delimitation?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleSaveZone = async (data: {
-    nom: string;
-    description: string;
-    prix: number;
-    delai_livraison: string;
-  }) => {
+  const handleSaveZone = async (data: ShippingZoneFormData) => {
     if (!boutique) return;
 
     try {
-      // Parser le délai de livraison
-      const delaiMatch = data.delai_livraison.match(/(\d+)(?:-(\d+))?/);
-      let delai_min = 1;
-      let delai_max = 3;
-
-      if (delaiMatch) {
-        delai_min = parseInt(delaiMatch[1]);
-        delai_max = delaiMatch[2] ? parseInt(delaiMatch[2]) : delai_min;
-      }
-
       if (editingZone) {
         // Modification
         const communeModifiee = await modifierCommune(editingZone.id, {
           nom_commune: data.nom,
-          code_postal: data.description || null,
+          delimitation: data.delimitation || null,
           tarif_livraison: data.prix,
-          delai_livraison_min: delai_min,
-          delai_livraison_max: delai_max
+          delai_livraison_min: data.delai_livraison_min,
+          delai_livraison_max: data.delai_livraison_max
         });
 
         // Adapter la réponse API vers le format d'affichage
         const zoneAffichage: ZoneLivraison = {
           id: communeModifiee.id,
           nom: communeModifiee.nom_commune,
-          description: communeModifiee.code_postal ? `Code postal: ${communeModifiee.code_postal}` : undefined,
+          delimitation: communeModifiee.delimitation || undefined,
           prix: communeModifiee.tarif_livraison,
-          delai_livraison: data.delai_livraison,
+          delai_livraison_min: communeModifiee.delai_livraison_min,
+          delai_livraison_max: communeModifiee.delai_livraison_max,
           actif: communeModifiee.est_active
         };
 
@@ -179,19 +158,20 @@ export default function ShippingPage() {
         const nouvelleCommune = await creerCommune({
           boutique_id: boutique.id,
           nom_commune: data.nom,
-          code_postal: data.description || undefined,
+          delimitation: data.delimitation || undefined,
           tarif_livraison: data.prix,
-          delai_livraison_min: delai_min,
-          delai_livraison_max: delai_max
+          delai_livraison_min: data.delai_livraison_min,
+          delai_livraison_max: data.delai_livraison_max
         });
 
         // Adapter la réponse API vers le format d'affichage
         const zoneAffichage: ZoneLivraison = {
           id: nouvelleCommune.id,
           nom: nouvelleCommune.nom_commune,
-          description: nouvelleCommune.code_postal ? `Code postal: ${nouvelleCommune.code_postal}` : undefined,
+          delimitation: nouvelleCommune.delimitation || undefined,
           prix: nouvelleCommune.tarif_livraison,
-          delai_livraison: data.delai_livraison,
+          delai_livraison_min: nouvelleCommune.delai_livraison_min,
+          delai_livraison_max: nouvelleCommune.delai_livraison_max,
           actif: nouvelleCommune.est_active
         };
 
@@ -357,8 +337,8 @@ export default function ShippingPage() {
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1 min-w-0">
                       <h3 className="text-base font-semibold text-gray-900 truncate">{zone.nom}</h3>
-                      {zone.description && (
-                        <p className="text-sm text-gray-500 mt-1 line-clamp-2">{zone.description}</p>
+                      {zone.delimitation && (
+                        <p className="text-sm text-gray-500 mt-1 line-clamp-2">{zone.delimitation}</p>
                       )}
                     </div>
                     <button
@@ -379,12 +359,10 @@ export default function ShippingPage() {
                       <Package className="h-4 w-4 mr-2 text-emerald-600" />
                       <span className="text-lg font-bold">{zone.prix.toLocaleString()} FCFA</span>
                     </div>
-                    {zone.delai_livraison && (
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Clock className="h-4 w-4 mr-2 text-gray-400" />
-                        <span>{zone.delai_livraison}</span>
-                      </div>
-                    )}
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Clock className="h-4 w-4 mr-2 text-gray-400" />
+                      <span>{formatDureeLivraison(zone.delai_livraison_min, zone.delai_livraison_max)}</span>
+                    </div>
                   </div>
 
                   {/* Actions */}
@@ -419,8 +397,8 @@ export default function ShippingPage() {
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-semibold text-gray-900 truncate">{zone.nom}</h3>
-                    {zone.description && (
-                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">{zone.description}</p>
+                    {zone.delimitation && (
+                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">{zone.delimitation}</p>
                     )}
                   </div>
                   <button
@@ -440,12 +418,10 @@ export default function ShippingPage() {
                     <Package className="h-3 w-3 mr-2 text-emerald-600" />
                     <span className="text-base font-bold">{zone.prix.toLocaleString()} FCFA</span>
                   </div>
-                  {zone.delai_livraison && (
-                    <div className="flex items-center text-xs text-gray-600">
-                      <Clock className="h-3 w-3 mr-2 text-gray-400" />
-                      <span>{zone.delai_livraison}</span>
-                    </div>
-                  )}
+                  <div className="flex items-center text-xs text-gray-600">
+                    <Clock className="h-3 w-3 mr-2 text-gray-400" />
+                    <span>{formatDureeLivraison(zone.delai_livraison_min, zone.delai_livraison_max)}</span>
+                  </div>
                 </div>
 
                 <div className="flex items-center space-x-2 pt-2 border-t">

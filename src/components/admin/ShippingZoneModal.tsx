@@ -6,52 +6,61 @@ import { X, MapPin, DollarSign, Clock, Save } from 'lucide-react';
 interface ZoneLivraison {
   id: number;
   nom: string;
-  description?: string;
+  delimitation?: string;
   prix: number;
-  delai_livraison?: string;
+  delai_livraison_min: number;
+  delai_livraison_max: number;
   actif: boolean;
+}
+
+export interface ShippingZoneFormData {
+  nom: string;
+  delimitation: string;
+  prix: number;
+  delai_livraison_min: number;
+  delai_livraison_max: number;
 }
 
 interface ShippingZoneModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: {
-    nom: string;
-    description: string;
-    prix: number;
-    delai_livraison: string;
-  }) => void;
+  onSave: (data: ShippingZoneFormData) => void;
   zone?: ZoneLivraison | null;
 }
 
+const JOURS_OPTIONS = Array.from({ length: 31 }, (_, i) => i); // 0 à 30
+
+const FORM_INITIAL = {
+  nom: '',
+  delimitation: '',
+  prix: '',
+  delai_livraison_min: 1,
+  delai_livraison_max: 3,
+  livraisonImmediate: false
+};
+
 export default function ShippingZoneModal({ isOpen, onClose, onSave, zone }: ShippingZoneModalProps) {
-  const [formData, setFormData] = useState({
-    nom: '',
-    description: '',
-    prix: '',
-    delai_livraison: ''
-  });
+  const [formData, setFormData] = useState(FORM_INITIAL);
 
   const [errors, setErrors] = useState<{
     nom?: string;
     prix?: string;
+    delai?: string;
   }>({});
 
   useEffect(() => {
     if (zone) {
+      const livraisonImmediate = zone.delai_livraison_min === 0 && zone.delai_livraison_max === 0;
       setFormData({
         nom: zone.nom,
-        description: zone.description || '',
+        delimitation: zone.delimitation || '',
         prix: zone.prix.toString(),
-        delai_livraison: zone.delai_livraison || ''
+        delai_livraison_min: zone.delai_livraison_min,
+        delai_livraison_max: zone.delai_livraison_max,
+        livraisonImmediate
       });
     } else {
-      setFormData({
-        nom: '',
-        description: '',
-        prix: '',
-        delai_livraison: ''
-      });
+      setFormData(FORM_INITIAL);
     }
     setErrors({});
   }, [zone, isOpen]);
@@ -62,13 +71,27 @@ export default function ShippingZoneModal({ isOpen, onClose, onSave, zone }: Shi
       ...prev,
       [name]: value
     }));
-    // Nettoyer l'erreur du champ modifié
     if (errors[name as keyof typeof errors]) {
       setErrors(prev => ({
         ...prev,
         [name]: undefined
       }));
     }
+  };
+
+  const handleLivraisonImmediateChange = (checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      livraisonImmediate: checked,
+      delai_livraison_min: checked ? 0 : (prev.delai_livraison_min === 0 ? 1 : prev.delai_livraison_min),
+      delai_livraison_max: checked ? 0 : (prev.delai_livraison_max === 0 ? 3 : prev.delai_livraison_max)
+    }));
+    setErrors(prev => ({ ...prev, delai: undefined }));
+  };
+
+  const handleDelaiChange = (field: 'delai_livraison_min' | 'delai_livraison_max', value: number) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    setErrors(prev => ({ ...prev, delai: undefined }));
   };
 
   const validateForm = (): boolean => {
@@ -87,6 +110,10 @@ export default function ShippingZoneModal({ isOpen, onClose, onSave, zone }: Shi
       }
     }
 
+    if (!formData.livraisonImmediate && formData.delai_livraison_max < formData.delai_livraison_min) {
+      newErrors.delai = 'Le délai max doit être supérieur ou égal au délai min';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -100,19 +127,15 @@ export default function ShippingZoneModal({ isOpen, onClose, onSave, zone }: Shi
 
     onSave({
       nom: formData.nom.trim(),
-      description: formData.description.trim(),
+      delimitation: formData.delimitation.trim(),
       prix: parseFloat(formData.prix),
-      delai_livraison: formData.delai_livraison.trim()
+      delai_livraison_min: formData.delai_livraison_min,
+      delai_livraison_max: formData.delai_livraison_max
     });
   };
 
   const handleClose = () => {
-    setFormData({
-      nom: '',
-      description: '',
-      prix: '',
-      delai_livraison: ''
-    });
+    setFormData(FORM_INITIAL);
     setErrors({});
     onClose();
   };
@@ -204,42 +227,90 @@ export default function ShippingZoneModal({ isOpen, onClose, onSave, zone }: Shi
 
               {/* Délai de livraison */}
               <div>
-                <label htmlFor="delai_livraison" className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Délai de livraison
                 </label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+
+                <div className="flex items-center gap-2 mb-3">
                   <input
-                    type="text"
-                    id="delai_livraison"
-                    name="delai_livraison"
-                    value={formData.delai_livraison}
-                    onChange={handleInputChange}
-                    placeholder="Ex: 1-2 heures, 24 heures, 2-3 jours"
-                    className="block w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                    id="livraisonImmediate"
+                    type="checkbox"
+                    checked={formData.livraisonImmediate}
+                    onChange={(e) => handleLivraisonImmediateChange(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
                   />
+                  <label htmlFor="livraisonImmediate" className="text-sm text-gray-700">
+                    Livraison immédiate
+                  </label>
                 </div>
+
+                {!formData.livraisonImmediate && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor="delai_livraison_min" className="block text-xs text-gray-500 mb-1">
+                        Min (jours)
+                      </label>
+                      <div className="relative">
+                        <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <select
+                          id="delai_livraison_min"
+                          value={formData.delai_livraison_min}
+                          onChange={(e) => handleDelaiChange('delai_livraison_min', Number(e.target.value))}
+                          className="block w-full pl-9 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                        >
+                          {JOURS_OPTIONS.map((j) => (
+                            <option key={j} value={j}>{j}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label htmlFor="delai_livraison_max" className="block text-xs text-gray-500 mb-1">
+                        Max (jours)
+                      </label>
+                      <div className="relative">
+                        <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <select
+                          id="delai_livraison_max"
+                          value={formData.delai_livraison_max}
+                          onChange={(e) => handleDelaiChange('delai_livraison_max', Number(e.target.value))}
+                          className="block w-full pl-9 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-colors"
+                        >
+                          {JOURS_OPTIONS.map((j) => (
+                            <option key={j} value={j}>{j}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {errors.delai && (
+                  <p className="mt-1 text-sm text-red-600">{errors.delai}</p>
+                )}
                 <p className="mt-1 text-xs text-gray-500">
-                  Indiquez le temps estimé pour la livraison dans cette zone
+                  {formData.livraisonImmediate
+                    ? 'La commande est livrée immédiatement, sans délai.'
+                    : 'Indiquez le nombre de jours estimé pour la livraison dans cette zone.'}
                 </p>
               </div>
 
-              {/* Description */}
+              {/* Délimitation */}
               <div>
-                <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-                  Description
+                <label htmlFor="delimitation" className="block text-sm font-medium text-gray-700 mb-2">
+                  Délimitation de la zone
                 </label>
                 <textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
+                  id="delimitation"
+                  name="delimitation"
+                  value={formData.delimitation}
                   onChange={handleInputChange}
                   rows={3}
+                  maxLength={100}
                   placeholder="Décrivez la zone de livraison (quartiers inclus, limites géographiques...)"
                   className="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent resize-none transition-colors"
                 />
                 <p className="mt-1 text-xs text-gray-500">
-                  Ajoutez des détails pour aider vos clients à identifier leur zone
+                  Ajoutez des détails pour aider vos clients à identifier leur zone ({formData.delimitation.length}/100)
                 </p>
               </div>
             </div>
@@ -267,4 +338,3 @@ export default function ShippingZoneModal({ isOpen, onClose, onSave, zone }: Shi
     </div>
   );
 }
-

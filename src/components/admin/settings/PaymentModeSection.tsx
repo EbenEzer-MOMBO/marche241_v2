@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { CreditCard, ShoppingBag, Truck, Info } from 'lucide-react';
+import { CreditCard, ShoppingBag, Truck, Info, Wallet } from 'lucide-react';
 
-export type PaymentRestrictionMode = 'complet_uniquement' | 'livraison_uniquement' | 'les_deux';
+export type PaymentRestrictionMode = 'complet_uniquement' | 'livraison_uniquement' | 'les_deux' | 'acompte_50';
 
 interface PaymentModeSectionProps {
   paymentRestrictionMode: PaymentRestrictionMode;
@@ -147,6 +147,45 @@ export const PaymentModeSection: React.FC<PaymentModeSectionProps> = ({
             </div>
           </div>
         </div>
+        {/* Acompte 50% - Vente sur commande */}
+        <div
+          onClick={() => onChange('acompte_50')}
+          className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all ${
+            paymentRestrictionMode === 'acompte_50'
+              ? 'border-purple-500 bg-purple-50'
+              : 'border-gray-200 hover:border-gray-300 bg-white'
+          }`}
+        >
+          <div className="flex items-start">
+            <input
+              type="radio"
+              checked={paymentRestrictionMode === 'acompte_50'}
+              onChange={() => onChange('acompte_50')}
+              className="mt-1 h-4 w-4 text-purple-600 focus:ring-purple-500"
+            />
+            <div className="ml-3 flex-1">
+              <div className="flex items-center">
+                <Wallet className="h-5 w-5 text-purple-600 mr-2" />
+                <label className="font-medium text-gray-900 cursor-pointer">
+                  Acompte de 50% (vente sur commande)
+                </label>
+              </div>
+              <p className="text-sm text-gray-600 mt-2">
+                Un acompte de 50% du montant total est requis en ligne pour valider la commande :
+              </p>
+              <ul className="text-sm text-gray-600 mt-2 ml-4 space-y-1">
+                <li className="flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Le client paie 50% du montant total (produits + livraison) en ligne pour passer commande.</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Le solde restant (50%) est réglé en espèces à la livraison.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Informations supplémentaires */}
@@ -159,6 +198,7 @@ export const PaymentModeSection: React.FC<PaymentModeSectionProps> = ({
               Le mode <strong>Les deux options</strong> offre le plus de flexibilité à vos clients et peut maximiser vos ventes.
               Choisissez <strong>Frais de livraison uniquement</strong> si vous souhaitez sécuriser l'envoi de la commande tout en permettant aux clients de payer leurs articles à réception.
               Choisissez <strong>Paiement complet uniquement</strong> si vous ne souhaitez pas gérer de transactions en espèces lors de la livraison.
+              Choisissez <strong>Acompte de 50%</strong> si vous vendez sur commande et souhaitez sécuriser un premier paiement tout en laissant le solde à régler à la livraison.
             </p>
           </div>
         </div>

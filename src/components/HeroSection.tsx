@@ -1,10 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useBoutique } from '@/hooks/useBoutique';
 import { HeroSkeleton, ErrorState } from './LoadingStates';
 import SafeImage from './SafeImage';
 import { BoutiqueTrustSignals } from './storefront/BoutiqueTrustSignals';
+import { getCommunesActives } from '@/lib/services/communes';
+import { formatDelaiLivraison } from '@/lib/utils/delai-livraison';
 
 interface HeroSectionProps {
   boutiqueName: string;
@@ -27,11 +29,34 @@ const DESCRIPTION_PREVIEW_MAX = 160;
 export default function HeroSection({ boutiqueName }: HeroSectionProps) {
   const { boutique, config, loading, error, refetch } = useBoutique(boutiqueName);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
+  const [delaiLivraisonLabel, setDelaiLivraisonLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!boutique?.id) return;
+
+    let cancelled = false;
+
+    getCommunesActives(boutique.id)
+      .then((communes) => {
+        if (cancelled || communes.length === 0) return;
+
+        const min = Math.min(...communes.map((c) => c.delai_livraison_min));
+        const max = Math.max(...communes.map((c) => c.delai_livraison_max));
+        setDelaiLivraisonLabel(formatDelaiLivraison(min, max));
+      })
+      .catch(() => {
+        // Garde le texte par défaut en cas d'échec du chargement des communes
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [boutique?.id]);
 
   const trustItems = useMemo(() => {
     return [
       {
-        title: 'Livraison 24–48 h',
+        title: delaiLivraisonLabel || 'Livraison rapide',
         subtitle: boutique?.adresse
           ? boutique.adresse
           : 'Libreville et environs',
@@ -45,7 +70,7 @@ export default function HeroSection({ boutiqueName }: HeroSectionProps) {
         subtitle: boutique?.ville || boutique?.adresse || 'Libreville',
       },
     ];
-  }, [boutique?.adresse, boutique?.nom, boutique?.ville]);
+  }, [boutique?.adresse, boutique?.nom, boutique?.ville, delaiLivraisonLabel]);
 
   if (loading) {
     return <HeroSkeleton />;

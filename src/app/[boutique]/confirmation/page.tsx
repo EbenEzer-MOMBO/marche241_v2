@@ -7,6 +7,8 @@ import { useBoutique } from '@/hooks/useBoutique';
 import { usePanier } from '@/hooks/usePanier';
 import SafeImage from '@/components/SafeImage';
 import { verifierPaiementEnBoucle } from '@/lib/services/paiements';
+import { getCommunesActives } from '@/lib/services/communes';
+import { formatDureeLivraison } from '@/lib/utils/delai-livraison';
 
 const getBoutiqueLogo = (logoUrl?: string | null): string => {
   if (logoUrl && logoUrl.trim() !== '') {
@@ -38,6 +40,29 @@ export default function ConfirmationPage() {
   const [visaState, setVisaState] = useState<VisaVerificationState>(billId ? 'verifying' : 'idle');
   const [visaMessage, setVisaMessage] = useState('Vérification du paiement par carte…');
   const cartClearedRef = useRef(false);
+  const [delaiLivraisonDuree, setDelaiLivraisonDuree] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!boutique?.id) return;
+
+    let cancelled = false;
+
+    getCommunesActives(boutique.id)
+      .then((communes) => {
+        if (cancelled || communes.length === 0) return;
+
+        const min = Math.min(...communes.map((c) => c.delai_livraison_min));
+        const max = Math.max(...communes.map((c) => c.delai_livraison_max));
+        setDelaiLivraisonDuree(formatDureeLivraison(min, max));
+      })
+      .catch(() => {
+        // Garde le texte par défaut en cas d'échec du chargement des communes
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [boutique?.id]);
 
   const isPartiel = typePaiement === 'partiel';
   const boutiqueName = config?.name || boutique?.nom || 'la boutique';
@@ -110,11 +135,11 @@ export default function ConfirmationPage() {
       {
         id: 'ship',
         label: 'Livraison',
-        detail: '24–48 h · suivi par WhatsApp',
+        detail: `${delaiLivraisonDuree || '24-48h'} · suivi par WhatsApp`,
         done: false,
       },
     ],
-    [visaState]
+    [visaState, delaiLivraisonDuree]
   );
 
   const handleCopy = async () => {

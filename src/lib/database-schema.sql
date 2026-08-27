@@ -233,7 +233,7 @@ CREATE TABLE public.communes_livraison (
   id integer NOT NULL DEFAULT nextval('communes_livraison_id_seq'::regclass),
   boutique_id integer NOT NULL,
   nom_commune character varying NOT NULL,
-  code_postal character varying,
+  delimitation character varying(100),
   tarif_livraison numeric NOT NULL DEFAULT 0.00,
   delai_livraison_min integer DEFAULT 1,
   delai_livraison_max integer DEFAULT 3,

@@ -79,7 +79,7 @@ export interface BoutiqueData {
   couleur_secondaire?: string;
   adresse?: string;
   telephone?: string;
-  payment_restriction_mode?: 'complet_uniquement' | 'livraison_uniquement' | 'les_deux';
+  payment_restriction_mode?: 'complet_uniquement' | 'livraison_uniquement' | 'les_deux' | 'acompte_50';
   statut: 'active' | 'inactive' | 'suspended';
   date_creation: string;
   date_modification: string;
@@ -125,7 +125,7 @@ export interface ModifierBoutiqueData {
   couleur_secondaire?: string;
   adresse?: string;
   telephone?: string;
-  payment_restriction_mode?: 'complet_uniquement' | 'livraison_uniquement' | 'les_deux';
+  payment_restriction_mode?: 'complet_uniquement' | 'livraison_uniquement' | 'les_deux' | 'acompte_50';
 }
 
 export interface ModifierBoutiqueResponse {
