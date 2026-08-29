@@ -7,6 +7,7 @@ import { getBoutiqueBySlug, getBoutiqueTheme } from './services/boutiques';
 export type BoutiqueConfig = {
   name: string;
   description: string;
+  estVerifiee: boolean;
   theme: {
     primary: string;
     secondary: string;
@@ -26,6 +27,7 @@ export async function getBoutiqueConfig(slug: string): Promise<BoutiqueConfig> {
   return {
     name: boutique.nom,
     description: boutique.description || '',
+    estVerifiee: boutique.est_verifiee,
     theme: getBoutiqueTheme(boutique),
   };
 }

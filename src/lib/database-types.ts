@@ -79,7 +79,8 @@ export interface Boutique {
   nombre_vues: number;
   note_moyenne: number;
   nombre_avis: number;
-  
+  est_verifiee: boolean; // Badge de vérification (attribution manuelle par un admin)
+
   // Relations
   vendeur?: Vendeur;
 }

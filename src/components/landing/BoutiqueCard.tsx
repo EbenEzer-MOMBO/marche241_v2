@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, BadgeCheck } from 'lucide-react';
 import { Boutique } from '@/lib/database-types';
 
 interface BoutiqueCardProps {
@@ -50,7 +50,15 @@ export const BoutiqueCard: React.FC<BoutiqueCardProps> = ({
       </div>
 
       <div className="p-3.5 flex flex-col gap-2 flex-1">
-        <h3 className="text-base font-bold text-gray-900 line-clamp-1">{boutique.nom}</h3>
+        <h3 className="flex items-center gap-1 text-base font-bold text-gray-900 line-clamp-1">
+          <span className="line-clamp-1">{boutique.nom}</span>
+          {boutique.est_verifiee && (
+            <BadgeCheck
+              className="h-4 w-4 shrink-0 fill-[#3B82F6] text-white"
+              aria-label="Boutique vérifiée"
+            />
+          )}
+        </h3>
         {(boutique.adresse || boutique.ville?.trim()) && (
           <p className="text-[13px] text-gray-500 line-clamp-1">
             {boutique.adresse || boutique.ville?.trim()}

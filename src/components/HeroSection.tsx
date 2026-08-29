@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { BadgeCheck } from 'lucide-react';
 import { useBoutique } from '@/hooks/useBoutique';
 import { HeroSkeleton, ErrorState } from './LoadingStates';
 import SafeImage from './SafeImage';
@@ -129,8 +130,14 @@ export default function HeroSection({ boutiqueName }: HeroSectionProps) {
         </div>
 
         <div className="mt-14 pb-5 text-center sm:mt-16 sm:pb-7">
-          <h1 className="mb-2 text-2xl font-bold text-[#17181a] sm:mb-3 sm:text-3xl lg:text-4xl">
+          <h1 className="mb-2 flex items-center justify-center gap-1.5 text-2xl font-bold text-[#17181a] sm:mb-3 sm:text-3xl lg:text-4xl">
             {config.name}
+            {config.estVerifiee && (
+              <BadgeCheck
+                className="h-6 w-6 shrink-0 fill-[#3B82F6] text-white sm:h-7 sm:w-7"
+                aria-label="Boutique vérifiée"
+              />
+            )}
           </h1>
 
           {fullDescription ? (
