@@ -25,7 +25,8 @@ import {
   Share2,
   Copy,
   Check,
-  Eye
+  Eye,
+  BadgeCheck
 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
 import { ToastContainer } from '@/components/ui/Toast';
@@ -222,6 +223,12 @@ export default function Sidebar({ boutique, isMobileMenuOpen = false, onToggleMo
                 <h1 className="text-lg font-semibold text-gray-900 truncate">
                   {boutique.nom}
                 </h1>
+                {boutique.est_verifiee && (
+                  <BadgeCheck
+                    className="h-4 w-4 shrink-0 fill-[#3B82F6] text-white"
+                    aria-label="Boutique vérifiée"
+                  />
+                )}
                 <Eye className="h-4 w-4 text-gray-400 group-hover:text-gray-600 transition-colors flex-shrink-0" />
               </div>
               <p className="text-xs sm:text-sm text-gray-500 truncate">

@@ -86,6 +86,7 @@ export interface BoutiqueData {
   nombre_produits?: number;
   note_moyenne?: number;
   nombre_avis?: number;
+  est_verifiee?: boolean;
 }
 
 export interface BoutiqueResponse {
