@@ -64,7 +64,15 @@ export default function TrendingByCategory({
 
   const visibleSections = useMemo(() => {
     if (!categories) return [];
-    const entries = Object.entries(categories);
+
+    const prioriserEnStock = (produits: ProduitDB[]) =>
+      [...produits].sort((a, b) => Number(Boolean(b.en_stock)) - Number(Boolean(a.en_stock)));
+
+    const entries = Object.entries(categories).map(([slug, data]) => [
+      slug,
+      { ...data, produits: prioriserEnStock(data.produits) },
+    ] as const);
+
     if (activeChip === 'all') return entries;
     if (activeChip === 'promos') {
       return entries
@@ -72,7 +80,7 @@ export default function TrendingByCategory({
           slug,
           {
             ...data,
-            produits: data.produits.filter((p) => p.est_en_promotion),
+            produits: prioriserEnStock(data.produits.filter((p) => p.est_en_promotion)),
           },
         ] as const)
         .filter(([, data]) => data.produits.length > 0);
