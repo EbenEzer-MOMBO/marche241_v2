@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { getForfaits, creerBoost, type ForfaitBoost } from '@/lib/services/boosts';
+import { getForfaits, creerBoost, type ForfaitBoost, type Boost } from '@/lib/services/boosts';
 import { creerTransaction, type CreerTransactionData } from '@/lib/services/transactions';
 import { initierPaiementMobile, verifierPaiementEnBoucle, type PaiementMobileData } from '@/lib/services/paiements';
 import { ToastContainer } from '@/components/ui/Toast';
@@ -50,6 +50,8 @@ export default function NewBoostPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showProgressBar, setShowProgressBar] = useState(false);
   const [showCountdown, setShowCountdown] = useState(false);
+  const [boostEnAttente, setBoostEnAttente] = useState<Boost | null>(null);
+  const cancelSignalRef = useRef({ cancelled: false });
 
   useEffect(() => {
     const load = async () => {
@@ -104,11 +106,14 @@ export default function NewBoostPage() {
     setIsSubmitting(true);
 
     try {
-      const boost = await creerBoost({
-        boutique_id: boutique.id,
-        forfait_code: forfaitChoisi.code,
-        zones: zonesChoisies,
-      });
+      const boost =
+        boostEnAttente ||
+        (await creerBoost({
+          boutique_id: boutique.id,
+          forfait_code: forfaitChoisi.code,
+          zones: zonesChoisies,
+        }));
+      setBoostEnAttente(boost);
 
       const reference = `BOOST-${boost.id}-${Date.now()}`;
       const paymentSystem = selectedPayment === 'moov' ? 'moovmoney' : 'airtelmoney';
@@ -152,15 +157,19 @@ export default function NewBoostPage() {
         console.error('Erreur transaction boost:', err);
       }
 
-      const cancelSignal = { cancelled: false };
+      cancelSignalRef.current = { cancelled: false };
       setShowCountdown(true);
 
-      verifierPaiementEnBoucle(paiement.bill_id, 60000, 5000, cancelSignal)
+      verifierPaiementEnBoucle(paiement.bill_id, 60000, 5000, cancelSignalRef.current)
         .then((resultat) => {
+          if (cancelSignalRef.current.cancelled) {
+            return;
+          }
           setShowCountdown(false);
           setIsSubmitting(false);
 
           if (resultat.status === 'paye' || resultat.status === 'paid' || resultat.status === 'processed') {
+            setBoostEnAttente(null);
             success('Paiement confirmé ! Votre boost est en cours de publication.', 'Boost créé', 3000);
             router.push(`/admin/${boutique.slug}/boost`);
           } else if (resultat.status === 'echec' || resultat.status === 'failed') {
@@ -171,11 +180,12 @@ export default function NewBoostPage() {
         })
         .catch((err) => {
           console.error('Erreur vérification paiement boost:', err);
+          if (cancelSignalRef.current.cancelled) {
+            return;
+          }
           setShowCountdown(false);
           setIsSubmitting(false);
-          if (!cancelSignal.cancelled) {
-            showError('Erreur lors de la vérification du paiement.');
-          }
+          showError('Erreur lors de la vérification du paiement.');
         });
     } catch (err) {
       console.error('Erreur lors de la création du boost:', err);
@@ -224,7 +234,11 @@ export default function NewBoostPage() {
         <PaymentCountdown
           duration={60}
           onComplete={() => setShowCountdown(false)}
-          onCancel={() => setShowCountdown(false)}
+          onCancel={() => {
+            cancelSignalRef.current.cancelled = true;
+            setShowCountdown(false);
+            setIsSubmitting(false);
+          }}
           paymentMethod={selectedPayment === 'moov' ? 'Moov Money' : 'Airtel Money'}
           phoneNumber={paymentPhone}
         />
