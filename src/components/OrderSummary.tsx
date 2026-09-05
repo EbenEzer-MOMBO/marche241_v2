@@ -11,6 +11,7 @@ import { BoutiqueConfig } from '@/lib/boutiques';
 import { usePanier } from '@/hooks/usePanier';
 import { useToast } from '@/hooks/useToast';
 import { creerCommande, CreerCommandeData } from '@/lib/services/commandes';
+import { getCodeAffilieMemorise, effacerCodeAffilieMemorise, validerCodeAffilie } from '@/lib/services/affiliation';
 import { getCommunesActives } from '@/lib/services/communes';
 import { formatDureeLivraison } from '@/lib/utils/delai-livraison';
 import { initierPaiementMobile, initierPaiementVisa, verifierPaiementEnBoucle, type PaiementMobileData } from '@/lib/services/paiements';
@@ -143,6 +144,37 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
   const { panier, totalItems, totalPrix, loading, supprimerItem, viderLePanier, mettreAJourQuantite } = usePanier(boutiqueId);
   const [itemsToDelete, setItemsToDelete] = useState<Set<number>>(new Set());
   const [showDeliveryNotes, setShowDeliveryNotes] = useState(false);
+
+  // Code affilié — pré-rempli depuis le lien de tracking mémorisé, modifiable,
+  // validé en direct sans jamais bloquer la soumission de la commande
+  const [showCodeAffilie, setShowCodeAffilie] = useState(false);
+  const [codeAffilie, setCodeAffilie] = useState('');
+  const [codeAffilieValide, setCodeAffilieValide] = useState<boolean | null>(null);
+  const [isCheckingCodeAffilie, setIsCheckingCodeAffilie] = useState(false);
+
+  useEffect(() => {
+    const codeMemorise = getCodeAffilieMemorise();
+    if (codeMemorise) {
+      setCodeAffilie(codeMemorise);
+      setShowCodeAffilie(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!codeAffilie.trim()) {
+      setCodeAffilieValide(null);
+      return;
+    }
+
+    setIsCheckingCodeAffilie(true);
+    const timer = setTimeout(async () => {
+      const valide = await validerCodeAffilie(codeAffilie.trim());
+      setCodeAffilieValide(valide);
+      setIsCheckingCodeAffilie(false);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [codeAffilie]);
 
   const handleDeleteClick = (itemId: number) => {
     if (itemsToDelete.has(itemId)) {
@@ -491,13 +523,15 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
           nom_produit: item.produit.nom,
           description: item.produit.description_courte || item.produit.nom,
           variants_selectionnes: item.variants_selectionnes
-        }))
+        })),
+        code_affilie: codeAffilie.trim() || undefined
       };
 
 
 
       const commande = await creerCommande(commandeData, turnstileToken || undefined);
       success('Commande créée avec succès !', 'Succès', 3000);
+      effacerCodeAffilieMemorise();
 
       console.log('Données de la commande:', commandeData);
 
@@ -1113,6 +1147,42 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
                       onChange={(e) => handleAddressChange('additionalInfo', e.target.value)}
                       placeholder="Instructions de livraison, points de repère..."
                     />
+                  </div>
+                )}
+              </div>
+              <div className="sm:col-span-2">
+                {!showCodeAffilie ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowCodeAffilie(true)}
+                    className="text-[13px] font-medium hover:underline"
+                    style={{ color: 'var(--color-shop-primary)' }}
+                  >
+                    + Ajouter un code de parrainage
+                  </button>
+                ) : (
+                  <div>
+                    <label className="mb-1.5 block text-[13px] font-medium text-[#3c4045]">
+                      Code de parrainage (optionnel)
+                    </label>
+                    <input
+                      type="text"
+                      className={fieldClass}
+                      value={codeAffilie}
+                      onChange={(e) => setCodeAffilie(e.target.value.toUpperCase())}
+                      placeholder="AFF-XXXXXX"
+                    />
+                    {isCheckingCodeAffilie && (
+                      <p className="mt-1.5 text-[12.5px] text-gray-500">Vérification...</p>
+                    )}
+                    {!isCheckingCodeAffilie && codeAffilieValide === true && (
+                      <p className="mt-1.5 text-[12.5px] font-medium text-green-600">Code valide ✓</p>
+                    )}
+                    {!isCheckingCodeAffilie && codeAffilieValide === false && (
+                      <p className="mt-1.5 text-[12.5px] text-gray-500">
+                        Code introuvable — la commande sera passée sans code de parrainage
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
