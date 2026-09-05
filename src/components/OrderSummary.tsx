@@ -163,17 +163,23 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
   useEffect(() => {
     if (!codeAffilie.trim()) {
       setCodeAffilieValide(null);
+      setIsCheckingCodeAffilie(false);
       return;
     }
 
+    let annule = false;
     setIsCheckingCodeAffilie(true);
     const timer = setTimeout(async () => {
       const valide = await validerCodeAffilie(codeAffilie.trim());
+      if (annule) return;
       setCodeAffilieValide(valide);
       setIsCheckingCodeAffilie(false);
     }, 500);
 
-    return () => clearTimeout(timer);
+    return () => {
+      annule = true;
+      clearTimeout(timer);
+    };
   }, [codeAffilie]);
 
   const handleDeleteClick = (itemId: number) => {
