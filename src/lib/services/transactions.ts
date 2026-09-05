@@ -6,10 +6,11 @@ import api from '@/lib/api';
 
 interface CreerTransactionData {
   reference_transaction: string;
-  commande_id: number;
+  commande_id?: number; // Absent pour une transaction de boost publicitaire (voir boost_id)
+  boost_id?: number; // Renseigné pour un paiement à l'acte de boost publicitaire
   montant: number;
   methode_paiement: 'mobile_money' | 'airtel_money' | 'moov_money' | 'carte_bancaire' | 'especes' | 'virement';
-  type_paiement: 'paiement_complet' | 'acompte' | 'frais_livraison' | 'solde_apres_livraison' | 'complement';
+  type_paiement: 'paiement_complet' | 'acompte' | 'frais_livraison' | 'solde_apres_livraison' | 'complement' | 'boost';
   numero_telephone?: string;
   reference_operateur?: string;
   note?: string;
@@ -17,7 +18,8 @@ interface CreerTransactionData {
 
 interface Transaction {
   id: number;
-  commande_id: number;
+  commande_id?: number;
+  boost_id?: number;
   reference_transaction: string;
   montant: number;
   methode_paiement: string;
