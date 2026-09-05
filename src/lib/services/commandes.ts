@@ -25,6 +25,7 @@ interface CreerCommandeData {
   taxes: number;
   remise: number;
   articles: ArticleCommande[];
+  code_affilie?: string;
 }
 
 interface Commande {
