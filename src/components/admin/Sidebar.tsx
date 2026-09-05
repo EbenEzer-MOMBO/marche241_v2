@@ -26,7 +26,8 @@ import {
   Copy,
   Check,
   Eye,
-  BadgeCheck
+  BadgeCheck,
+  Megaphone
 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
 import { ToastContainer } from '@/components/ui/Toast';
@@ -126,6 +127,12 @@ export default function Sidebar({ boutique, isMobileMenuOpen = false, onToggleMo
       icon: Truck,
       current: pathname.includes('/shipping'),
       showAlert: alerts.livraison
+    },
+    {
+      name: 'Boost publicitaire',
+      href: `/admin/${boutique.slug}/boost`,
+      icon: Megaphone,
+      current: pathname.includes('/boost')
     }
   ];
 
