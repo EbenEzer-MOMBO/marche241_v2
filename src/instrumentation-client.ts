@@ -10,6 +10,17 @@ Sentry.init({
   // Add optional integrations for additional features
   integrations: [Sentry.replayIntegration()],
 
+  // Erreurs réseau non actionnables (requêtes fetch interrompues par le
+  // navigateur, souvent dans les webviews in-app comme TikTok/Instagram
+  // quand l'utilisateur quitte la page avant la fin du chargement).
+  ignoreErrors: [
+    "Load failed",
+    "Failed to fetch",
+    "NetworkError when attempting to fetch resource.",
+    "The network connection was lost.",
+    "The Internet connection appears to be offline.",
+  ],
+
   // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
   tracesSampleRate: 1,
 
