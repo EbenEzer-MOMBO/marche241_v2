@@ -127,7 +127,7 @@ export function ShoesProductDisplay({
   };
 
   // Obtenir les couleurs uniques
-  const couleurs = Array.from(new Set(variants.map(v => v.couleur)));
+  const couleurs = Array.from(new Set(variants.map(v => v.couleur).filter(Boolean)));
 
   return (
     <div className="space-y-6">

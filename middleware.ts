@@ -46,7 +46,16 @@ export function middleware(request: NextRequest): NextResponse {
     pathname === '/robots.txt' ||
     pathname === '/sitemap.xml';
 
-  if (isExempt) {
+  // Les requêtes internes de Next.js (Server Actions, navigations RSC,
+  // prefetch du routeur) attendent une réponse au format RSC, jamais du
+  // HTML. Les intercepter ici casse le contrat client/serveur de Next.js
+  // et déclenche "Expected RSC response, got text/plain" côté client.
+  const isNextInternalRequest =
+    request.headers.has('next-action') ||
+    request.headers.get('RSC') === '1' ||
+    request.headers.get('Next-Router-Prefetch') === '1';
+
+  if (isExempt || isNextInternalRequest) {
     return NextResponse.next();
   }
 

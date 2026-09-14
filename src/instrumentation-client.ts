@@ -19,6 +19,10 @@ Sentry.init({
     "NetworkError when attempting to fetch resource.",
     "The network connection was lost.",
     "The Internet connection appears to be offline.",
+    // Bridge natif des navigateurs in-app Android (Facebook, Instagram...)
+    // qui se détruit avant que le JS injecté ait fini de communiquer avec
+    // lui — rien à voir avec notre code, pas actionnable.
+    "Error invoking postMessage: Java object is gone",
   ],
 
   // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.

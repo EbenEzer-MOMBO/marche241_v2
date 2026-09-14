@@ -36,7 +36,10 @@ const COLOR_HEX: Record<string, string> = {
 /**
  * Retourne un hex pour un nom de couleur connu, sinon un gris neutre.
  */
-export const getColorSwatch = (name: string): string => {
+export const getColorSwatch = (name: string | undefined | null): string => {
+  if (!name) {
+    return '#cfcbc3';
+  }
   const key = name
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
