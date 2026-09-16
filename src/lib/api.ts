@@ -57,14 +57,36 @@ function handleUnauthorized(): void {
 }
 
 /**
+ * Détecte, côté serveur uniquement, si la requête en cours porte le header
+ * de prévisualisation vendeur (posé par le middleware depuis ?preview=1).
+ * Import dynamique pour ne jamais faire atterrir `next/headers` (server-only)
+ * dans le bundle client, ce module étant aussi utilisé par des hooks client.
+ */
+async function isServerPreviewRequest(): Promise<boolean> {
+  if (typeof window !== 'undefined') {
+    return false;
+  }
+  try {
+    const { headers } = await import('next/headers');
+    const h = await headers();
+    return h.get('x-boutique-preview') === '1';
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Wrapper pour les requêtes API avec gestion d'erreurs
  */
 async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = `${config.apiBaseUrl}${endpoint}`;
-  
+  const isPreview = await isServerPreviewRequest();
+  const url = isPreview
+    ? `${config.apiBaseUrl}${endpoint}${endpoint.includes('?') ? '&' : '?'}preview=1`
+    : `${config.apiBaseUrl}${endpoint}`;
+
   // Ajouter le token d'authentification si disponible
   const token = getAuthToken();
   const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};

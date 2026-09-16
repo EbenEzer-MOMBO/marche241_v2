@@ -31,11 +31,24 @@ const MAINTENANCE_HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
+function withPreviewHeaderIfNeeded(request: NextRequest): NextResponse {
+  // Prévisualisation vendeur ("Voir la boutique" depuis le dashboard, ?preview=1) :
+  // relayée via un header pour rester accessible aux Server Components qui n'ont
+  // pas accès à searchParams (layout.tsx notamment).
+  if (request.nextUrl.searchParams.get('preview') !== '1') {
+    return NextResponse.next();
+  }
+
+  const headers = new Headers(request.headers);
+  headers.set('x-boutique-preview', '1');
+  return NextResponse.next({ request: { headers } });
+}
+
 export function middleware(request: NextRequest): NextResponse {
   const maintenanceEnabled = process.env.MAINTENANCE_MODE === 'true';
 
   if (!maintenanceEnabled) {
-    return NextResponse.next();
+    return withPreviewHeaderIfNeeded(request);
   }
 
   const { pathname } = request.nextUrl;
