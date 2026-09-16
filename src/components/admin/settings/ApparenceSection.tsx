@@ -113,47 +113,12 @@ export const ApparenceSection: React.FC<ApparenceSectionProps> = ({
             </p>
           </div>
 
-          {/* Couleur secondaire */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Couleur secondaire (claire)
-            </label>
-            <div className="grid grid-cols-8 sm:grid-cols-10 md:grid-cols-12 lg:grid-cols-15 gap-2">
-              {COULEURS_SECONDAIRES.map((couleur) => (
-                <button
-                  key={couleur.valeur}
-                  type="button"
-                  onClick={() => onChangeSecondaire(couleur.valeur)}
-                  className={`relative aspect-square rounded-lg border-2 transition-all hover:scale-110 ${
-                    couleurSecondaire === couleur.valeur
-                      ? 'border-gray-900 ring-2 ring-gray-400'
-                      : 'border-gray-300 hover:border-gray-400'
-                  }`}
-                  style={{ backgroundColor: couleur.valeur }}
-                  title={couleur.nom}
-                >
-                  {couleurSecondaire === couleur.valeur && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Check className="h-4 w-4 text-gray-900 stroke-[3]" />
-                    </div>
-                  )}
-                </button>
-              ))}
-            </div>
-            <div className="mt-3 flex items-center gap-2">
-              <div
-                className="h-8 w-8 rounded-lg border-2 border-gray-300 flex-shrink-0"
-                style={{ backgroundColor: couleurSecondaire }}
-              />
-              <p className="text-sm text-gray-700 font-medium">
-                {COULEURS_SECONDAIRES.find(c => c.valeur === couleurSecondaire)?.nom || 'Couleur personnalisée'}
-                <span className="ml-2 text-gray-500 font-mono text-xs">{couleurSecondaire}</span>
-              </p>
-            </div>
-            <p className="mt-2 text-xs text-gray-500">
-              Couleur pour les fonds, arrière-plans et éléments secondaires
-            </p>
-          </div>
+          {/*
+            Couleur secondaire (claire) — masquée temporairement (MAR-34) :
+            le picker n'a plus d'effet visible depuis la refonte de l'UI boutique,
+            qui n'exploite plus --secondary-color. couleurSecondaire/onChangeSecondaire
+            restent branchés pour ne pas perdre les valeurs déjà enregistrées.
+          */}
         </div>
 
         <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-3">
