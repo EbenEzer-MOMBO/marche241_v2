@@ -56,17 +56,27 @@ function handleUnauthorized(): void {
   }
 }
 
+const PREVIEW_COOKIE = 'boutique_preview';
+
 /**
  * Détecte si la requête en cours est une prévisualisation vendeur (?preview=1).
- * Côté navigateur, l'URL de la page suffit (window.location) : c'est le cas
- * de la plupart des fetches storefront, faits depuis des hooks client après
- * hydratation. Côté serveur, les layouts n'ont pas accès à searchParams, donc
- * on relit le header posé par le middleware. Import dynamique de next/headers
- * pour ne jamais le faire atterrir dans le bundle client (server-only).
+ * Côté navigateur : l'URL de la page (premier chargement) ou, à défaut, le
+ * cookie de session posé par le middleware — les liens internes de la
+ * boutique (header, produits, panier...) ne portent pas ?preview=1, donc
+ * sans ce cookie la prévisualisation ne survivrait pas à la navigation.
+ * Côté serveur, les layouts n'ont pas accès à searchParams, donc on relit le
+ * header posé par le middleware (lui-même dérivé de l'URL ou du cookie).
+ * Import dynamique de next/headers pour ne jamais le faire atterrir dans le
+ * bundle client (server-only).
  */
 async function isPreviewRequest(): Promise<boolean> {
   if (typeof window !== 'undefined') {
-    return new URLSearchParams(window.location.search).get('preview') === '1';
+    if (new URLSearchParams(window.location.search).get('preview') === '1') {
+      return true;
+    }
+    return document.cookie
+      .split('; ')
+      .some((cookie) => cookie === `${PREVIEW_COOKIE}=1`);
   }
   try {
     const { headers } = await import('next/headers');

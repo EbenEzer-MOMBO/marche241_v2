@@ -31,17 +31,36 @@ const MAINTENANCE_HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
+const PREVIEW_COOKIE = 'boutique_preview';
+const PREVIEW_COOKIE_MAX_AGE_SECONDS = 30 * 60; // 30 min : le temps d'une session de prévisualisation vendeur
+
 function withPreviewHeaderIfNeeded(request: NextRequest): NextResponse {
   // Prévisualisation vendeur ("Voir la boutique" depuis le dashboard, ?preview=1) :
   // relayée via un header pour rester accessible aux Server Components qui n'ont
-  // pas accès à searchParams (layout.tsx notamment).
-  if (request.nextUrl.searchParams.get('preview') !== '1') {
+  // pas accès à searchParams (layout.tsx notamment). Un cookie de session la fait
+  // aussi survivre à la navigation interne à la boutique (les liens internes ne
+  // portent pas ?preview=1), pour que tout le parcours du vendeur reste exclu du
+  // tracking, pas seulement la première page atteinte.
+  const hasPreviewParam = request.nextUrl.searchParams.get('preview') === '1';
+  const hasPreviewCookie = request.cookies.get(PREVIEW_COOKIE)?.value === '1';
+
+  if (!hasPreviewParam && !hasPreviewCookie) {
     return NextResponse.next();
   }
 
   const headers = new Headers(request.headers);
   headers.set('x-boutique-preview', '1');
-  return NextResponse.next({ request: { headers } });
+  const response = NextResponse.next({ request: { headers } });
+
+  if (hasPreviewParam) {
+    response.cookies.set(PREVIEW_COOKIE, '1', {
+      maxAge: PREVIEW_COOKIE_MAX_AGE_SECONDS,
+      path: '/',
+      sameSite: 'lax',
+    });
+  }
+
+  return response;
 }
 
 export function middleware(request: NextRequest): NextResponse {
