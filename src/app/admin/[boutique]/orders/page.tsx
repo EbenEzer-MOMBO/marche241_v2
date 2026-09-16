@@ -298,11 +298,14 @@ export default function OrdersPage() {
     }
   };
 
-  // Une commande expédiée, livrée ou payée ne peut pas être archivée (règle métier côté API)
+  // Une commande expédiée, livrée ou payée (même partiellement) ne peut pas
+  // être archivée (règle métier côté API)
   const isOrderArchivable = (order: Commande) => {
+    const statutPaiement = order.statut_paiement?.toLowerCase();
     return order.statut.toLowerCase() !== 'expedie'
       && order.statut.toLowerCase() !== 'livree'
-      && order.statut_paiement?.toLowerCase() !== 'paye';
+      && statutPaiement !== 'paye'
+      && statutPaiement !== 'partiellement_paye';
   };
 
   const confirmArchiveOrder = async () => {
