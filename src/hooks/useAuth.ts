@@ -233,8 +233,10 @@ export function useAuth(): UseAuthReturn {
         status: error.status,
         response: error.response
       });
-      // Ne pas afficher d'erreur toast ici car cela peut causer des redirections
-      return null;
+      // Erreur réseau/API (timeout, 5xx transitoire...) : à ne pas confondre avec
+      // "le vendeur n'a pas de boutique". On la propage pour que l'appelant affiche
+      // un message d'erreur/retry au lieu de rediriger vers la création de boutique.
+      throw error;
     }
   }, [user?.id]);
 
