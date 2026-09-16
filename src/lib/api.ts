@@ -57,14 +57,16 @@ function handleUnauthorized(): void {
 }
 
 /**
- * Détecte, côté serveur uniquement, si la requête en cours porte le header
- * de prévisualisation vendeur (posé par le middleware depuis ?preview=1).
- * Import dynamique pour ne jamais faire atterrir `next/headers` (server-only)
- * dans le bundle client, ce module étant aussi utilisé par des hooks client.
+ * Détecte si la requête en cours est une prévisualisation vendeur (?preview=1).
+ * Côté navigateur, l'URL de la page suffit (window.location) : c'est le cas
+ * de la plupart des fetches storefront, faits depuis des hooks client après
+ * hydratation. Côté serveur, les layouts n'ont pas accès à searchParams, donc
+ * on relit le header posé par le middleware. Import dynamique de next/headers
+ * pour ne jamais le faire atterrir dans le bundle client (server-only).
  */
-async function isServerPreviewRequest(): Promise<boolean> {
+async function isPreviewRequest(): Promise<boolean> {
   if (typeof window !== 'undefined') {
-    return false;
+    return new URLSearchParams(window.location.search).get('preview') === '1';
   }
   try {
     const { headers } = await import('next/headers');
@@ -80,9 +82,9 @@ async function isServerPreviewRequest(): Promise<boolean> {
  */
 async function apiRequest<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  isPreview: boolean = false
 ): Promise<T> {
-  const isPreview = await isServerPreviewRequest();
   const url = isPreview
     ? `${config.apiBaseUrl}${endpoint}${endpoint.includes('?') ? '&' : '?'}preview=1`
     : `${config.apiBaseUrl}${endpoint}`;
@@ -153,29 +155,29 @@ const inflightGetRequests = new Map<string, Promise<unknown>>();
 const recentGetResults = new Map<string, { expiresAt: number; value: unknown }>();
 const GET_CACHE_TTL_MS = 2000;
 
-function coalesceGet<T>(endpoint: string, factory: () => Promise<T>): Promise<T> {
-  const cached = recentGetResults.get(endpoint);
+function coalesceGet<T>(cacheKey: string, factory: () => Promise<T>): Promise<T> {
+  const cached = recentGetResults.get(cacheKey);
   if (cached && Date.now() < cached.expiresAt) {
     return Promise.resolve(cached.value as T);
   }
 
-  const existing = inflightGetRequests.get(endpoint);
+  const existing = inflightGetRequests.get(cacheKey);
   if (existing) {
     return existing as Promise<T>;
   }
 
   const promise = factory()
     .then((value) => {
-      recentGetResults.set(endpoint, {
+      recentGetResults.set(cacheKey, {
         value,
         expiresAt: Date.now() + GET_CACHE_TTL_MS,
       });
       return value;
     })
     .finally(() => {
-      inflightGetRequests.delete(endpoint);
+      inflightGetRequests.delete(cacheKey);
     });
-  inflightGetRequests.set(endpoint, promise);
+  inflightGetRequests.set(cacheKey, promise);
   return promise;
 }
 
@@ -183,32 +185,46 @@ function coalesceGet<T>(endpoint: string, factory: () => Promise<T>): Promise<T>
  * Méthodes HTTP spécialisées
  */
 export const api = {
-  get: <T>(endpoint: string, options?: RequestInit) =>
-    coalesceGet(endpoint, () => apiRequest<T>(endpoint, { ...options, method: 'GET' })),
-  
-  post: <T>(endpoint: string, data?: any, options?: RequestInit) =>
-    apiRequest<T>(endpoint, {
+  get: async <T>(endpoint: string, options?: RequestInit): Promise<T> => {
+    const isPreview = await isPreviewRequest();
+    // La prévisualisation vendeur ne doit jamais partager le cache/coalescing
+    // d'une requête publique concurrente sur le même endpoint (sinon l'une des
+    // deux hérite du comportement de tracking de l'autre, cf. MAR-37).
+    const cacheKey = isPreview ? `${endpoint}::preview` : endpoint;
+    return coalesceGet(cacheKey, () => apiRequest<T>(endpoint, { ...options, method: 'GET' }, isPreview));
+  },
+
+  post: async <T>(endpoint: string, data?: any, options?: RequestInit): Promise<T> => {
+    const isPreview = await isPreviewRequest();
+    return apiRequest<T>(endpoint, {
       ...options,
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
-    }),
-  
-  put: <T>(endpoint: string, data?: any, options?: RequestInit) =>
-    apiRequest<T>(endpoint, {
+    }, isPreview);
+  },
+
+  put: async <T>(endpoint: string, data?: any, options?: RequestInit): Promise<T> => {
+    const isPreview = await isPreviewRequest();
+    return apiRequest<T>(endpoint, {
       ...options,
       method: 'PUT',
       body: data ? JSON.stringify(data) : undefined,
-    }),
-  
-  patch: <T>(endpoint: string, data?: any, options?: RequestInit) =>
-    apiRequest<T>(endpoint, {
+    }, isPreview);
+  },
+
+  patch: async <T>(endpoint: string, data?: any, options?: RequestInit): Promise<T> => {
+    const isPreview = await isPreviewRequest();
+    return apiRequest<T>(endpoint, {
       ...options,
       method: 'PATCH',
       body: data ? JSON.stringify(data) : undefined,
-    }),
-  
-  delete: <T>(endpoint: string, options?: RequestInit) =>
-    apiRequest<T>(endpoint, { ...options, method: 'DELETE' }),
+    }, isPreview);
+  },
+
+  delete: async <T>(endpoint: string, options?: RequestInit): Promise<T> => {
+    const isPreview = await isPreviewRequest();
+    return apiRequest<T>(endpoint, { ...options, method: 'DELETE' }, isPreview);
+  },
 };
 
 export default api;

@@ -64,10 +64,19 @@ export default function OrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
+  // Recharge des commandes après le chargement initial (ex: bascule du filtre
+  // archivées) : ne doit pas déclencher le spinner plein écran, qui démonterait
+  // la liste et le filtre lui-même — seulement isLoading (premier chargement).
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   // Fonction pour charger toutes les commandes depuis l'API
-  const loadOrders = async (boutiqueId: number, includeArchived: boolean = showArchived) => {
+  const loadOrders = async (boutiqueId: number, includeArchived: boolean = showArchived, isInitial: boolean = true) => {
     try {
-      setIsLoading(true);
+      if (isInitial) {
+        setIsLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
 
       // Charger toutes les commandes sans pagination côté serveur
       const response = await getCommandesParBoutique(boutiqueId, {
@@ -88,7 +97,11 @@ export default function OrdersPage() {
       showError('Erreur lors du chargement des commandes');
       setOrders([]);
     } finally {
-      setIsLoading(false);
+      if (isInitial) {
+        setIsLoading(false);
+      } else {
+        setIsRefreshing(false);
+      }
     }
   };
 
@@ -130,9 +143,10 @@ export default function OrdersPage() {
   }, [user, boutiqueName, router]);
 
   // Recharger les commandes quand on bascule l'affichage des archivées
+  // (isInitial=false : ne pas afficher le spinner plein écran, juste rafraîchir la liste)
   useEffect(() => {
     if (boutique?.id) {
-      loadOrders(boutique.id, showArchived);
+      loadOrders(boutique.id, showArchived, false);
       setCurrentPage(1);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -541,9 +555,13 @@ export default function OrdersPage() {
                 type="checkbox"
                 checked={showArchived}
                 onChange={(e) => setShowArchived(e.target.checked)}
+                disabled={isRefreshing}
                 className="rounded border-gray-300 text-black focus:ring-black"
               />
               Afficher les commandes archivées
+              {isRefreshing && (
+                <span className="h-3.5 w-3.5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+              )}
             </label>
           </div>
 
@@ -645,14 +663,22 @@ export default function OrdersPage() {
                       {formatDate(order.date_commande)}
                     </div>
                   </div>
-                  <span
-                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(
-                      order.statut
-                    )}`}
-                  >
-                    {getStatusIcon(order.statut)}
-                    <span className="ml-1">{getStatusLabel(order.statut)}</span>
-                  </span>
+                  <div className="flex flex-col items-end gap-1">
+                    <span
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(
+                        order.statut
+                      )}`}
+                    >
+                      {getStatusIcon(order.statut)}
+                      <span className="ml-1">{getStatusLabel(order.statut)}</span>
+                    </span>
+                    {order.archivee && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                        <Archive className="h-3 w-3 mr-1" />
+                        Archivée
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-2 mb-3">
