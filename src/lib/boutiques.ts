@@ -22,7 +22,7 @@ export type BoutiqueConfig = {
  * @throws Error si la boutique n'est pas trouvée
  */
 export async function getBoutiqueConfig(slug: string): Promise<BoutiqueConfig> {
-  const boutique = await getBoutiqueBySlug(slug);
+  const boutique = await getBoutiqueBySlug(slug, { skipTracking: true });
   
   return {
     name: boutique.nom,

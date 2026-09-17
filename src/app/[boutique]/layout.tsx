@@ -43,7 +43,7 @@ export async function generateMetadata({
   
   try {
     // Récupérer les données complètes de la boutique pour le logo
-    const boutiqueData = await getBoutiqueBySlug(boutique);
+    const boutiqueData = await getBoutiqueBySlug(boutique, { skipTracking: true });
     const boutiqueConfig = await getBoutiqueConfig(boutique);
     
     // Préparer la description (limitée à 160 caractères pour l'OpenGraph)
@@ -111,7 +111,7 @@ export default async function BoutiqueLayout({
   let boutiqueData;
   try {
     boutiqueConfig = await getBoutiqueConfig(boutique);
-    boutiqueData = await getBoutiqueBySlug(boutique);
+    boutiqueData = await getBoutiqueBySlug(boutique, { skipTracking: true });
   } catch (error) {
     console.error('Erreur lors de la récupération de la boutique:', error);
     notFound();

@@ -3,6 +3,7 @@
  */
 
 import config from './config';
+import { clearAuthTokenCookie } from './auth-cookie';
 
 export class ApiError extends Error {
   constructor(
@@ -25,13 +26,21 @@ const defaultRequestConfig: RequestInit = {
 };
 
 /**
- * Récupère le token d'authentification depuis le localStorage
+ * Récupère le token d'authentification : localStorage côté navigateur,
+ * cookie `admin_token` côté serveur (posé à la connexion) pour que le SSR
+ * reconnaisse le vendeur/admin et n'enregistre pas ses propres visites.
  */
-function getAuthToken(): string | null {
+async function getAuthToken(): Promise<string | null> {
   if (typeof window !== 'undefined') {
     return localStorage.getItem('admin_token');
   }
-  return null;
+  try {
+    const { cookies } = await import('next/headers');
+    const store = await cookies();
+    return store.get('admin_token')?.value ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -43,6 +52,7 @@ function handleUnauthorized(): void {
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_user');
     localStorage.removeItem('admin_boutique');
+    clearAuthTokenCookie();
     
     // Vérifier si on n'est pas déjà sur la page de login pour éviter une boucle
     if (!window.location.pathname.includes('/admin/login')) {
@@ -57,6 +67,8 @@ function handleUnauthorized(): void {
 }
 
 const PREVIEW_COOKIE = 'boutique_preview';
+const PREVIEW_HEADER = 'x-boutique-preview';
+const SKIP_TRACKING_HEADER = 'x-skip-view-tracking';
 
 /**
  * Détecte si la requête en cours est une prévisualisation vendeur (?preview=1).
@@ -99,9 +111,9 @@ async function apiRequest<T>(
     ? `${config.apiBaseUrl}${endpoint}${endpoint.includes('?') ? '&' : '?'}preview=1`
     : `${config.apiBaseUrl}${endpoint}`;
 
-  // Ajouter le token d'authentification si disponible
-  const token = getAuthToken();
-  const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
+  const token = await getAuthToken();
+  const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+  const previewHeaders = isPreview ? { [PREVIEW_HEADER]: '1' } : {};
   
   const requestConfig: RequestInit = {
     ...defaultRequestConfig,
@@ -109,6 +121,7 @@ async function apiRequest<T>(
     headers: {
       ...defaultRequestConfig.headers,
       ...authHeaders,
+      ...previewHeaders,
       ...options.headers,
     } as HeadersInit,
   };
@@ -194,13 +207,27 @@ function coalesceGet<T>(cacheKey: string, factory: () => Promise<T>): Promise<T>
 /**
  * Méthodes HTTP spécialisées
  */
+function headerValue(headers: HeadersInit | undefined, name: string): string | null {
+  if (!headers) {
+    return null;
+  }
+  if (headers instanceof Headers) {
+    return headers.get(name);
+  }
+  if (Array.isArray(headers)) {
+    const match = headers.find(([key]) => key.toLowerCase() === name.toLowerCase());
+    return match ? match[1] : null;
+  }
+  const record = headers as Record<string, string>;
+  const key = Object.keys(record).find((candidate) => candidate.toLowerCase() === name.toLowerCase());
+  return key ? record[key] : null;
+}
+
 export const api = {
   get: async <T>(endpoint: string, options?: RequestInit): Promise<T> => {
     const isPreview = await isPreviewRequest();
-    // La prévisualisation vendeur ne doit jamais partager le cache/coalescing
-    // d'une requête publique concurrente sur le même endpoint (sinon l'une des
-    // deux hérite du comportement de tracking de l'autre, cf. MAR-37).
-    const cacheKey = isPreview ? `${endpoint}::preview` : endpoint;
+    const skipTracking = headerValue(options?.headers, SKIP_TRACKING_HEADER) === '1';
+    const cacheKey = `${endpoint}::preview=${isPreview}::skip=${skipTracking}`;
     return coalesceGet(cacheKey, () => apiRequest<T>(endpoint, { ...options, method: 'GET' }, isPreview));
   },
 

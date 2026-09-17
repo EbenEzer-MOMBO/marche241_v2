@@ -41,7 +41,7 @@ export default async function OrderPage({ params }: OrderPageProps) {
   let boutiqueData;
   try {
     boutiqueConfig = await getBoutiqueConfig(boutique);
-    boutiqueData = await getBoutiqueBySlug(boutique);
+    boutiqueData = await getBoutiqueBySlug(boutique, { skipTracking: true });
   } catch (error) {
     console.error('Erreur lors de la récupération de la boutique:', error);
     notFound();

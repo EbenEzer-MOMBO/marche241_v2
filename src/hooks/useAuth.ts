@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { demanderCodeVerification, verifierCode, inscrireVendeur, getBoutiquesVendeur, DemanderCodeData, VerifierCodeData, InscriptionData, BoutiqueData } from '@/lib/services/auth';
+import { clearAuthTokenCookie, persistAuthTokenCookie } from '@/lib/auth-cookie';
 import { useToast } from './useToast';
 
 interface AuthUser {
@@ -40,6 +41,7 @@ export function useAuth(): UseAuthReturn {
     const userData = localStorage.getItem('admin_user');
     
     if (token && userData) {
+      persistAuthTokenCookie(token);
       try {
         const parsedUser = JSON.parse(userData);
         setUser({
@@ -54,6 +56,7 @@ export function useAuth(): UseAuthReturn {
         console.error('Erreur lors du parsing des données utilisateur:', error);
         localStorage.removeItem('admin_token');
         localStorage.removeItem('admin_user');
+        clearAuthTokenCookie();
       }
     }
   }, []);
@@ -107,6 +110,7 @@ export function useAuth(): UseAuthReturn {
       if (response.success && response.vendeur && response.token) {
         // Stocker le token et les données utilisateur
         localStorage.setItem('admin_token', response.token);
+        persistAuthTokenCookie(response.token);
         localStorage.setItem('admin_user', JSON.stringify(response.vendeur));
         
         setUser({
@@ -251,6 +255,7 @@ export function useAuth(): UseAuthReturn {
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_user');
     localStorage.removeItem('admin_boutique');
+    clearAuthTokenCookie();
     setUser(null);
     success('Déconnexion réussie', 'À bientôt !');
     router.push('/admin/login');

@@ -107,9 +107,15 @@ export async function getProduitsParBoutique(
  * @param id - L'ID du produit
  * @returns Promise<ProduitDB> - Le produit
  */
-export async function getProduitById(id: number): Promise<ProduitDB> {
+export async function getProduitById(
+  id: number,
+  options?: { skipTracking?: boolean }
+): Promise<ProduitDB> {
   try {
-    const response = await api.get<ApiProduitResponse>(`/produits/${id}`);
+    const response = await api.get<ApiProduitResponse>(
+      `/produits/${id}`,
+      options?.skipTracking ? { headers: { 'x-skip-view-tracking': '1' } } : undefined
+    );
     
     if (!response.success || !response.produit) {
       throw new Error(`Produit avec l'ID ${id} introuvable`);

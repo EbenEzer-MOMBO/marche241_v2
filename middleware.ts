@@ -57,6 +57,7 @@ function withPreviewHeaderIfNeeded(request: NextRequest): NextResponse {
       maxAge: PREVIEW_COOKIE_MAX_AGE_SECONDS,
       path: '/',
       sameSite: 'lax',
+      httpOnly: false,
     });
   }
 
