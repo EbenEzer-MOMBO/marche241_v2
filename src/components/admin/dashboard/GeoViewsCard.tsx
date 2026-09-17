@@ -106,7 +106,7 @@ export const GeoViewsCard: React.FC<GeoViewsCardProps> = ({ lignes, periodeJours
           {total.toLocaleString('fr-FR')} vue{total > 1 ? 's' : ''} · {libellePeriode}
         </p>
         <p className="text-xs text-gray-400 mt-2">
-          Répartition approximative selon l’IP. Un VPN (ex. WARP) peut afficher un autre pays.
+          Répartition approximative, un VPN peut afficher un autre pays.
         </p>
       </div>
 
