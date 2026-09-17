@@ -19,5 +19,6 @@ export function clearAuthTokenCookie(): void {
     return;
   }
 
-  document.cookie = `${AUTH_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
+  const secure = cookieEstHttps() ? '; Secure' : '';
+  document.cookie = `${AUTH_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
 }

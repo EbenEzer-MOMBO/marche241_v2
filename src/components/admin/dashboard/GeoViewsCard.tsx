@@ -27,13 +27,13 @@ function agregerParPays(lignes: StatsVuesGeo[]): PaysAgregé[] {
       nom: libellePays(code),
       nombre_vues,
     }))
-    .sort((a, b) => b.nombre_vues - a.nombre_vues)
-    .slice(0, 6);
+    .sort((a, b) => b.nombre_vues - a.nombre_vues);
 }
 
 export const GeoViewsCard: React.FC<GeoViewsCardProps> = ({ lignes, periodeJours }) => {
-  const pays = agregerParPays(lignes);
-  const total = pays.reduce((somme, item) => somme + item.nombre_vues, 0);
+  const paysTous = agregerParPays(lignes);
+  const total = paysTous.reduce((somme, item) => somme + item.nombre_vues, 0);
+  const pays = paysTous.slice(0, 6);
   const maxVues = pays[0]?.nombre_vues || 1;
   const libellePeriode = periodeJours === 1 ? '24 h' : `${periodeJours} jours`;
 
