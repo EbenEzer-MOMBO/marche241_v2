@@ -26,7 +26,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
     // Récupérer les données de la boutique
     const [configResult, boutiqueResult] = await Promise.all([
       getBoutiqueConfig(boutique),
-      getBoutiqueBySlug(boutique)
+      getBoutiqueBySlug(boutique, { skipTracking: true })
     ]);
 
     boutiqueConfig = configResult;
@@ -138,10 +138,9 @@ export async function generateMetadata({
   const { boutique, id } = await params;
   
   try {
-    // Récupérer les données de la boutique et du produit en parallèle
     const [boutiqueConfig, produitDB] = await Promise.all([
       getBoutiqueConfig(boutique),
-      getProduitById(Number(id))
+      getProduitById(Number(id), { skipTracking: true })
     ]);
 
     if (!produitDB) {

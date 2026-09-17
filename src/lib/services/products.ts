@@ -163,7 +163,10 @@ export async function getProduitsParBoutique(
  */
 export async function getProduitById(id: number): Promise<ProduitDB> {
   try {
-    const response = await api.get<{success: boolean; produit: ProduitDB}>(`/produits/${id}`);
+    const response = await api.get<{success: boolean; produit: ProduitDB}>(
+      `/produits/${id}`,
+      { headers: { 'x-skip-view-tracking': '1' } }
+    );
     
     if (!response.success || !response.produit) {
       throw new Error(`Produit avec l'ID ${id} introuvable`);

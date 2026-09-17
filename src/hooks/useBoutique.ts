@@ -39,7 +39,7 @@ export function useBoutique(slug: string): UseBoutiqueResult {
 
       // Récupération en parallèle des données API et de la configuration
       const [boutiqueData, configData] = await Promise.all([
-        getBoutiqueBySlug(slug),
+        getBoutiqueBySlug(slug, { skipTracking: true }),
         getBoutiqueConfig(slug)
       ]);
 

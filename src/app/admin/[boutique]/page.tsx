@@ -12,7 +12,7 @@ import { getProduitsParBoutique, ProduitsResponse } from '@/lib/services/product
 import { getCategoriesParBoutique } from '@/lib/services/categories';
 import { getCommunesParBoutique } from '@/lib/services/communes';
 import { getStatistiquesDashboard, StatistiquesDashboard } from '@/lib/services/statistiques';
-import { getProduitsLesPlusVus, ProduitPopulaire } from '@/lib/services/vues';
+import { getProduitsLesPlusVus, getStatsVuesGeoBoutique, ProduitPopulaire, StatsVuesGeo } from '@/lib/services/vues';
 import { ChartEvolutionCA } from '@/components/admin/ChartEvolutionCA';
 import { ChartRepartitionCommandes } from '@/components/admin/ChartRepartitionCommandes';
 import { StatsCard } from '@/components/admin/dashboard/StatsCard';
@@ -21,6 +21,7 @@ import { ConfigAlert } from '@/components/admin/dashboard/ConfigAlert';
 import { QuickActions } from '@/components/admin/dashboard/QuickActions';
 import { RecentProducts } from '@/components/admin/dashboard/RecentProducts';
 import { TopViewedProducts } from '@/components/admin/dashboard/TopViewedProducts';
+import { GeoViewsCard } from '@/components/admin/dashboard/GeoViewsCard';
 import {
   Package,
   ShoppingCart,
@@ -61,6 +62,7 @@ export default function BoutiqueDashboard() {
   const [totalCommunes, setTotalCommunes] = useState(0);
   const [recentProducts, setRecentProducts] = useState<any[]>([]);
   const [topViewedProducts, setTopViewedProducts] = useState<ProduitPopulaire[]>([]);
+  const [repartitionGeo, setRepartitionGeo] = useState<StatsVuesGeo[]>([]);
 
   // États pour le bouton PWA
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -213,10 +215,11 @@ export default function BoutiqueDashboard() {
     const loadStats = async (boutiqueId: number) => {
       try {
         // Produits récents + stats dashboard (categories/communes: Sidebar fait déjà le check alertes)
-        const [produitsData, statsData, topProducts] = await Promise.all([
+        const [produitsData, statsData, topProducts, geoData] = await Promise.all([
           getProduitsParBoutique(boutiqueId, { limite: 5 }),
           getStatistiquesDashboard(boutiqueId, periode),
           getProduitsLesPlusVus(boutiqueId, 5),
+          getStatsVuesGeoBoutique(boutiqueId, periode),
         ]);
 
         setTotalCommunes(0);
@@ -235,6 +238,7 @@ export default function BoutiqueDashboard() {
 
         setRecentProducts(produitsData.donnees.slice(0, 5));
         setTopViewedProducts(topProducts);
+        setRepartitionGeo(geoData);
 
         // Compteurs categories/communes sans bloquer le dashboard (partagés via coalesce GET)
         const [categoriesData, communesData] = await Promise.all([
@@ -274,8 +278,12 @@ export default function BoutiqueDashboard() {
       if (!boutique?.id) return;
 
       try {
-        const statsData = await getStatistiquesDashboard(boutique.id, periode);
+        const [statsData, geoData] = await Promise.all([
+          getStatistiquesDashboard(boutique.id, periode),
+          getStatsVuesGeoBoutique(boutique.id, periode),
+        ]);
         setStatistiques(statsData);
+        setRepartitionGeo(geoData);
         
         // Mettre à jour aussi le nombre total de commandes
         setStats(prev => ({
@@ -399,6 +407,7 @@ export default function BoutiqueDashboard() {
               label="Produits"
               value={stats.totalProduits}
               subtitle={`${stats.produitsActifs} actifs`}
+              onClick={() => router.push(`/admin/${boutique.slug}/products`)}
             />
             
             <StatsCard
@@ -407,6 +416,7 @@ export default function BoutiqueDashboard() {
               label="Commandes"
               value={stats.totalCommandes}
               subtitle="Total"
+              onClick={() => router.push(`/admin/${boutique.slug}/orders`)}
             />
             
             <StatsCard
@@ -415,6 +425,7 @@ export default function BoutiqueDashboard() {
               label="Catégories"
               value={stats.totalCategories}
               subtitle="Catégories actives"
+              onClick={() => router.push(`/admin/${boutique.slug}/categories`)}
             />
             
             <StatsCard
@@ -473,7 +484,7 @@ export default function BoutiqueDashboard() {
           </div>
 
           {/* Recent Activity & Top Viewed Products */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
             <RecentProducts
               products={recentProducts}
               boutiqueSlug={boutique.slug}
@@ -486,6 +497,8 @@ export default function BoutiqueDashboard() {
               onNavigate={(path) => router.push(path)}
             />
           </div>
+
+          <GeoViewsCard lignes={repartitionGeo} periodeJours={periode} />
         </div>
       </div>
 

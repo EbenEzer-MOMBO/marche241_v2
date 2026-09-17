@@ -173,6 +173,38 @@ export async function getStatistiquesVuesProduits(
 }
 
 /**
+ * Répartition géographique des vues boutique (pays / ville)
+ */
+export interface StatsVuesGeo {
+  pays: string;
+  ville: string;
+  nombre_vues: number;
+}
+
+export interface StatsGeoBoutiqueResponse {
+  success: boolean;
+  boutique_id: number;
+  periode_jours: number;
+  repartition_geo: StatsVuesGeo[];
+}
+
+export async function getStatsVuesGeoBoutique(
+  boutiqueId: number,
+  jours: number = 30
+): Promise<StatsVuesGeo[]> {
+  try {
+    const response = await api.get<StatsGeoBoutiqueResponse>(
+      `/boutiques/${boutiqueId}/stats/geo?jours=${jours}`
+    );
+
+    return response.repartition_geo || [];
+  } catch (error) {
+    console.error('Erreur lors de la récupération des stats géo:', error);
+    return [];
+  }
+}
+
+/**
  * Interface pour un produit populaire avec son nombre de vues
  */
 export interface ProduitPopulaire {

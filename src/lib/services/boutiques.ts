@@ -5,14 +5,32 @@
 import api from '@/lib/api';
 import { ApiBoutiqueResponse, Boutique } from '@/lib/database-types';
 
+export interface LectureBoutiqueOptions {
+  skipTracking?: boolean;
+}
+
+function headersSansTracking(skipTracking?: boolean): RequestInit | undefined {
+  if (!skipTracking) {
+    return undefined;
+  }
+
+  return { headers: { 'x-skip-view-tracking': '1' } };
+}
+
 /**
  * Récupère les paramètres d'une boutique par son slug
  * @param slug - Le slug de la boutique (ex: "marche_241")
  * @returns Promise<Boutique> - Les données de la boutique
  */
-export async function getBoutiqueBySlug(slug: string): Promise<Boutique> {
+export async function getBoutiqueBySlug(
+  slug: string,
+  options?: LectureBoutiqueOptions
+): Promise<Boutique> {
   try {
-    const response = await api.get<ApiBoutiqueResponse>(`/boutiques/${slug}`);
+    const response = await api.get<ApiBoutiqueResponse>(
+      `/boutiques/${slug}`,
+      headersSansTracking(options?.skipTracking)
+    );
     
     if (!response.success || !response.boutique) {
       throw new Error(`Boutique "${slug}" introuvable`);
@@ -156,7 +174,7 @@ export async function updateBoutique(
  */
 export async function boutiqueExists(slug: string): Promise<boolean> {
   try {
-    await getBoutiqueBySlug(slug);
+    await getBoutiqueBySlug(slug, { skipTracking: true });
     return true;
   } catch {
     return false;

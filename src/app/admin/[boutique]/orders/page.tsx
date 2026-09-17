@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import {
   getCommandesParBoutique,
   modifierStatutCommande,
+  archiverCommande,
   type Commande,
   type CommandesParams
 } from '@/lib/services/commandes';
@@ -24,7 +25,9 @@ import {
   XCircle,
   Truck,
   Eye,
-  AlertCircle
+  AlertCircle,
+  Archive,
+  ArchiveRestore
 } from 'lucide-react';
 
 export default function OrdersPage() {
@@ -41,6 +44,8 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Commande[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [showArchived, setShowArchived] = useState(false);
+  const [pendingArchiveOrder, setPendingArchiveOrder] = useState<Commande | null>(null);
 
   // États pour le sidebar de détails
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
@@ -59,17 +64,27 @@ export default function OrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
+  // Recharge des commandes après le chargement initial (ex: bascule du filtre
+  // archivées) : ne doit pas déclencher le spinner plein écran, qui démonterait
+  // la liste et le filtre lui-même — seulement isLoading (premier chargement).
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   // Fonction pour charger toutes les commandes depuis l'API
-  const loadOrders = async (boutiqueId: number) => {
+  const loadOrders = async (boutiqueId: number, includeArchived: boolean = showArchived, isInitial: boolean = true) => {
     try {
-      setIsLoading(true);
+      if (isInitial) {
+        setIsLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
 
       // Charger toutes les commandes sans pagination côté serveur
       const response = await getCommandesParBoutique(boutiqueId, {
         page: 1,
         limite: 100, // Charger jusqu'à 100 commandes
         tri_par: 'date_commande',
-        ordre: 'DESC'
+        ordre: 'DESC',
+        includeArchived
       });
 
       console.log('📦 Réponse API commandes:', response);
@@ -82,7 +97,11 @@ export default function OrdersPage() {
       showError('Erreur lors du chargement des commandes');
       setOrders([]);
     } finally {
-      setIsLoading(false);
+      if (isInitial) {
+        setIsLoading(false);
+      } else {
+        setIsRefreshing(false);
+      }
     }
   };
 
@@ -122,6 +141,16 @@ export default function OrdersPage() {
 
     return () => clearTimeout(timer);
   }, [user, boutiqueName, router]);
+
+  // Recharger les commandes quand on bascule l'affichage des archivées
+  // (isInitial=false : ne pas afficher le spinner plein écran, juste rafraîchir la liste)
+  useEffect(() => {
+    if (boutique?.id) {
+      loadOrders(boutique.id, showArchived, false);
+      setCurrentPage(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showArchived]);
 
   // Filtrer et paginer les commandes côté client
   const filteredOrders = orders.filter(order => {
@@ -269,6 +298,42 @@ export default function OrdersPage() {
     }
   };
 
+  // Une commande expédiée, livrée ou payée (même partiellement) ne peut pas
+  // être archivée (règle métier côté API)
+  const isOrderArchivable = (order: Commande) => {
+    const statutPaiement = order.statut_paiement?.toLowerCase();
+    return order.statut.toLowerCase() !== 'expedie'
+      && order.statut.toLowerCase() !== 'livree'
+      && statutPaiement !== 'paye'
+      && statutPaiement !== 'partiellement_paye';
+  };
+
+  const confirmArchiveOrder = async () => {
+    if (!pendingArchiveOrder) return;
+
+    const nouvelEtat = !pendingArchiveOrder.archivee;
+
+    try {
+      await archiverCommande(pendingArchiveOrder.id, nouvelEtat);
+
+      if (nouvelEtat && !showArchived) {
+        // On masque immédiatement la commande archivée de la vue courante
+        setOrders(prevOrders => prevOrders.filter(o => o.id !== pendingArchiveOrder.id));
+      } else {
+        setOrders(prevOrders =>
+          prevOrders.map(o => o.id === pendingArchiveOrder.id ? { ...o, archivee: nouvelEtat } : o)
+        );
+      }
+
+      success(nouvelEtat ? 'Commande archivée avec succès' : 'Commande désarchivée avec succès');
+    } catch (error: any) {
+      console.error('Erreur lors de l\'archivage de la commande:', error);
+      showError(error?.message || 'Erreur lors de l\'archivage de la commande');
+    } finally {
+      setPendingArchiveOrder(null);
+    }
+  };
+
   const openConfirmModal = (orderId: number, currentStatus: string, newStatus: string, statusLabel: string) => {
     setPendingStatusUpdate({ orderId, currentStatus, newStatus, statusLabel });
     setIsConfirmModalOpen(true);
@@ -328,6 +393,49 @@ export default function OrdersPage() {
     }
     
     return null;
+  };
+
+  const getArchiveButton = (order: Commande, isMobile: boolean = false) => {
+    const archivable = isOrderArchivable(order);
+
+    if (!archivable && !order.archivee) {
+      // Commande expédiée/livrée/payée : archivage désactivé, pas de désarchivage à proposer non plus
+      return null;
+    }
+
+    const baseClasses = isMobile
+      ? "w-full flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg transition-colors border"
+      : "inline-flex items-center p-1.5 rounded-lg transition-colors";
+
+    if (order.archivee) {
+      return (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setPendingArchiveOrder(order);
+          }}
+          className={`${baseClasses} ${isMobile ? 'border-gray-300 text-gray-700 hover:bg-gray-50' : 'text-gray-600 hover:bg-gray-100'}`}
+          title="Désarchiver la commande"
+        >
+          <ArchiveRestore className={isMobile ? 'h-4 w-4 mr-2' : 'h-4 w-4'} />
+          {isMobile && 'Désarchiver'}
+        </button>
+      );
+    }
+
+    return (
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          setPendingArchiveOrder(order);
+        }}
+        className={`${baseClasses} ${isMobile ? 'border-gray-300 text-gray-700 hover:bg-gray-50' : 'text-gray-500 hover:bg-gray-100'}`}
+        title="Archiver la commande (ex: commande de test)"
+      >
+        <Archive className={isMobile ? 'h-4 w-4 mr-2' : 'h-4 w-4'} />
+        {isMobile && 'Archiver'}
+      </button>
+    );
   };
 
   if (isLoading) {
@@ -444,6 +552,20 @@ export default function OrdersPage() {
                 </div>
               )}
             </div>
+
+            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer w-fit">
+              <input
+                type="checkbox"
+                checked={showArchived}
+                onChange={(e) => setShowArchived(e.target.checked)}
+                disabled={isRefreshing}
+                className="rounded border-gray-300 text-black focus:ring-black"
+              />
+              Afficher les commandes archivées
+              {isRefreshing && (
+                <span className="h-3.5 w-3.5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+              )}
+            </label>
           </div>
 
           {/* Orders Table - Desktop */}
@@ -502,10 +624,17 @@ export default function OrdersPage() {
                         {getStatusIcon(order.statut)}
                         <span className="ml-1">{getStatusLabelLocal(order.statut)}</span>
                       </span>
+                      {order.archivee && (
+                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                          <Archive className="h-3 w-3 mr-1" />
+                          Archivée
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2">
                         {getActionButton(order)}
+                        {getArchiveButton(order)}
                         <button
                           onClick={() => handleViewDetails(order.id)}
                           className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"
@@ -537,14 +666,22 @@ export default function OrdersPage() {
                       {formatDate(order.date_commande)}
                     </div>
                   </div>
-                  <span
-                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(
-                      order.statut
-                    )}`}
-                  >
-                    {getStatusIcon(order.statut)}
-                    <span className="ml-1">{getStatusLabel(order.statut)}</span>
-                  </span>
+                  <div className="flex flex-col items-end gap-1">
+                    <span
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(
+                        order.statut
+                      )}`}
+                    >
+                      {getStatusIcon(order.statut)}
+                      <span className="ml-1">{getStatusLabel(order.statut)}</span>
+                    </span>
+                    {order.archivee && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                        <Archive className="h-3 w-3 mr-1" />
+                        Archivée
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-2 mb-3">
@@ -564,6 +701,7 @@ export default function OrdersPage() {
 
                 <div className="space-y-2">
                   {getActionButton(order, true)}
+                  {getArchiveButton(order, true)}
                   <button
                     onClick={() => handleViewDetails(order.id)}
                     className="w-full flex items-center justify-center px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm"
@@ -806,6 +944,52 @@ export default function OrdersPage() {
               }
             }
           `}</style>
+        </div>
+      )}
+
+      {/* Modal de confirmation d'archivage */}
+      {pendingArchiveOrder && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-start mb-4">
+              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                {pendingArchiveOrder.archivee ? (
+                  <ArchiveRestore className="h-6 w-6 text-gray-600" />
+                ) : (
+                  <Archive className="h-6 w-6 text-gray-600" />
+                )}
+              </div>
+              <div className="ml-4 flex-1">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {pendingArchiveOrder.archivee ? 'Désarchiver la commande ?' : 'Archiver la commande ?'}
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Commande {pendingArchiveOrder.numero_commande}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-sm text-gray-600 mb-6">
+              {pendingArchiveOrder.archivee
+                ? 'La commande réapparaîtra dans votre historique et vos statistiques.'
+                : 'La commande sera masquée de votre historique et de vos statistiques (utile pour une commande de test). Cette action est réversible à tout moment.'}
+            </p>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setPendingArchiveOrder(null)}
+                className="flex-1 px-4 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={confirmArchiveOrder}
+                className="flex-1 px-4 py-2.5 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors font-medium text-sm"
+              >
+                {pendingArchiveOrder.archivee ? 'Désarchiver' : 'Archiver'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

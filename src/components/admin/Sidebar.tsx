@@ -201,7 +201,7 @@ export default function Sidebar({ boutique, isMobileMenuOpen = false, onToggleMo
       <div className="flex items-center justify-between p-4 border-b border-gray-200">
         {!isCollapsed && (
           <a
-            href={`/${boutique.slug}`}
+            href={`/${boutique.slug}?preview=1`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center p-3 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer"

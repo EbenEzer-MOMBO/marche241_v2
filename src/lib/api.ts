@@ -3,6 +3,7 @@
  */
 
 import config from './config';
+import { clearAuthTokenCookie } from './auth-cookie';
 
 export class ApiError extends Error {
   constructor(
@@ -25,13 +26,21 @@ const defaultRequestConfig: RequestInit = {
 };
 
 /**
- * Récupère le token d'authentification depuis le localStorage
+ * Récupère le token d'authentification : localStorage côté navigateur,
+ * cookie `admin_token` côté serveur (posé à la connexion) pour que le SSR
+ * reconnaisse le vendeur/admin et n'enregistre pas ses propres visites.
  */
-function getAuthToken(): string | null {
+async function getAuthToken(): Promise<string | null> {
   if (typeof window !== 'undefined') {
     return localStorage.getItem('admin_token');
   }
-  return null;
+  try {
+    const { cookies } = await import('next/headers');
+    const store = await cookies();
+    return store.get('admin_token')?.value ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -43,6 +52,7 @@ function handleUnauthorized(): void {
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_user');
     localStorage.removeItem('admin_boutique');
+    clearAuthTokenCookie();
     
     // Vérifier si on n'est pas déjà sur la page de login pour éviter une boucle
     if (!window.location.pathname.includes('/admin/login')) {
@@ -56,18 +66,54 @@ function handleUnauthorized(): void {
   }
 }
 
+const PREVIEW_COOKIE = 'boutique_preview';
+const PREVIEW_HEADER = 'x-boutique-preview';
+const SKIP_TRACKING_HEADER = 'x-skip-view-tracking';
+
+/**
+ * Détecte si la requête en cours est une prévisualisation vendeur (?preview=1).
+ * Côté navigateur : l'URL de la page (premier chargement) ou, à défaut, le
+ * cookie de session posé par le middleware — les liens internes de la
+ * boutique (header, produits, panier...) ne portent pas ?preview=1, donc
+ * sans ce cookie la prévisualisation ne survivrait pas à la navigation.
+ * Côté serveur, les layouts n'ont pas accès à searchParams, donc on relit le
+ * header posé par le middleware (lui-même dérivé de l'URL ou du cookie).
+ * Import dynamique de next/headers pour ne jamais le faire atterrir dans le
+ * bundle client (server-only).
+ */
+async function isPreviewRequest(): Promise<boolean> {
+  if (typeof window !== 'undefined') {
+    if (new URLSearchParams(window.location.search).get('preview') === '1') {
+      return true;
+    }
+    return document.cookie
+      .split('; ')
+      .some((cookie) => cookie === `${PREVIEW_COOKIE}=1`);
+  }
+  try {
+    const { headers } = await import('next/headers');
+    const h = await headers();
+    return h.get('x-boutique-preview') === '1';
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Wrapper pour les requêtes API avec gestion d'erreurs
  */
 async function apiRequest<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  isPreview: boolean = false
 ): Promise<T> {
-  const url = `${config.apiBaseUrl}${endpoint}`;
-  
-  // Ajouter le token d'authentification si disponible
-  const token = getAuthToken();
-  const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
+  const url = isPreview
+    ? `${config.apiBaseUrl}${endpoint}${endpoint.includes('?') ? '&' : '?'}preview=1`
+    : `${config.apiBaseUrl}${endpoint}`;
+
+  const token = await getAuthToken();
+  const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+  const previewHeaders = isPreview ? { [PREVIEW_HEADER]: '1' } : {};
   
   const requestConfig: RequestInit = {
     ...defaultRequestConfig,
@@ -75,6 +121,7 @@ async function apiRequest<T>(
     headers: {
       ...defaultRequestConfig.headers,
       ...authHeaders,
+      ...previewHeaders,
       ...options.headers,
     } as HeadersInit,
   };
@@ -131,62 +178,90 @@ const inflightGetRequests = new Map<string, Promise<unknown>>();
 const recentGetResults = new Map<string, { expiresAt: number; value: unknown }>();
 const GET_CACHE_TTL_MS = 2000;
 
-function coalesceGet<T>(endpoint: string, factory: () => Promise<T>): Promise<T> {
-  const cached = recentGetResults.get(endpoint);
+function coalesceGet<T>(cacheKey: string, factory: () => Promise<T>): Promise<T> {
+  const cached = recentGetResults.get(cacheKey);
   if (cached && Date.now() < cached.expiresAt) {
     return Promise.resolve(cached.value as T);
   }
 
-  const existing = inflightGetRequests.get(endpoint);
+  const existing = inflightGetRequests.get(cacheKey);
   if (existing) {
     return existing as Promise<T>;
   }
 
   const promise = factory()
     .then((value) => {
-      recentGetResults.set(endpoint, {
+      recentGetResults.set(cacheKey, {
         value,
         expiresAt: Date.now() + GET_CACHE_TTL_MS,
       });
       return value;
     })
     .finally(() => {
-      inflightGetRequests.delete(endpoint);
+      inflightGetRequests.delete(cacheKey);
     });
-  inflightGetRequests.set(endpoint, promise);
+  inflightGetRequests.set(cacheKey, promise);
   return promise;
 }
 
 /**
  * Méthodes HTTP spécialisées
  */
+function headerValue(headers: HeadersInit | undefined, name: string): string | null {
+  if (!headers) {
+    return null;
+  }
+  if (headers instanceof Headers) {
+    return headers.get(name);
+  }
+  if (Array.isArray(headers)) {
+    const match = headers.find(([key]) => key.toLowerCase() === name.toLowerCase());
+    return match ? match[1] : null;
+  }
+  const record = headers as Record<string, string>;
+  const key = Object.keys(record).find((candidate) => candidate.toLowerCase() === name.toLowerCase());
+  return key ? record[key] : null;
+}
+
 export const api = {
-  get: <T>(endpoint: string, options?: RequestInit) =>
-    coalesceGet(endpoint, () => apiRequest<T>(endpoint, { ...options, method: 'GET' })),
-  
-  post: <T>(endpoint: string, data?: any, options?: RequestInit) =>
-    apiRequest<T>(endpoint, {
+  get: async <T>(endpoint: string, options?: RequestInit): Promise<T> => {
+    const isPreview = await isPreviewRequest();
+    const skipTracking = headerValue(options?.headers, SKIP_TRACKING_HEADER) === '1';
+    const cacheKey = `${endpoint}::preview=${isPreview}::skip=${skipTracking}`;
+    return coalesceGet(cacheKey, () => apiRequest<T>(endpoint, { ...options, method: 'GET' }, isPreview));
+  },
+
+  post: async <T>(endpoint: string, data?: any, options?: RequestInit): Promise<T> => {
+    const isPreview = await isPreviewRequest();
+    return apiRequest<T>(endpoint, {
       ...options,
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
-    }),
-  
-  put: <T>(endpoint: string, data?: any, options?: RequestInit) =>
-    apiRequest<T>(endpoint, {
+    }, isPreview);
+  },
+
+  put: async <T>(endpoint: string, data?: any, options?: RequestInit): Promise<T> => {
+    const isPreview = await isPreviewRequest();
+    return apiRequest<T>(endpoint, {
       ...options,
       method: 'PUT',
       body: data ? JSON.stringify(data) : undefined,
-    }),
-  
-  patch: <T>(endpoint: string, data?: any, options?: RequestInit) =>
-    apiRequest<T>(endpoint, {
+    }, isPreview);
+  },
+
+  patch: async <T>(endpoint: string, data?: any, options?: RequestInit): Promise<T> => {
+    const isPreview = await isPreviewRequest();
+    return apiRequest<T>(endpoint, {
       ...options,
       method: 'PATCH',
       body: data ? JSON.stringify(data) : undefined,
-    }),
-  
-  delete: <T>(endpoint: string, options?: RequestInit) =>
-    apiRequest<T>(endpoint, { ...options, method: 'DELETE' }),
+    }, isPreview);
+  },
+
+  delete: async <T>(endpoint: string, options?: RequestInit): Promise<T> => {
+    const isPreview = await isPreviewRequest();
+    return apiRequest<T>(endpoint, { ...options, method: 'DELETE' }, isPreview);
+  },
 };
 
 export default api;

@@ -48,6 +48,7 @@ interface Commande {
   sous_total: number;
   statut: string;
   statut_paiement: string;
+  archivee: boolean;
   taxes: number;
   total: number;
   montant_paye?: number;
@@ -84,6 +85,7 @@ interface CommandesParams {
   tri_par?: string;
   ordre?: 'ASC' | 'DESC';
   recherche?: string;
+  includeArchived?: boolean;
 }
 
 interface CommandesResponse {
@@ -141,6 +143,7 @@ export async function getCommandesParBoutique(
     if (params.tri_par) queryParams.append('tri_par', params.tri_par);
     if (params.ordre) queryParams.append('ordre', params.ordre);
     if (params.recherche) queryParams.append('recherche', params.recherche);
+    if (params.includeArchived) queryParams.append('include_archived', 'true');
 
     const url = `/commandes/boutique/${boutiqueId}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await api.get<CommandesResponse>(url);
@@ -244,6 +247,26 @@ export async function annulerCommande(commandeId: number): Promise<Commande> {
   } catch (error) {
     console.error('Erreur lors de l\'annulation de la commande:', error);
     throw new Error('Impossible d\'annuler la commande. Veuillez réessayer.');
+  }
+}
+
+/**
+ * Archiver ou désarchiver une commande (action réversible, ex: nettoyer une
+ * commande de test). Refusé par l'API si la commande est expédiée, livrée
+ * ou payée.
+ * @param commandeId - ID de la commande
+ * @param archivee - true pour archiver, false pour désarchiver
+ * @returns Promise<Commande>
+ */
+export async function archiverCommande(commandeId: number, archivee: boolean = true): Promise<Commande> {
+  try {
+    const response = await api.patch<CommandeResponse>(`/commandes/${commandeId}/archive`, {
+      archivee
+    });
+    return response.commande;
+  } catch (error) {
+    console.error('Erreur lors de l\'archivage de la commande:', error);
+    throw error;
   }
 }
 

@@ -17,7 +17,7 @@ export async function generateMetadata({
   try {
     const [boutiqueConfig, boutiqueData] = await Promise.all([
       getBoutiqueConfig(boutique),
-      getBoutiqueBySlug(boutique),
+      getBoutiqueBySlug(boutique, { skipTracking: true }),
     ]);
 
     const description = boutiqueData.description
