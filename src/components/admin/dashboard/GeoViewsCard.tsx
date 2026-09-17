@@ -1,5 +1,10 @@
 import { Globe } from 'lucide-react';
-import { libellePays } from '@/lib/utils/geo-pays';
+import {
+  CODE_SEAU_AUTRES,
+  CODE_SEAU_PROXY,
+  estCodePaysInconnuOuVpn,
+  libellePays,
+} from '@/lib/utils/geo-pays';
 import type { StatsVuesGeo } from '@/lib/services/vues';
 
 interface GeoViewsCardProps {
@@ -11,24 +16,75 @@ interface PaysAgregé {
   code: string;
   nom: string;
   nombre_vues: number;
+  estProxy: boolean;
+  estAutres: boolean;
 }
+
+const SEUIL_AUTRES = 0.03;
 
 function agregerParPays(lignes: StatsVuesGeo[]): PaysAgregé[] {
   const parPays = new Map<string, number>();
+  let vuesProxy = 0;
 
   lignes.forEach((ligne) => {
-    const code = (ligne.pays || 'Inconnu').trim() || 'Inconnu';
-    parPays.set(code, (parPays.get(code) || 0) + (ligne.nombre_vues || 0));
+    const code = (ligne.pays || '').trim() || 'Inconnu';
+    const vues = ligne.nombre_vues || 0;
+
+    if (estCodePaysInconnuOuVpn(code)) {
+      vuesProxy += vues;
+      return;
+    }
+
+    const cle = code.toUpperCase();
+    parPays.set(cle, (parPays.get(cle) || 0) + vues);
   });
 
-  return Array.from(parPays.entries())
-    .map(([code, nombre_vues]) => ({
-      code,
-      nom: libellePays(code),
-      nombre_vues,
-    }))
-    .sort((a, b) => b.nombre_vues - a.nombre_vues)
-    .slice(0, 6);
+  const paysReels: PaysAgregé[] = Array.from(parPays.entries()).map(([code, nombre_vues]) => ({
+    code,
+    nom: libellePays(code),
+    nombre_vues,
+    estProxy: false,
+    estAutres: false,
+  }));
+
+  const total = paysReels.reduce((somme, item) => somme + item.nombre_vues, 0) + vuesProxy;
+  let vuesAutres = 0;
+  let visibles = paysReels;
+
+  if (paysReels.length > 2 && total > 0) {
+    visibles = [];
+    paysReels.forEach((item) => {
+      if (item.nombre_vues / total < SEUIL_AUTRES) {
+        vuesAutres += item.nombre_vues;
+        return;
+      }
+      visibles.push(item);
+    });
+  }
+
+  visibles.sort((a, b) => b.nombre_vues - a.nombre_vues);
+
+  if (vuesAutres > 0) {
+    visibles.push({
+      code: CODE_SEAU_AUTRES,
+      nom: 'Autres',
+      nombre_vues: vuesAutres,
+      estProxy: false,
+      estAutres: true,
+    });
+  }
+
+  if (vuesProxy > 0) {
+    visibles.push({
+      code: CODE_SEAU_PROXY,
+      nom: 'Proxy / VPN / inconnu',
+      nombre_vues: vuesProxy,
+      estProxy: true,
+      estAutres: false,
+    });
+  }
+
+  return visibles;
 }
 
 export const GeoViewsCard: React.FC<GeoViewsCardProps> = ({ lignes, periodeJours }) => {
@@ -49,6 +105,9 @@ export const GeoViewsCard: React.FC<GeoViewsCardProps> = ({ lignes, periodeJours
         <p className="text-sm text-gray-500">
           {total.toLocaleString('fr-FR')} vue{total > 1 ? 's' : ''} · {libellePeriode}
         </p>
+        <p className="text-xs text-gray-400 mt-2">
+          Répartition approximative selon l’IP. Un VPN (ex. WARP) peut afficher un autre pays.
+        </p>
       </div>
 
       {pays.length > 0 && total > 0 ? (
@@ -56,6 +115,11 @@ export const GeoViewsCard: React.FC<GeoViewsCardProps> = ({ lignes, periodeJours
           {pays.map((item) => {
             const pourcentage = total > 0 ? Math.round((item.nombre_vues / total) * 100) : 0;
             const largeur = Math.max((item.nombre_vues / maxVues) * 100, 4);
+            const barreClass = item.estProxy
+              ? 'bg-gradient-to-r from-gray-400 to-gray-500'
+              : item.estAutres
+                ? 'bg-gradient-to-r from-slate-400 to-slate-500'
+                : 'bg-gradient-to-r from-teal-500 to-teal-600';
 
             return (
               <div key={item.code}>
@@ -70,7 +134,7 @@ export const GeoViewsCard: React.FC<GeoViewsCardProps> = ({ lignes, periodeJours
                 </div>
                 <div className="relative w-full h-2 bg-gray-100 rounded-full overflow-hidden">
                   <div
-                    className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-teal-500 to-teal-600"
+                    className={`absolute inset-y-0 left-0 rounded-full ${barreClass}`}
                     style={{ width: `${largeur}%` }}
                   />
                 </div>

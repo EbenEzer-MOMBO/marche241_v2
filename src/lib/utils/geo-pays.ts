@@ -33,7 +33,17 @@ const NOMS_PAYS_FR: Record<string, string> = {
   IN: 'Inde',
   AE: 'Émirats arabes unis',
   INCONNU: 'Inconnu',
+  VPN: 'Proxy / VPN',
 };
+
+export const CODE_SEAU_PROXY = 'PROXY';
+export const CODE_SEAU_AUTRES = 'AUTRES';
+
+export function estCodePaysInconnuOuVpn(code: string | null | undefined): boolean {
+  const normalise = (code || '').trim().toUpperCase();
+
+  return !normalise || normalise === 'INCONNU' || normalise === 'VPN';
+}
 
 export function libellePays(code: string | null | undefined): string {
   const brut = (code || '').trim();
