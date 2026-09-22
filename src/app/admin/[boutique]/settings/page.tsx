@@ -396,9 +396,9 @@ export default function SettingsPage() {
 
                       <ApparenceSection
                         couleurPrimaire={boutiqueData.couleur_primaire}
-                        couleurSecondaire={boutiqueData.couleur_secondaire}
-                        onChangePrimaire={(value) => setBoutiqueData({ ...boutiqueData, couleur_primaire: value })}
-                        onChangeSecondaire={(value) => setBoutiqueData({ ...boutiqueData, couleur_secondaire: value })}
+                        onChangePrimaire={(value) =>
+                          setBoutiqueData({ ...boutiqueData, couleur_primaire: value })
+                        }
                       />
 
                       <div className="flex justify-end pt-4 border-t border-gray-200">

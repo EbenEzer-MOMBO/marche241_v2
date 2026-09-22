@@ -4,9 +4,7 @@ import { Palette, Check } from 'lucide-react';
 
 interface ApparenceSectionProps {
   couleurPrimaire: string;
-  couleurSecondaire: string;
   onChangePrimaire: (value: string) => void;
-  onChangeSecondaire: (value: string) => void;
 }
 
 // Palette de couleurs sombres prédéfinies pour la couleur primaire
@@ -33,35 +31,9 @@ const COULEURS_PRIMAIRES = [
   { nom: 'Bleu Pétrole', valeur: '#0E7490' }
 ];
 
-// Palette de couleurs claires prédéfinies pour la couleur secondaire
-const COULEURS_SECONDAIRES = [
-  { nom: 'Blanc', valeur: '#FFFFFF' },
-  { nom: 'Gris Très Clair', valeur: '#F9FAFB' },
-  { nom: 'Gris Clair', valeur: '#F3F4F6' },
-  { nom: 'Beige Clair', valeur: '#FEFCE8' },
-  { nom: 'Jaune Pâle', valeur: '#FEF9C3' },
-  { nom: 'Jaune Clair', valeur: '#FEF08A' },
-  { nom: 'Orange Pâle', valeur: '#FED7AA' },
-  { nom: 'Pêche', valeur: '#FECACA' },
-  { nom: 'Rose Pâle', valeur: '#FBCFE8' },
-  { nom: 'Rose Clair', valeur: '#FCE7F3' },
-  { nom: 'Violet Pâle', valeur: '#F3E8FF' },
-  { nom: 'Lavande', valeur: '#E9D5FF' },
-  { nom: 'Bleu Très Clair', valeur: '#EFF6FF' },
-  { nom: 'Bleu Ciel', valeur: '#DBEAFE' },
-  { nom: 'Cyan Clair', valeur: '#CFFAFE' },
-  { nom: 'Turquoise Clair', valeur: '#CCFBF1' },
-  { nom: 'Vert Menthe', valeur: '#D1FAE5' },
-  { nom: 'Vert Clair', valeur: '#DCFCE7' },
-  { nom: 'Vert Tilleul', valeur: '#ECFCCB' },
-  { nom: 'Crème', valeur: '#FFFBEB' }
-];
-
 export const ApparenceSection: React.FC<ApparenceSectionProps> = ({
   couleurPrimaire,
-  couleurSecondaire,
-  onChangePrimaire,
-  onChangeSecondaire
+  onChangePrimaire
 }) => {
   return (
     <div>
@@ -74,7 +46,7 @@ export const ApparenceSection: React.FC<ApparenceSectionProps> = ({
           {/* Couleur primaire */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">
-              Couleur primaire (sombre)
+              Couleur de la boutique
             </label>
             <div className="grid grid-cols-8 sm:grid-cols-10 md:grid-cols-12 lg:grid-cols-15 gap-2">
               {COULEURS_PRIMAIRES.map((couleur) => (
@@ -89,6 +61,7 @@ export const ApparenceSection: React.FC<ApparenceSectionProps> = ({
                   }`}
                   style={{ backgroundColor: couleur.valeur }}
                   title={couleur.nom}
+                  aria-label={couleur.nom}
                 >
                   {couleurPrimaire === couleur.valeur && (
                     <div className="absolute inset-0 flex items-center justify-center">
@@ -104,7 +77,7 @@ export const ApparenceSection: React.FC<ApparenceSectionProps> = ({
                 style={{ backgroundColor: couleurPrimaire }}
               />
               <p className="text-sm text-gray-700 font-medium">
-                {COULEURS_PRIMAIRES.find(c => c.valeur === couleurPrimaire)?.nom || 'Couleur personnalisée'} 
+                {COULEURS_PRIMAIRES.find((c) => c.valeur === couleurPrimaire)?.nom || 'Couleur personnalisée'} 
                 <span className="ml-2 text-gray-500 font-mono text-xs">{couleurPrimaire}</span>
               </p>
             </div>
@@ -112,19 +85,6 @@ export const ApparenceSection: React.FC<ApparenceSectionProps> = ({
               Couleur pour les boutons, titres et éléments principaux
             </p>
           </div>
-
-          {/*
-            Couleur secondaire (claire) — masquée temporairement (MAR-34) :
-            le picker n'a plus d'effet visible depuis la refonte de l'UI boutique,
-            qui n'exploite plus --secondary-color. couleurSecondaire/onChangeSecondaire
-            restent branchés pour ne pas perdre les valeurs déjà enregistrées.
-          */}
-        </div>
-
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <p className="text-sm text-blue-800">
-            <span className="font-medium">💡 Conseil :</span> Choisissez une couleur sombre pour les éléments principaux et une couleur claire pour les arrière-plans. Un bon contraste améliore la lisibilité.
-          </p>
         </div>
       </div>
     </div>
