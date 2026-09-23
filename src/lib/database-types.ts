@@ -550,12 +550,14 @@ export interface FiltresProduits {
   categorie_id?: number;
   prix_min?: number;
   prix_max?: number;
+  commune_id?: number;
   en_stock?: boolean;
   est_nouveau?: boolean;
   est_en_promotion?: boolean;
   note_min?: number;
   boutique_id?: number;
   recherche?: string;
+  q?: string;
   tags?: string[];
 }
 

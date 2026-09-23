@@ -5,7 +5,7 @@ import { BoutiqueShareBar } from '@/components/storefront/BoutiqueShareBar';
 import { getBoutiqueConfig, getBoutiqueBySlug, type BoutiqueConfig } from '@/lib/boutiques';
 import { notFound } from 'next/navigation';
 
-const reservedSlugs = ['admin', 'affiche_boutiques', 'promo-poster', 'favicon.ico', 'manifest.json', 'robots.txt'];
+const reservedSlugs = ['admin', 'affiche_boutiques', 'produits', 'promo-poster', 'favicon.ico', 'manifest.json', 'robots.txt'];
 
 function isReservedOrAsset(slug: string): boolean {
   if (!slug) {

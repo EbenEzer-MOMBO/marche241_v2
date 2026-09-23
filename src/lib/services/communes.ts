@@ -56,6 +56,26 @@ interface CommuneResponse {
  * @param boutiqueId - ID de la boutique
  * @returns Liste des communes
  */
+/**
+ * Communes / localisations exposées globalement (marketplace).
+ * L’endpoint peut ne pas exister encore : on échoue silencieusement.
+ */
+export async function getCommunesMarketplace(): Promise<Commune[]> {
+  try {
+    const response = await api.get<CommunesResponse>('/communes');
+    if (!response.success) {
+      return [];
+    }
+    return (response.communes || []).map((commune) => ({
+      ...commune,
+      tarif_livraison: Number(commune.tarif_livraison) || 0,
+    }));
+  } catch (error) {
+    console.warn('Communes marketplace indisponibles:', error);
+    return [];
+  }
+}
+
 export async function getCommunesParBoutique(boutiqueId: number): Promise<Commune[]> {
   try {
     const response = await api.get<CommunesResponse>(`/communes/boutique/${boutiqueId}`);
