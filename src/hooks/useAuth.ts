@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { demanderCodeVerification, verifierCode, inscrireVendeur, getBoutiquesVendeur, DemanderCodeData, VerifierCodeData, InscriptionData, BoutiqueData } from '@/lib/services/auth';
 import { clearAuthTokenCookie, persistAuthTokenCookie } from '@/lib/auth-cookie';
+import { clearPendingOnboardingEmail, isOnboardingActive, markOnboardingActive } from '@/lib/onboarding/storage';
 import { useToast } from './useToast';
 
 interface AuthUser {
@@ -126,16 +127,20 @@ export function useAuth(): UseAuthReturn {
         // La vérification de la boutique a déjà été faite dans verifierCode
         console.log('📊 État de la boutique:', response.hasBoutique);
         
+        const vendeurId = String(response.vendeur.id);
+        clearPendingOnboardingEmail();
+
         if (response.hasBoutique && response.boutique) {
-          // Le vendeur a une boutique, stocker les données et utiliser le slug
           localStorage.setItem('admin_boutique', JSON.stringify(response.boutique));
-          console.log('✅ Boutique trouvée, redirection vers:', `/admin/${response.boutique.slug}`);
-          router.push(`/admin/${response.boutique.slug}`);
+          if (isOnboardingActive(vendeurId)) {
+            router.push('/admin/onboarding');
+          } else {
+            router.push(`/admin/${response.boutique.slug}`);
+          }
         } else {
-          // Pas de boutique, supprimer les données si elles existent
           localStorage.removeItem('admin_boutique');
-          console.log('❌ Aucune boutique trouvée, redirection vers la création');
-          router.push('/admin/boutique/create');
+          markOnboardingActive(vendeurId);
+          router.push('/admin/onboarding');
         }
         
         return true;
