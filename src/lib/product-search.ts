@@ -18,7 +18,7 @@ export type ProductSearchState = {
 export const SEARCH_DEBOUNCE_MS = 300;
 
 export const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-  { value: 'recent', label: 'Plus récents' },
+  { value: 'recent', label: 'Les plus vus' },
   { value: 'price-asc', label: 'Prix croissant' },
   { value: 'price-desc', label: 'Prix décroissant' },
   { value: 'name', label: 'Nom A-Z' },
@@ -129,7 +129,7 @@ export const mapSortToApi = (
 ): { tri_par: string; ordre: 'ASC' | 'DESC' } => {
   switch (sort) {
     case 'recent':
-      return { tri_par: 'date_creation', ordre: 'DESC' };
+      return { tri_par: 'nombre_vues', ordre: 'DESC' };
     case 'price-asc':
       return { tri_par: 'prix', ordre: 'ASC' };
     case 'price-desc':
