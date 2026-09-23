@@ -49,13 +49,11 @@ export async function checkWhatsAppNumber(phoneNumber: string): Promise<CheckWha
  * @param phoneNumber - Numéro de téléphone
  * @param code - Code de vérification à envoyer
  */
-export async function sendWhatsAppCode(phoneNumber: string, code: string): Promise<boolean> {
+export async function sendWhatsAppMessage(phoneNumber: string, message: string): Promise<boolean> {
   try {
     const cleanNumber = phoneNumber.replace(/[^\d]/g, '');
-    
     const url = `${API_BASE_URL}/whatsapp/envoyer-message`;
-    const message = `Votre code de vérification Marché241 est: ${code}\n\nCe code expire dans 10 minutes.`;
-    
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -63,7 +61,7 @@ export async function sendWhatsAppCode(phoneNumber: string, code: string): Promi
       },
       body: JSON.stringify({
         telephone: cleanNumber,
-        message: message
+        message,
       }),
     });
 
@@ -73,9 +71,22 @@ export async function sendWhatsAppCode(phoneNumber: string, code: string): Promi
 
     return true;
   } catch (error) {
-    console.error('Erreur lors de l\'envoi du message WhatsApp via le backend:', error);
+    console.error("Erreur lors de l'envoi du message WhatsApp via le backend:", error);
     return false;
   }
 }
+
+export async function sendWhatsAppCode(phoneNumber: string, code: string): Promise<boolean> {
+  const message = `Votre code de vérification Marché241 est: ${code}\n\nCe code expire dans 10 minutes.`;
+  return sendWhatsAppMessage(phoneNumber, message);
+}
+
+export const buildOnboardingWelcomeMessage = (prenom: string, boutiqueSlug?: string) => {
+  const dashboardHint = boutiqueSlug
+    ? `Accédez à votre espace : /admin/${boutiqueSlug}`
+    : 'Accédez à votre espace vendeur depuis le tableau de bord.';
+
+  return `Bienvenue ${prenom} !\n\nVotre boutique est prête.\n${dashboardHint}\n\nAjoutez des produits, partagez le lien et commencez à vendre.`;
+};
 
 
