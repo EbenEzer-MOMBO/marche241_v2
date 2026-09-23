@@ -53,13 +53,6 @@ export const markPaiementSkipped = (userId: string) => {
 export const isPaiementSkipped = (userId: string): boolean =>
   readFlag(`${ONBOARDING_STORAGE.skipPaiementPrefix}${userId}`);
 
-export const markProduitsSkipped = (userId: string) => {
-  writeFlag(`${ONBOARDING_STORAGE.skipProduitsPrefix}${userId}`, true);
-};
-
-export const isProduitsSkipped = (userId: string): boolean =>
-  readFlag(`${ONBOARDING_STORAGE.skipProduitsPrefix}${userId}`);
-
 export const markWelcomeSent = (userId: string) => {
   writeFlag(`${ONBOARDING_STORAGE.welcomeSentPrefix}${userId}`, true);
 };

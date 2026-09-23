@@ -1,14 +1,13 @@
 'use client';
 
-import { Suspense, use } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { Suspense, use, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { OnboardingShell } from '@/components/onboarding/OnboardingShell';
 import { CompteStep } from '@/components/onboarding/CompteStep';
 import { VerifStep } from '@/components/onboarding/VerifStep';
 import { BoutiqueStep } from '@/components/onboarding/BoutiqueStep';
 import { PaiementStep } from '@/components/onboarding/PaiementStep';
-import { ProduitsStep } from '@/components/onboarding/ProduitsStep';
 import { DoneStep } from '@/components/onboarding/DoneStep';
 import { useOnboardingGate } from '@/hooks/useOnboardingGate';
 import { isOnboardingStepId, type OnboardingStepId } from '@/lib/onboarding/steps';
@@ -18,20 +17,29 @@ const StepContent = ({ step }: { step: OnboardingStepId }) => {
   if (step === 'verif') return <VerifStep />;
   if (step === 'boutique') return <BoutiqueStep />;
   if (step === 'paiement') return <PaiementStep />;
-  if (step === 'produits') return <ProduitsStep />;
   return <DoneStep />;
 };
 
 const OnboardingStepInner = ({ step }: { step: string }) => {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const isPreview = searchParams.get('preview') === '1';
-  const validStep: OnboardingStepId = isOnboardingStepId(step) ? step : 'compte';
-  const { isReady } = useOnboardingGate(validStep, { disabled: isPreview });
+  const isKnownStep = isOnboardingStepId(step);
+  const validStep: OnboardingStepId = isKnownStep ? step : 'compte';
+  const { isReady } = useOnboardingGate(isKnownStep ? validStep : undefined, { disabled: isPreview || !isKnownStep });
 
-  if (!isOnboardingStepId(step)) {
+  useEffect(() => {
+    if (!isKnownStep && !isPreview) {
+      router.replace('/admin/onboarding');
+    }
+  }, [isKnownStep, isPreview, router]);
+
+  if (!isKnownStep) {
     return (
       <OnboardingShell currentStep="compte">
-        <p className="text-center text-gray-600">Étape inconnue.</p>
+        <div className="flex min-h-[40vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-gray-600" aria-label="Redirection" />
+        </div>
       </OnboardingShell>
     );
   }

@@ -3,8 +3,7 @@ export const ONBOARDING_STEPS = [
   { id: 'verif', label: 'Vérif', index: 2 },
   { id: 'boutique', label: 'Boutique', index: 3 },
   { id: 'paiement', label: 'Paiement', index: 4 },
-  { id: 'produits', label: 'Premiers produits', index: 5 },
-  { id: 'done', label: 'Terminé', index: 6 },
+  { id: 'done', label: 'Terminé', index: 5 },
 ] as const;
 
 export type OnboardingStepId = (typeof ONBOARDING_STEPS)[number]['id'];
@@ -14,7 +13,6 @@ export const ONBOARDING_STORAGE = {
   pending: 'onboarding_pending',
   activePrefix: 'onboarding_active_',
   skipPaiementPrefix: 'onboarding_skip_paiement_',
-  skipProduitsPrefix: 'onboarding_skip_produits_',
   welcomeSentPrefix: 'onboarding_welcome_sent_',
   completedPrefix: 'onboarding_completed_',
 } as const;
@@ -24,9 +22,7 @@ export type OnboardingSnapshot = {
   pendingEmail: string | null;
   hasBoutique: boolean;
   hasNumeroPaiement: boolean;
-  hasProducts: boolean;
   skipPaiement: boolean;
-  skipProduits: boolean;
   completed: boolean;
 };
 
@@ -44,7 +40,6 @@ export const resolveOnboardingStep = (snapshot: OnboardingSnapshot): OnboardingS
 
   if (!snapshot.hasBoutique) return 'boutique';
   if (!snapshot.hasNumeroPaiement && !snapshot.skipPaiement) return 'paiement';
-  if (!snapshot.hasProducts && !snapshot.skipProduits) return 'produits';
   if (!snapshot.completed) return 'done';
   return 'dashboard';
 };

@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { getProduitsParBoutique } from '@/lib/services/products';
 import {
   canVisitOnboardingStep,
   resolveOnboardingStep,
@@ -14,7 +13,6 @@ import {
   getPendingOnboardingEmail,
   isOnboardingCompleted,
   isPaiementSkipped,
-  isProduitsSkipped,
 } from '@/lib/onboarding/storage';
 import type { BoutiqueData } from '@/lib/services/auth';
 
@@ -45,7 +43,6 @@ export const useOnboardingGate = (requestedStep?: OnboardingStepId, options?: { 
     const run = async () => {
       const pendingEmail = getPendingOnboardingEmail();
       let boutique = getStoredBoutique();
-      let hasProducts = false;
 
       if (isAuthenticated && user) {
         try {
@@ -53,15 +50,6 @@ export const useOnboardingGate = (requestedStep?: OnboardingStepId, options?: { 
           if (remoteBoutique) boutique = remoteBoutique;
         } catch {
           // garder le cache local si l'API échoue
-        }
-
-        if (boutique?.id) {
-          try {
-            const produits = await getProduitsParBoutique(boutique.id, { limite: 1 });
-            hasProducts = (produits.total || produits.donnees?.length || 0) > 0;
-          } catch {
-            hasProducts = (boutique.nombre_produits || 0) > 0;
-          }
         }
       }
 
@@ -72,9 +60,7 @@ export const useOnboardingGate = (requestedStep?: OnboardingStepId, options?: { 
         pendingEmail,
         hasBoutique: Boolean(boutique?.id),
         hasNumeroPaiement: Boolean(user?.numero_paiement?.trim()),
-        hasProducts,
         skipPaiement: user ? isPaiementSkipped(user.id) : false,
-        skipProduits: user ? isProduitsSkipped(user.id) : false,
         completed: user ? isOnboardingCompleted(user.id) : false,
       };
 

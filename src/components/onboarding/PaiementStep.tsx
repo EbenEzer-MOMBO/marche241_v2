@@ -7,30 +7,24 @@ import { useAuth } from '@/hooks/useAuth';
 import { modifierVendeur } from '@/lib/services/auth';
 import { ToastContainer } from '@/components/ui/Toast';
 import { useToast } from '@/hooks/useToast';
-import {
-  normalizeMsisdnInput,
-  validateMsisdn,
-  msisdnPlaceholder,
-  type MobileMoneyOperator,
-} from '@/lib/utils/mobileMoneyMsisdn';
+import { normalizeMsisdnInput, validateMsisdn, msisdnPlaceholder } from '@/lib/utils/mobileMoneyMsisdn';
 import { markPaiementSkipped } from '@/lib/onboarding/storage';
 
 export const PaiementStep = () => {
   const router = useRouter();
   const { user, updateUser } = useAuth();
   const { toasts, removeToast, success, error: showError } = useToast();
-  const [operator, setOperator] = useState<MobileMoneyOperator>('airtel');
   const [numero, setNumero] = useState(user?.numero_paiement || '');
   const [isLoading, setIsLoading] = useState(false);
 
-  const error = validateMsisdn(numero, operator);
+  const error = validateMsisdn(numero, 'airtel');
   const isValid = numero.length === 9 && !error;
 
   const handleSkip = () => {
     if (user?.id) {
       markPaiementSkipped(user.id);
     }
-    router.push('/admin/onboarding/produits');
+    router.push('/admin/onboarding/done');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,7 +45,7 @@ export const PaiementStep = () => {
         }
         updateUser({ numero_paiement: nextNumero });
         success('Numéro enregistré', 'Vous pourrez le modifier plus tard dans les paramètres.');
-        router.push('/admin/onboarding/produits');
+        router.push('/admin/onboarding/done');
       } else {
         showError(response.message || 'Impossible d’enregistrer le numéro', 'Erreur');
       }
@@ -67,55 +61,31 @@ export const PaiementStep = () => {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Configurer le paiement</h1>
         <p className="mt-1 text-gray-600">
-          Ajoutez votre numéro Airtel Money ou Moov Money pour recevoir vos versements. Vous pouvez passer cette étape.
+          Ajoutez votre numéro Airtel Money pour recevoir vos reversements. Vous pouvez passer cette étape.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <button
-          type="button"
-          onClick={() => setOperator('airtel')}
-          className={`w-full rounded-lg border p-4 text-left ${
-            operator === 'airtel' ? 'border-2 border-gray-900 bg-gray-50' : 'border-gray-200'
-          }`}
-          aria-pressed={operator === 'airtel'}
-        >
+        <div className="rounded-lg border-2 border-gray-900 bg-gray-50 p-4">
           <div className="flex items-center">
             <Image src="/airtel_money.png" alt="" width={40} height={40} className="mr-3 rounded" />
             <div>
               <p className="font-semibold text-gray-900">Airtel Money</p>
-              <p className="text-sm text-gray-600">Format {msisdnPlaceholder('airtel')}</p>
+              <p className="text-sm text-gray-600">Versement sur ce numéro</p>
             </div>
           </div>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setOperator('moov')}
-          className={`w-full rounded-lg border p-4 text-left ${
-            operator === 'moov' ? 'border-2 border-gray-900 bg-gray-50' : 'border-gray-200'
-          }`}
-          aria-pressed={operator === 'moov'}
-        >
-          <div className="flex items-center">
-            <Image src="/moov_money.png" alt="" width={40} height={40} className="mr-3 rounded" />
-            <div>
-              <p className="font-semibold text-gray-900">Moov Money</p>
-              <p className="text-sm text-gray-600">Format {msisdnPlaceholder('moov')}</p>
-            </div>
-          </div>
-        </button>
+        </div>
 
         <div>
           <label htmlFor="numero_paiement" className="mb-2 block text-sm font-medium text-gray-700">
-            Numéro {operator === 'airtel' ? 'Airtel Money' : 'Moov Money'}
+            Numéro Airtel Money
           </label>
           <input
             id="numero_paiement"
             type="tel"
             value={numero}
             onChange={(e) => setNumero(normalizeMsisdnInput(e.target.value))}
-            placeholder={msisdnPlaceholder(operator)}
+            placeholder={msisdnPlaceholder('airtel')}
             maxLength={9}
             autoComplete="tel-national"
             className={`w-full rounded-lg border px-3 py-3 focus:outline-none focus:ring-2 ${
@@ -126,7 +96,13 @@ export const PaiementStep = () => {
                   : 'border-gray-300 focus:ring-black'
             }`}
           />
-          {error ? <p className="mt-1 text-xs text-red-600">{error}</p> : null}
+          {error ? (
+            <p className="mt-1 text-xs text-red-600">{error}</p>
+          ) : (
+            <p className="mt-1 text-xs text-gray-500">
+              Saisissez le numéro associé à votre compte Airtel Money (format {msisdnPlaceholder('airtel')}).
+            </p>
+          )}
         </div>
 
         <button
