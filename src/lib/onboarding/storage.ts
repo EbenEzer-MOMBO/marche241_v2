@@ -14,6 +14,18 @@ const writeFlag = (key: string, value: boolean) => {
   }
 };
 
+export const getStoredAdminUserId = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  const raw = window.localStorage.getItem('admin_user');
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as { id?: string | number };
+    return parsed?.id != null ? String(parsed.id) : null;
+  } catch {
+    return null;
+  }
+};
+
 export const getPendingOnboardingEmail = (): string | null => {
   if (typeof window === 'undefined') return null;
   return window.sessionStorage.getItem(ONBOARDING_STORAGE.pendingEmail);

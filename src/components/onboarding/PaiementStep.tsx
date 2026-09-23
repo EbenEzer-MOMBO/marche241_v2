@@ -13,7 +13,7 @@ import {
   msisdnPlaceholder,
   type MobileMoneyOperator,
 } from '@/lib/utils/mobileMoneyMsisdn';
-import { markPaiementSkipped } from '@/lib/onboarding/storage';
+import { getStoredAdminUserId, markPaiementSkipped } from '@/lib/onboarding/storage';
 
 export const PaiementStep = () => {
   const router = useRouter();
@@ -27,8 +27,9 @@ export const PaiementStep = () => {
   const isValid = numero.length === 9 && !error;
 
   const handleSkip = () => {
-    if (user?.id) {
-      markPaiementSkipped(user.id);
+    const userId = user?.id || getStoredAdminUserId();
+    if (userId) {
+      markPaiementSkipped(userId);
     }
     router.push('/admin/onboarding/produits');
   };

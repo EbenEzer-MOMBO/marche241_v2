@@ -2,6 +2,8 @@
  * Service pour vérifier et interagir avec WhatsApp via le backend de l'application
  */
 
+import { absoluteUrl } from '@/lib/seo';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api/v1';
 
 export interface CheckWhatsAppResponse {
@@ -83,7 +85,7 @@ export async function sendWhatsAppCode(phoneNumber: string, code: string): Promi
 
 export const buildOnboardingWelcomeMessage = (prenom: string, boutiqueSlug?: string) => {
   const dashboardHint = boutiqueSlug
-    ? `Accédez à votre espace : /admin/${boutiqueSlug}`
+    ? `Accédez à votre espace : ${absoluteUrl(`/admin/${boutiqueSlug}`)}`
     : 'Accédez à votre espace vendeur depuis le tableau de bord.';
 
   return `Bienvenue ${prenom} !\n\nVotre boutique est prête.\n${dashboardHint}\n\nAjoutez des produits, partagez le lien et commencez à vendre.`;

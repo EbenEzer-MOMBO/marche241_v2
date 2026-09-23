@@ -6,7 +6,7 @@ import { CheckCircle2 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { buildOnboardingWelcomeMessage, sendWhatsAppMessage } from '@/lib/services/whatsapp';
-import { isWelcomeSent, markOnboardingCompleted, markWelcomeSent } from '@/lib/onboarding/storage';
+import { getStoredAdminUserId, isWelcomeSent, markOnboardingCompleted, markWelcomeSent } from '@/lib/onboarding/storage';
 import type { BoutiqueData } from '@/lib/services/auth';
 
 const getStoredBoutique = (): BoutiqueData | null => {
@@ -62,8 +62,9 @@ export const DoneStep = () => {
   }, [user, boutique?.slug, isPreview]);
 
   const handleGoDashboard = () => {
-    if (user?.id) {
-      markOnboardingCompleted(user.id);
+    const userId = user?.id || getStoredAdminUserId();
+    if (userId) {
+      markOnboardingCompleted(userId);
     }
     if (boutique?.slug) {
       router.push(`/admin/${boutique.slug}`);

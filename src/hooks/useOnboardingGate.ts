@@ -49,8 +49,7 @@ export const useOnboardingGate = (requestedStep?: OnboardingStepId, options?: { 
 
       if (isAuthenticated && user) {
         try {
-          const remoteBoutique = await verifierBoutique();
-          if (remoteBoutique) boutique = remoteBoutique;
+          boutique = await verifierBoutique();
         } catch {
           // garder le cache local si l'API échoue
         }

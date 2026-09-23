@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { getCategoriesParBoutique } from '@/lib/services/categories';
+import { getCategoriesMarketplace, getCategoriesParBoutique } from '@/lib/services/categories';
 import { creerProduit, genererSlugProduit } from '@/lib/services/products';
 import { ToastContainer } from '@/components/ui/Toast';
 import { useToast } from '@/hooks/useToast';
-import { markProduitsSkipped } from '@/lib/onboarding/storage';
+import { getStoredAdminUserId, markProduitsSkipped } from '@/lib/onboarding/storage';
 import type { BoutiqueData } from '@/lib/services/auth';
 import type { Categorie } from '@/lib/database-types';
 
@@ -40,12 +40,34 @@ export const ProduitsStep = () => {
     if (!stored?.id) return;
 
     const loadCategories = async () => {
+      const fallbackCategories: Categorie[] = [
+        { id: 1, nom: 'Électronique', slug: 'electronique', ordre_affichage: 1, statut: 'active', date_creation: new Date(), date_modification: new Date() },
+        { id: 2, nom: 'Mode & Vêtements', slug: 'mode-vetements', ordre_affichage: 2, statut: 'active', date_creation: new Date(), date_modification: new Date() },
+        { id: 3, nom: 'Maison & Décoration', slug: 'maison-decoration', ordre_affichage: 3, statut: 'active', date_creation: new Date(), date_modification: new Date() },
+        { id: 4, nom: 'Beauté & Cosmétiques', slug: 'beaute-cosmetiques', ordre_affichage: 4, statut: 'active', date_creation: new Date(), date_modification: new Date() },
+        { id: 5, nom: 'Alimentation', slug: 'alimentation', ordre_affichage: 5, statut: 'active', date_creation: new Date(), date_modification: new Date() },
+      ];
+
       try {
-        const list = await getCategoriesParBoutique(stored.id);
+        let list = await getCategoriesParBoutique(stored.id);
+        if (list.length === 0) {
+          list = await getCategoriesMarketplace();
+        }
+        if (list.length === 0) {
+          list = fallbackCategories;
+        }
         setCategories(list);
         if (list[0]) setCategorieId(list[0].id);
       } catch {
-        setCategories([]);
+        try {
+          const marketplace = await getCategoriesMarketplace();
+          const list = marketplace.length > 0 ? marketplace : fallbackCategories;
+          setCategories(list);
+          if (list[0]) setCategorieId(list[0].id);
+        } catch {
+          setCategories(fallbackCategories);
+          setCategorieId(fallbackCategories[0].id);
+        }
       }
     };
 
@@ -53,7 +75,8 @@ export const ProduitsStep = () => {
   }, []);
 
   const handleSkip = () => {
-    if (user?.id) markProduitsSkipped(user.id);
+    const userId = user?.id || getStoredAdminUserId();
+    if (userId) markProduitsSkipped(userId);
     router.push('/admin/onboarding/done');
   };
 
