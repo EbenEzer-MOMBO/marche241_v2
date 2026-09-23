@@ -90,27 +90,30 @@ export const ProductListingFilters = ({
   const debouncedPrixMax = useDebouncedValue(prixMaxDraft, SEARCH_DEBOUNCE_MS);
 
   useEffect(() => {
+    if (searchDraft !== debouncedSearch) return;
     const next = debouncedSearch.trim();
     if (next !== filters.q) {
       onPatch({ q: next, page: 1 });
     }
-  }, [debouncedSearch, filters.q, onPatch]);
+  }, [debouncedSearch, searchDraft, filters.q, onPatch]);
 
   useEffect(() => {
+    if (prixMinDraft !== debouncedPrixMin) return;
     const parsed = debouncedPrixMin.trim() === '' ? null : Number(debouncedPrixMin);
     const next = parsed != null && Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
     if (next !== filters.prixMin) {
       onPatch({ prixMin: next, page: 1 });
     }
-  }, [debouncedPrixMin, filters.prixMin, onPatch]);
+  }, [debouncedPrixMin, prixMinDraft, filters.prixMin, onPatch]);
 
   useEffect(() => {
+    if (prixMaxDraft !== debouncedPrixMax) return;
     const parsed = debouncedPrixMax.trim() === '' ? null : Number(debouncedPrixMax);
     const next = parsed != null && Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
     if (next !== filters.prixMax) {
       onPatch({ prixMax: next, page: 1 });
     }
-  }, [debouncedPrixMax, filters.prixMax, onPatch]);
+  }, [debouncedPrixMax, prixMaxDraft, filters.prixMax, onPatch]);
 
   const handleCategorieSelect = (slug: string | null, id: number | null) => {
     onPatch({ categorieSlug: slug, categorieId: id, page: 1 });
