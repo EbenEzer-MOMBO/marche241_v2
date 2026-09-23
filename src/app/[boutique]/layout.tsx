@@ -12,7 +12,7 @@ import { getCtaTextColor } from "@/lib/utils/shop-theme";
 // Force le mode dynamique pour éviter les erreurs de génération statique
 export const dynamic = 'force-dynamic';
 
-const reservedSlugs = ['admin', 'affiche_boutiques', 'promo-poster', 'favicon.ico', 'manifest.json', 'robots.txt'];
+const reservedSlugs = ['admin', 'affiche_boutiques', 'produits', 'promo-poster', 'favicon.ico', 'manifest.json', 'robots.txt'];
 
 function isReservedOrAsset(slug: string): boolean {
   if (!slug) {

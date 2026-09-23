@@ -10,6 +10,22 @@ import { ApiCategoriesResponse, Categorie } from '@/lib/database-types';
  * @param boutiqueId - L'ID de la boutique
  * @returns Promise<Categorie[]> - Liste des catégories
  */
+/**
+ * Catégories globales marketplace (si l’API les expose sans boutique_id).
+ */
+export async function getCategoriesMarketplace(): Promise<Categorie[]> {
+  try {
+    const response = await api.get<ApiCategoriesResponse>('/categories');
+    if (!response.success || !response.categories) {
+      return [];
+    }
+    return response.categories;
+  } catch (error) {
+    console.warn('Catégories marketplace indisponibles:', error);
+    return [];
+  }
+}
+
 export async function getCategoriesParBoutique(boutiqueId: number): Promise<Categorie[]> {
   try {
     const response = await api.get<ApiCategoriesResponse>(`/categories?boutique_id=${boutiqueId}`);
@@ -254,6 +270,7 @@ export function getIconeCategorie(nomCategorie: string): string {
 }
 
 export default {
+  getCategoriesMarketplace,
   getCategoriesParBoutique,
   getCategorieById,
   getCategorieBySlug,

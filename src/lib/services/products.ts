@@ -5,6 +5,10 @@
 import api, { ApiError } from '@/lib/api';
 import { ProduitDB } from '@/lib/database-types';
 import {
+  appendApiProduitsQuery,
+  type ApiProduitsQuery,
+} from '@/lib/product-search';
+import {
   ProductValidationError,
   type ProductValidationErrorItem,
 } from '@/lib/errors/product-validation-error';
@@ -102,12 +106,7 @@ export interface ProduitsResponse {
 /**
  * Paramètres pour la récupération des produits
  */
-export interface ProduitsParams {
-  page?: number;
-  limite?: number;
-  tri_par?: string;
-  ordre?: 'ASC' | 'DESC';
-}
+export interface ProduitsParams extends ApiProduitsQuery {}
 
 /**
  * Récupère tous les produits d'une boutique avec pagination
@@ -115,23 +114,58 @@ export interface ProduitsParams {
  * @param params - Paramètres de pagination et tri
  * @returns Promise<ProduitsResponse> - Réponse paginée avec les produits
  */
+const buildProduitsQuery = (params: ProduitsParams = {}): URLSearchParams => {
+  const queryParams = new URLSearchParams();
+  appendApiProduitsQuery(queryParams, {
+    page: params.page ?? 1,
+    limite: params.limite ?? 10,
+    tri_par: params.tri_par ?? 'date_creation',
+    ordre: params.ordre ?? 'DESC',
+    q: params.q,
+    prix_min: params.prix_min,
+    prix_max: params.prix_max,
+    commune_id: params.commune_id,
+    categorie_id: params.categorie_id,
+    boutique_id: params.boutique_id,
+    featured: params.featured,
+    nouveaux: params.nouveaux,
+    promotion: params.promotion,
+    en_stock: params.en_stock,
+  });
+  return queryParams;
+};
+
+/**
+ * Catalogue marketplace (toutes boutiques) — GET /produits
+ */
+export async function getProduitsMarketplace(
+  params: ProduitsParams = {}
+): Promise<ProduitsResponse> {
+  try {
+    const queryParams = buildProduitsQuery(params);
+    const response = await api.get<ProduitsResponse>(
+      `/produits?${queryParams.toString()}`
+    );
+
+    if (!response.success) {
+      throw new Error('Erreur lors de la récupération des produits');
+    }
+
+    return response;
+  } catch (error: unknown) {
+    console.error('Erreur lors de la récupération des produits marketplace:', error);
+    throw error;
+  }
+}
+
 export async function getProduitsParBoutique(
   boutiqueId: number, 
   params: ProduitsParams = {}
 ): Promise<ProduitsResponse> {
   try {
-    const {
-      page = 1,
-      limite = 10,
-      tri_par = 'date_creation',
-      ordre = 'DESC'
-    } = params;
-
-    const queryParams = new URLSearchParams({
-      page: page.toString(),
-      limite: limite.toString(),
-      tri_par,
-      ordre
+    const queryParams = buildProduitsQuery({
+      ...params,
+      boutique_id: boutiqueId,
     });
 
     const response = await api.get<ProduitsResponse>(
@@ -350,6 +384,7 @@ export function genererSlugProduit(nom: string): string {
 }
 
 export default {
+  getProduitsMarketplace,
   getProduitsParBoutique,
   getProduitById,
   creerProduit,
