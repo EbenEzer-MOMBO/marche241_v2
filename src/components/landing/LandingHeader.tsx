@@ -8,7 +8,7 @@ import { Marche241Logo } from '@/components/Marche241Logo';
 interface LandingHeaderProps {
   isAuthenticated?: boolean;
   boutiqueSlug?: string | null;
-  activePage?: 'home' | 'boutiques';
+  activePage?: 'home' | 'boutiques' | 'produits';
 }
 
 const navLinkClass =
@@ -31,7 +31,25 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({
             <Marche241Logo iconHeight={36} textHeight={26} priority />
 
             <div className="hidden md:flex items-center gap-6">
-              {activePage === 'boutiques' ? (
+              {activePage === 'produits' ? (
+                <>
+                  <Link href="/" className={navLinkClass}>
+                    Accueil
+                  </Link>
+                  <Link href="/affiche_boutiques" className={navLinkClass}>
+                    Boutiques
+                  </Link>
+                  <Link
+                    href="/produits"
+                    className="text-sm font-semibold text-gray-900 border-b-2 border-[#508e27] pb-0.5"
+                  >
+                    Produits
+                  </Link>
+                  <Link href="/#faq" className={navLinkClass}>
+                    FAQ
+                  </Link>
+                </>
+              ) : activePage === 'boutiques' ? (
                 <>
                   <Link href="/" className={navLinkClass}>
                     Accueil
@@ -41,6 +59,9 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({
                     className="text-sm font-semibold text-gray-900 border-b-2 border-[#508e27] pb-0.5"
                   >
                     Boutiques
+                  </Link>
+                  <Link href="/produits" className={navLinkClass}>
+                    Produits
                   </Link>
                   <Link href="/#faq" className={navLinkClass}>
                     FAQ
@@ -56,6 +77,9 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({
                   </a>
                   <Link href="/affiche_boutiques" className={navLinkClass}>
                     Boutiques
+                  </Link>
+                  <Link href="/produits" className={navLinkClass}>
+                    Produits
                   </Link>
                   <a href="#faq" className={navLinkClass}>
                     FAQ
@@ -125,6 +149,9 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({
                   <Link href="/affiche_boutiques" className={navLinkClass} onClick={handleCloseMenu}>
                     Boutiques
                   </Link>
+                  <Link href="/produits" className={navLinkClass} onClick={handleCloseMenu}>
+                    Produits
+                  </Link>
                   <Link href="/#faq" className={navLinkClass} onClick={handleCloseMenu}>
                     FAQ
                   </Link>
@@ -139,6 +166,9 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({
                   </a>
                   <Link href="/affiche_boutiques" className={navLinkClass} onClick={handleCloseMenu}>
                     Boutiques
+                  </Link>
+                  <Link href="/produits" className={navLinkClass} onClick={handleCloseMenu}>
+                    Produits
                   </Link>
                   <a href="#faq" className={navLinkClass} onClick={handleCloseMenu}>
                     FAQ

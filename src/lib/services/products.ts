@@ -101,12 +101,87 @@ export interface ProduitsResponse {
 
 /**
  * Paramètres pour la récupération des produits
+ * Inclut le contrat de recherche avancée (MAR-9).
  */
 export interface ProduitsParams {
   page?: number;
   limite?: number;
   tri_par?: string;
   ordre?: 'ASC' | 'DESC';
+  q?: string;
+  prix_min?: number;
+  prix_max?: number;
+  commune_id?: number;
+  categorie_id?: number;
+  boutique_id?: number;
+  featured?: boolean;
+  nouveaux?: boolean;
+  promotion?: boolean;
+  en_stock?: boolean;
+}
+
+const appendProduitsQueryParams = (
+  queryParams: URLSearchParams,
+  params: ProduitsParams
+): void => {
+  const {
+    page = 1,
+    limite = 10,
+    tri_par = 'date_creation',
+    ordre = 'DESC',
+    q,
+    prix_min,
+    prix_max,
+    commune_id,
+    categorie_id,
+    boutique_id,
+    featured,
+    nouveaux,
+    promotion,
+    en_stock,
+  } = params;
+
+  queryParams.set('page', page.toString());
+  queryParams.set('limite', limite.toString());
+  queryParams.set('tri_par', tri_par);
+  queryParams.set('ordre', ordre);
+
+  if (q?.trim()) queryParams.set('q', q.trim());
+  if (prix_min != null) queryParams.set('prix_min', String(prix_min));
+  if (prix_max != null) queryParams.set('prix_max', String(prix_max));
+  if (commune_id != null) queryParams.set('commune_id', String(commune_id));
+  if (categorie_id != null) queryParams.set('categorie_id', String(categorie_id));
+  if (boutique_id != null) queryParams.set('boutique_id', String(boutique_id));
+  if (featured) queryParams.set('featured', 'true');
+  if (nouveaux) queryParams.set('nouveaux', 'true');
+  if (promotion) queryParams.set('promotion', 'true');
+  if (en_stock === true) queryParams.set('en_stock', 'true');
+  if (en_stock === false) queryParams.set('en_stock', 'false');
+};
+
+/**
+ * Listing marketplace (toutes boutiques) — GET /produits
+ */
+export async function getProduits(
+  params: ProduitsParams = {}
+): Promise<ProduitsResponse> {
+  try {
+    const queryParams = new URLSearchParams();
+    appendProduitsQueryParams(queryParams, params);
+
+    const response = await api.get<ProduitsResponse>(
+      `/produits?${queryParams.toString()}`
+    );
+
+    if (!response.success) {
+      throw new Error('Erreur lors de la récupération des produits');
+    }
+
+    return response;
+  } catch (error: unknown) {
+    console.error('Erreur lors de la récupération des produits marketplace:', error);
+    throw error;
+  }
 }
 
 /**
@@ -120,19 +195,8 @@ export async function getProduitsParBoutique(
   params: ProduitsParams = {}
 ): Promise<ProduitsResponse> {
   try {
-    const {
-      page = 1,
-      limite = 10,
-      tri_par = 'date_creation',
-      ordre = 'DESC'
-    } = params;
-
-    const queryParams = new URLSearchParams({
-      page: page.toString(),
-      limite: limite.toString(),
-      tri_par,
-      ordre
-    });
+    const queryParams = new URLSearchParams();
+    appendProduitsQueryParams(queryParams, params);
 
     const response = await api.get<ProduitsResponse>(
       `/produits/boutique/${boutiqueId}?${queryParams.toString()}`
@@ -350,6 +414,7 @@ export function genererSlugProduit(nom: string): string {
 }
 
 export default {
+  getProduits,
   getProduitsParBoutique,
   getProduitById,
   creerProduit,

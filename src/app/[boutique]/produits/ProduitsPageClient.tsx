@@ -16,12 +16,26 @@ import { ErrorState } from '@/components/LoadingStates';
 import { CategoryChips } from '@/components/storefront/CategoryChips';
 import { StorefrontCard } from '@/components/storefront/StorefrontCard';
 import { ShopCtaButton } from '@/components/storefront/ShopCtaButton';
+import { ProductAdvancedFilters } from '@/components/storefront/ProductAdvancedFilters';
 import { produitHasRequiredVariants } from '@/lib/utils/shop-theme';
+import { getCommunesActives, type Commune } from '@/lib/services/communes';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import {
+  listingHasActiveFilters,
+  labelForFilterStock,
+  labelForFilterType,
+  mapSortToApi,
+  parseProductListingSearchParams,
+  SEARCH_DEBOUNCE_MS,
+  SORT_OPTIONS,
+  STOCK_OPTIONS,
+  TYPE_OPTIONS,
+  writeProductListingSearchParams,
+  type FilterStock,
+  type FilterType,
+  type SortKey,
+} from '@/lib/product-listing-query';
 import { Search, SlidersHorizontal, X } from 'lucide-react';
-
-type SortKey = 'recent' | 'price-asc' | 'price-desc' | 'name';
-type FilterStock = 'all' | 'in-stock' | 'out-stock';
-type FilterType = 'all' | 'nouveau' | 'promo' | 'featured';
 
 /** Catégorie affichée dans le filtre, dérivée de l’ensemble des produits boutique (comptage exact) */
 type CategorieAvecCompte = {
@@ -40,41 +54,6 @@ type FiltreActif = {
 const CHUNK_FETCH_META = 100;
 const MAX_PAGES_META = 500;
 const TAILLE_LOT = 12;
-
-const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-  { value: 'recent', label: 'Plus récents' },
-  { value: 'price-asc', label: 'Prix croissant' },
-  { value: 'price-desc', label: 'Prix décroissant' },
-  { value: 'name', label: 'Nom A-Z' },
-];
-
-const STOCK_OPTIONS: { value: FilterStock; label: string }[] = [
-  { value: 'all', label: 'Tous' },
-  { value: 'in-stock', label: 'En stock' },
-  { value: 'out-stock', label: 'Épuisés' },
-];
-
-const TYPE_OPTIONS: { value: FilterType; label: string }[] = [
-  { value: 'all', label: 'Tous' },
-  { value: 'nouveau', label: 'Nouveautés' },
-  { value: 'promo', label: 'Promotions' },
-  { value: 'featured', label: 'Vedettes' },
-];
-
-const mapSortToApi = (sort: SortKey): { tri_par: string; ordre: 'ASC' | 'DESC' } => {
-  switch (sort) {
-    case 'recent':
-      return { tri_par: 'date_creation', ordre: 'DESC' };
-    case 'price-asc':
-      return { tri_par: 'prix', ordre: 'ASC' };
-    case 'price-desc':
-      return { tri_par: 'prix', ordre: 'DESC' };
-    case 'name':
-      return { tri_par: 'nom', ordre: 'ASC' };
-    default:
-      return { tri_par: 'date_creation', ordre: 'DESC' };
-  }
-};
 
 /** Parcourt toutes les pages produits pour reconstruire catégories + effectifs (comme l’ancienne page en un seul chargement) */
 const fetchAllProduitsPourCategories = async (boutiqueId: number): Promise<ProduitDB[]> => {
@@ -156,12 +135,6 @@ const trierProduitsClient = (list: ProduitDB[], sort: SortKey): ProduitDB[] => {
   return copie;
 };
 
-const labelForFilterStock = (value: FilterStock): string =>
-  STOCK_OPTIONS.find((opt) => opt.value === value)?.label ?? value;
-
-const labelForFilterType = (value: FilterType): string =>
-  TYPE_OPTIONS.find((opt) => opt.value === value)?.label ?? value;
-
 const filtreChipStyle = {
   borderColor: 'var(--color-shop-primary, var(--primary-color))',
   backgroundColor: 'var(--shop-primary-tint)',
@@ -175,11 +148,12 @@ export default function ProduitsPageClient() {
   const router = useRouter();
   const boutiqueName = params.boutique as string;
 
-  const rawPage = searchParams.get('page');
-  const parsedPage = rawPage ? parseInt(rawPage, 10) : 1;
-  const currentPage =
-    Number.isFinite(parsedPage) && parsedPage >= 1 ? parsedPage : 1;
-  const selectedCategorieSlug = searchParams.get('categorie');
+  const listing = parseProductListingSearchParams(searchParams);
+  const currentPage = listing.page;
+  const selectedCategorieSlug = listing.categorieSlug;
+  const sortBy = listing.sort;
+  const filterStock = listing.stock;
+  const filterType = listing.type;
 
   const { boutique, loading: boutiqueLoading, error: boutiqueError } = useBoutique(boutiqueName);
   const { ajouterProduit, loading: adding } = useAjoutPanier();
@@ -192,15 +166,33 @@ export default function ProduitsPageClient() {
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<SortKey>('recent');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStock, setFilterStock] = useState<FilterStock>('all');
-  const [filterType, setFilterType] = useState<FilterType>('all');
+  const [searchDraft, setSearchDraft] = useState(listing.q);
+  const [prixMinDraft, setPrixMinDraft] = useState(
+    listing.prixMin != null ? String(listing.prixMin) : ''
+  );
+  const [prixMaxDraft, setPrixMaxDraft] = useState(
+    listing.prixMax != null ? String(listing.prixMax) : ''
+  );
   const [pageSize, setPageSize] = useState(24);
+  const [communes, setCommunes] = useState<Commune[]>([]);
+  const [communesLoading, setCommunesLoading] = useState(false);
   const [totalProducts, setTotalProducts] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [addingId, setAddingId] = useState<number | null>(null);
   const [filtresOuverts, setFiltresOuverts] = useState(false);
+
+  const debouncedSearch = useDebouncedValue(searchDraft, SEARCH_DEBOUNCE_MS);
+  const debouncedPrixMin = useDebouncedValue(prixMinDraft, SEARCH_DEBOUNCE_MS);
+  const debouncedPrixMax = useDebouncedValue(prixMaxDraft, SEARCH_DEBOUNCE_MS);
+
+  const replaceListing = useCallback(
+    (patch: Parameters<typeof writeProductListingSearchParams>[1]) => {
+      const next = writeProductListingSearchParams(searchParams, patch);
+      const qs = next.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
 
   const replaceSearchParams = useCallback(
     (mutate: (p: URLSearchParams) => void) => {
@@ -211,6 +203,38 @@ export default function ProduitsPageClient() {
     },
     [pathname, router, searchParams]
   );
+
+  useEffect(() => {
+    setSearchDraft(listing.q);
+  }, [listing.q]);
+
+  useEffect(() => {
+    setPrixMinDraft(listing.prixMin != null ? String(listing.prixMin) : '');
+  }, [listing.prixMin]);
+
+  useEffect(() => {
+    setPrixMaxDraft(listing.prixMax != null ? String(listing.prixMax) : '');
+  }, [listing.prixMax]);
+
+  useEffect(() => {
+    const nextQ = debouncedSearch.trim();
+    if (nextQ === listing.q) return;
+    replaceListing({ q: nextQ, page: 1 });
+  }, [debouncedSearch, listing.q, replaceListing]);
+
+  useEffect(() => {
+    const parsed = debouncedPrixMin.trim() === '' ? null : Number(debouncedPrixMin);
+    const next = parsed != null && Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+    if (next === listing.prixMin) return;
+    replaceListing({ prixMin: next, page: 1 });
+  }, [debouncedPrixMin, listing.prixMin, replaceListing]);
+
+  useEffect(() => {
+    const parsed = debouncedPrixMax.trim() === '' ? null : Number(debouncedPrixMax);
+    const next = parsed != null && Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+    if (next === listing.prixMax) return;
+    replaceListing({ prixMax: next, page: 1 });
+  }, [debouncedPrixMax, listing.prixMax, replaceListing]);
 
   const setPageInUrl = useCallback(
     (page: number) => {
@@ -261,14 +285,42 @@ export default function ProduitsPageClient() {
     };
   }, [boutique?.id]);
 
-  const aFiltresLocaux = useMemo(
+  useEffect(() => {
+    if (!boutique?.id) return;
+    let cancelled = false;
+    setCommunesLoading(true);
+    getCommunesActives(boutique.id)
+      .then((liste) => {
+        if (!cancelled) setCommunes(liste);
+      })
+      .catch(() => {
+        if (!cancelled) setCommunes([]);
+      })
+      .finally(() => {
+        if (!cancelled) setCommunesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [boutique?.id]);
+
+  const selectedCategorieId = useMemo(() => {
+    if (listing.categorieId) return listing.categorieId;
+    if (!selectedCategorieSlug) return undefined;
+    return categories.find((c) => c.slug === selectedCategorieSlug)?.id;
+  }, [listing.categorieId, selectedCategorieSlug, categories]);
+
+  const hasShareableFilters = useMemo(
     () =>
-      !!selectedCategorieSlug ||
-      searchTerm.trim().length > 0 ||
-      filterStock !== 'all' ||
-      filterType !== 'all',
-    [selectedCategorieSlug, searchTerm, filterStock, filterType]
+      listingHasActiveFilters({
+        ...listing,
+        categorieSlug: selectedCategorieSlug,
+      }),
+    [listing, selectedCategorieSlug]
   );
+
+  /** Catalogue local pour q/prix/catégorie/stock — commune_id n'existe que côté API */
+  const aFiltresLocaux = hasShareableFilters && listing.communeId == null;
 
   // Grille : produits paginés via API uniquement sans filtres locaux (sinon pagination client sur catalogueComplet)
   useEffect(() => {
@@ -290,6 +342,20 @@ export default function ProduitsPageClient() {
           limite: pageSize,
           tri_par,
           ordre,
+          q: listing.q || undefined,
+          prix_min: listing.prixMin ?? undefined,
+          prix_max: listing.prixMax ?? undefined,
+          commune_id: listing.communeId ?? undefined,
+          categorie_id: selectedCategorieId,
+          featured: filterType === 'featured' || undefined,
+          nouveaux: filterType === 'nouveau' || undefined,
+          promotion: filterType === 'promo' || undefined,
+          en_stock:
+            filterStock === 'in-stock'
+              ? true
+              : filterStock === 'out-stock'
+                ? false
+                : undefined,
         });
 
         setProduits(response.donnees || []);
@@ -305,7 +371,20 @@ export default function ProduitsPageClient() {
     };
 
     void loadProduits();
-  }, [boutique?.id, currentPage, pageSize, sortBy, aFiltresLocaux]);
+  }, [
+    boutique?.id,
+    currentPage,
+    pageSize,
+    sortBy,
+    aFiltresLocaux,
+    listing.q,
+    listing.prixMin,
+    listing.prixMax,
+    listing.communeId,
+    selectedCategorieId,
+    filterType,
+    filterStock,
+  ]);
 
   const produitMatcheFiltres = useCallback(
     (produit: ProduitDB) => {
@@ -313,12 +392,15 @@ export default function ProduitsPageClient() {
         return false;
       }
 
-      if (searchTerm.trim()) {
-        const searchLower = searchTerm.toLowerCase();
+      if (listing.q) {
+        const searchLower = listing.q.toLowerCase();
         const matchNom = produit.nom.toLowerCase().includes(searchLower);
         const matchDescription = produit.description?.toLowerCase().includes(searchLower);
         if (!matchNom && !matchDescription) return false;
       }
+
+      if (listing.prixMin != null && produit.prix < listing.prixMin) return false;
+      if (listing.prixMax != null && produit.prix > listing.prixMax) return false;
 
       if (filterStock === 'in-stock' && !produit.en_stock) return false;
       if (filterStock === 'out-stock' && produit.en_stock) return false;
@@ -329,7 +411,7 @@ export default function ProduitsPageClient() {
 
       return true;
     },
-    [selectedCategorieSlug, searchTerm, filterStock, filterType]
+    [selectedCategorieSlug, listing.q, listing.prixMin, listing.prixMax, filterStock, filterType]
   );
 
   const listeFiltreeTriee = useMemo(() => {
@@ -396,31 +478,35 @@ export default function ProduitsPageClient() {
 
   const handleCategorieChange = useCallback(
     (slug: string | null) => {
-      replaceSearchParams((p) => {
-        if (slug) {
-          p.set('categorie', slug);
-        } else {
-          p.delete('categorie');
-        }
-        p.delete('page');
+      const categorieId = slug
+        ? categories.find((c) => c.slug === slug)?.id ?? null
+        : null;
+      replaceListing({
+        categorieSlug: slug,
+        categorieId,
+        page: 1,
       });
     },
-    [replaceSearchParams]
+    [replaceListing, categories]
   );
 
   const handleSortChange = (value: SortKey) => {
-    setSortBy(value);
-    handleResetPageInUrl();
+    replaceListing({ sort: value, page: 1 });
   };
 
   const handleFilterStockChange = (value: FilterStock) => {
-    setFilterStock(value);
-    handleResetPageInUrl();
+    replaceListing({ stock: value, page: 1 });
   };
 
   const handleFilterTypeChange = (value: FilterType) => {
-    setFilterType(value);
-    handleResetPageInUrl();
+    replaceListing({ type: value, page: 1 });
+  };
+
+  const handleCommuneChange = (value: string) => {
+    replaceListing({
+      communeId: value ? Number(value) : null,
+      page: 1,
+    });
   };
 
   const handlePageSizeChange = (size: number) => {
@@ -429,14 +515,22 @@ export default function ProduitsPageClient() {
   };
 
   const handleClearAllFilters = useCallback(() => {
-    setSearchTerm('');
-    setFilterStock('all');
-    setFilterType('all');
-    replaceSearchParams((p) => {
-      p.delete('categorie');
-      p.delete('page');
+    setSearchDraft('');
+    setPrixMinDraft('');
+    setPrixMaxDraft('');
+    replaceListing({
+      q: '',
+      prixMin: null,
+      prixMax: null,
+      communeId: null,
+      categorieId: null,
+      categorieSlug: null,
+      page: 1,
+      sort: 'recent',
+      stock: 'all',
+      type: 'all',
     });
-  }, [replaceSearchParams]);
+  }, [replaceListing]);
 
   const handleVoirPlus = () => {
     handlePageSizeChange(pageSize + TAILLE_LOT);
@@ -503,11 +597,37 @@ export default function ProduitsPageClient() {
       });
     }
 
-    if (searchTerm.trim()) {
+    if (listing.q) {
       chips.push({
         id: 'recherche',
-        label: `« ${searchTerm.trim()} »`,
-        onRemove: () => setSearchTerm(''),
+        label: `« ${listing.q} »`,
+        onRemove: () => {
+          setSearchDraft('');
+          replaceListing({ q: '', page: 1 });
+        },
+      });
+    }
+
+    if (listing.prixMin != null || listing.prixMax != null) {
+      const minLabel = listing.prixMin != null ? `${listing.prixMin.toLocaleString('fr-FR')}` : '0';
+      const maxLabel = listing.prixMax != null ? `${listing.prixMax.toLocaleString('fr-FR')}` : '∞';
+      chips.push({
+        id: 'prix',
+        label: `${minLabel} – ${maxLabel} FCFA`,
+        onRemove: () => {
+          setPrixMinDraft('');
+          setPrixMaxDraft('');
+          replaceListing({ prixMin: null, prixMax: null, page: 1 });
+        },
+      });
+    }
+
+    if (listing.communeId != null) {
+      const commune = communes.find((c) => c.id === listing.communeId);
+      chips.push({
+        id: 'commune',
+        label: commune?.nom_commune ?? `Commune #${listing.communeId}`,
+        onRemove: () => replaceListing({ communeId: null, page: 1 }),
       });
     }
 
@@ -528,10 +648,26 @@ export default function ProduitsPageClient() {
     }
 
     return chips;
-  }, [selectedCategorieSlug, categories, searchTerm, filterStock, filterType, handleCategorieChange]);
+  }, [
+    selectedCategorieSlug,
+    categories,
+    listing.q,
+    listing.prixMin,
+    listing.prixMax,
+    listing.communeId,
+    communes,
+    filterStock,
+    filterType,
+    handleCategorieChange,
+    replaceListing,
+  ]);
 
   const mobileFilterCount =
-    (filterStock !== 'all' ? 1 : 0) + (filterType !== 'all' ? 1 : 0) + (sortBy !== 'recent' ? 1 : 0);
+    (filterStock !== 'all' ? 1 : 0) +
+    (filterType !== 'all' ? 1 : 0) +
+    (sortBy !== 'recent' ? 1 : 0) +
+    (listing.prixMin != null || listing.prixMax != null ? 1 : 0) +
+    (listing.communeId != null ? 1 : 0);
 
   const resteAVoir = Math.max(0, totalPourPagination - produitsAffiche.length);
   const prochainLot = Math.min(TAILLE_LOT, resteAVoir);
@@ -598,16 +734,19 @@ export default function ProduitsPageClient() {
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9a9892]" />
             <input
               type="search"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={searchDraft}
+              onChange={(e) => setSearchDraft(e.target.value)}
               placeholder="Rechercher un produit..."
               aria-label="Rechercher un produit"
               className="h-10 w-full rounded-[9px] border border-[#e0ded9] bg-white pl-9 pr-8 text-[13.5px] text-[#17181a] placeholder:text-[#9a9892] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#17181a]/20"
             />
-            {searchTerm && (
+            {searchDraft && (
               <button
                 type="button"
-                onClick={() => setSearchTerm('')}
+                onClick={() => {
+                  setSearchDraft('');
+                  replaceListing({ q: '', page: 1 });
+                }}
                 aria-label="Effacer la recherche"
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#9a9892] hover:text-[#17181a]"
               >
@@ -640,6 +779,19 @@ export default function ProduitsPageClient() {
           </label>
         </div>
 
+        <div className="hidden border-b border-[#ececea] py-3 sm:block">
+          <ProductAdvancedFilters
+            prixMin={prixMinDraft}
+            prixMax={prixMaxDraft}
+            communeId={listing.communeId != null ? String(listing.communeId) : ''}
+            communes={communes}
+            communesLoading={communesLoading}
+            onPrixMinChange={setPrixMinDraft}
+            onPrixMaxChange={setPrixMaxDraft}
+            onCommuneChange={handleCommuneChange}
+          />
+        </div>
+
         {/* Barre de filtres — mobile */}
         <div className="flex flex-col gap-3 pb-4 sm:hidden">
           <div className="flex items-center gap-2">
@@ -647,16 +799,19 @@ export default function ProduitsPageClient() {
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9a9892]" />
               <input
                 type="search"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={searchDraft}
+                onChange={(e) => setSearchDraft(e.target.value)}
                 placeholder="Rechercher un produit..."
                 aria-label="Rechercher un produit"
                 className="h-10 w-full rounded-[9px] border border-[#e0ded9] bg-white pl-9 pr-8 text-[13.5px] text-[#17181a] placeholder:text-[#9a9892] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#17181a]/20"
               />
-              {searchTerm && (
+              {searchDraft && (
                 <button
                   type="button"
-                  onClick={() => setSearchTerm('')}
+                  onClick={() => {
+                    setSearchDraft('');
+                    replaceListing({ q: '', page: 1 });
+                  }}
                   aria-label="Effacer la recherche"
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#9a9892] hover:text-[#17181a]"
                 >
@@ -791,6 +946,20 @@ export default function ProduitsPageClient() {
               >
                 <X className="h-5 w-5" />
               </button>
+            </div>
+
+            <div className="mb-5">
+              <ProductAdvancedFilters
+                compact
+                prixMin={prixMinDraft}
+                prixMax={prixMaxDraft}
+                communeId={listing.communeId != null ? String(listing.communeId) : ''}
+                communes={communes}
+                communesLoading={communesLoading}
+                onPrixMinChange={setPrixMinDraft}
+                onPrixMaxChange={setPrixMaxDraft}
+                onCommuneChange={handleCommuneChange}
+              />
             </div>
 
             <div className="mb-5">
