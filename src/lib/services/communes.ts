@@ -223,3 +223,23 @@ export async function getCommunesActives(boutiqueId: number): Promise<Commune[]>
   const communes = await getCommunesParBoutique(boutiqueId);
   return communes.filter(commune => commune.est_active);
 }
+
+/**
+ * Communes disponibles pour le filtre marketplace (GET /communes).
+ * Tolère l'absence de l'endpoint tant que l'API n'est pas fusionnée.
+ */
+export async function getCommunesPubliques(): Promise<Commune[]> {
+  try {
+    const response = await api.get<CommunesResponse>('/communes');
+    if (!response.success) {
+      return [];
+    }
+    return (response.communes || []).map((commune) => ({
+      ...commune,
+      tarif_livraison: Number(commune.tarif_livraison) || 0,
+    }));
+  } catch (error) {
+    console.warn('Liste globale des communes indisponible:', error);
+    return [];
+  }
+}
