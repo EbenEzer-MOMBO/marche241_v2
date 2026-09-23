@@ -204,9 +204,11 @@ export default function ProduitsPageClient() {
   }, [filters.categorieSlug, filters.categorieId, resolvedCategorieId, replaceFilters]);
 
   useEffect(() => {
-    const loadProduits = async () => {
-      if (!boutique?.id) return;
+    if (!boutique?.id) return;
 
+    let cancelled = false;
+
+    const loadProduits = async () => {
       try {
         setLoading(true);
         setError(null);
@@ -219,18 +221,25 @@ export default function ProduitsPageClient() {
 
         const response = await getProduitsParBoutique(boutique.id, query);
 
+        if (cancelled) return;
         setProduits(response.donnees || []);
         setTotalProducts(response.total);
       } catch (err: unknown) {
         console.error('Erreur lors du chargement des produits:', err);
+        if (cancelled) return;
         const message = err instanceof Error ? err.message : 'Erreur inconnue';
         setError(message);
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     void loadProduits();
+    return () => {
+      cancelled = true;
+    };
   }, [boutique?.id, filters, pageSize, resolvedCategorieId]);
 
   const aFiltresLocaux = useMemo(
@@ -255,12 +264,14 @@ export default function ProduitsPageClient() {
     );
   }, [aFiltresLocaux, catalogueComplet, filters, resolvedCategorieId]);
 
-  const produitsAffiche = aFiltresLocaux && catalogueComplet.length > 0
+  const useLocalFilteredList =
+    aFiltresLocaux && catalogueComplet.length > 0 && filters.communeId == null;
+
+  const produitsAffiche = useLocalFilteredList
     ? listeFiltree.slice(0, pageSize)
     : produits;
 
-  const totalAffiche =
-    aFiltresLocaux && catalogueComplet.length > 0 ? listeFiltree.length : totalProducts;
+  const totalAffiche = useLocalFilteredList ? listeFiltree.length : totalProducts;
 
   const handleClearAllFilters = useCallback(() => {
     replaceFilters({
@@ -308,7 +319,11 @@ export default function ProduitsPageClient() {
   const resteAVoir = Math.max(0, totalAffiche - produitsAffiche.length);
   const prochainLot = Math.min(TAILLE_LOT, resteAVoir);
 
-  if (boutiqueLoading || loading) {
+  const isInitialLoading = boutiqueLoading || (loading && !boutique);
+  const hasLocalCatalog = aFiltresLocaux && catalogueComplet.length > 0;
+  const isFatalListingError = Boolean(error) && !hasLocalCatalog;
+
+  if (isInitialLoading) {
     return (
       <MainLayout boutiqueName={boutiqueName}>
         <div className="mx-auto max-w-7xl px-4 sm:px-8">
@@ -326,7 +341,7 @@ export default function ProduitsPageClient() {
     );
   }
 
-  if (boutiqueError || error || !boutique) {
+  if (boutiqueError || isFatalListingError || !boutique) {
     return (
       <MainLayout boutiqueName={boutiqueName}>
         <ErrorState
@@ -374,7 +389,11 @@ export default function ProduitsPageClient() {
         />
 
         <div className="pb-10 pt-2 sm:pb-14">
-          {produitsAffiche.length === 0 ? (
+          {loading && !useLocalFilteredList ? (
+            <div className="py-6">
+              <ProductCardGridSkeleton count={8} />
+            </div>
+          ) : produitsAffiche.length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-16 text-center">
               <p className="text-[15px] text-[#5f6369]">Aucun produit trouvé</p>
               <button

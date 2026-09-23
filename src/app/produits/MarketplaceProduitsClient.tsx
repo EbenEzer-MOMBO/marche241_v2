@@ -68,6 +68,8 @@ export default function MarketplaceProduitsClient() {
   }, [filters.categorieId, filters.categorieSlug, categories]);
 
   useEffect(() => {
+    let cancelled = false;
+
     const loadProduits = async () => {
       try {
         setLoading(true);
@@ -77,18 +79,25 @@ export default function MarketplaceProduitsClient() {
           categorieId: resolvedCategorieId,
         });
         const response = await getProduitsMarketplace(query);
+        if (cancelled) return;
         setProduits(response.donnees || []);
         setTotalProducts(response.total);
       } catch (err: unknown) {
         console.error('Erreur marketplace produits:', err);
+        if (cancelled) return;
         const message = err instanceof Error ? err.message : 'Erreur inconnue';
         setError(message);
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     void loadProduits();
+    return () => {
+      cancelled = true;
+    };
   }, [filters, pageSize, resolvedCategorieId]);
 
   const handleClearAllFilters = useCallback(() => {

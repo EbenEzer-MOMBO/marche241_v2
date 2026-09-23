@@ -74,6 +74,7 @@ export const ProductListingFilters = ({
   );
 
   useEffect(() => {
+    if (searchDraft.trim() === filters.q) return;
     setSearchDraft(filters.q);
   }, [filters.q]);
 
@@ -142,6 +143,13 @@ export const ProductListingFilters = ({
   const handleClearSearch = () => {
     setSearchDraft('');
     onPatch({ q: '', page: 1 });
+  };
+
+  const handleClearAll = () => {
+    setSearchDraft('');
+    setPrixMinDraft('');
+    setPrixMaxDraft('');
+    onClearAll();
   };
 
   const activeCategoryId = filters.categorieSlug || (filters.categorieId ? String(filters.categorieId) : 'all');
@@ -430,7 +438,7 @@ export const ProductListingFilters = ({
           ))}
           <button
             type="button"
-            onClick={onClearAll}
+            onClick={handleClearAll}
             className="text-[12.5px] font-medium text-[#5f6369] underline underline-offset-2 hover:text-[#17181a]"
           >
             Tout effacer
