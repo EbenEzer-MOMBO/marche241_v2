@@ -28,27 +28,38 @@ export const CompteStep = () => {
   const turnstileContainerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
 
+  type TurnstileApi = {
+    render: (
+      container: HTMLElement,
+      options: {
+        sitekey: string;
+        callback: (token: string) => void;
+        'expired-callback': () => void;
+        'error-callback': () => void;
+      }
+    ) => string;
+    remove: (widgetId: string) => void;
+  };
+
+  const getTurnstile = (): TurnstileApi | undefined => {
+    if (typeof window === 'undefined') return undefined;
+    return (window as unknown as { turnstile?: TurnstileApi }).turnstile;
+  };
+
   useEffect(() => {
     const interval = setInterval(() => {
-      if (
-        typeof window !== 'undefined' &&
-        (window as { turnstile?: { render: Function; remove: Function } }).turnstile &&
-        turnstileContainerRef.current &&
-        !widgetIdRef.current
-      ) {
+      const turnstile = getTurnstile();
+      if (turnstile && turnstileContainerRef.current && !widgetIdRef.current) {
         clearInterval(interval);
         try {
           const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
           if (siteKey) {
-            widgetIdRef.current = (window as { turnstile: { render: Function } }).turnstile.render(
-              turnstileContainerRef.current,
-              {
-                sitekey: siteKey,
-                callback: (token: string) => setTurnstileToken(token),
-                'expired-callback': () => setTurnstileToken(null),
-                'error-callback': () => setTurnstileToken(null),
-              }
-            );
+            widgetIdRef.current = turnstile.render(turnstileContainerRef.current, {
+              sitekey: siteKey,
+              callback: (token: string) => setTurnstileToken(token),
+              'expired-callback': () => setTurnstileToken(null),
+              'error-callback': () => setTurnstileToken(null),
+            });
           }
         } catch (e) {
           console.error('Erreur lors du rendu de Turnstile:', e);
@@ -58,15 +69,13 @@ export const CompteStep = () => {
 
     return () => {
       clearInterval(interval);
-      if (widgetIdRef.current && typeof window !== 'undefined') {
-        const turnstile = (window as { turnstile?: { remove: Function } }).turnstile;
-        if (turnstile) {
-          try {
-            turnstile.remove(widgetIdRef.current);
-            widgetIdRef.current = null;
-          } catch {
-            // ignore
-          }
+      const turnstile = getTurnstile();
+      if (widgetIdRef.current && turnstile) {
+        try {
+          turnstile.remove(widgetIdRef.current);
+          widgetIdRef.current = null;
+        } catch {
+          // ignore
         }
       }
     };
