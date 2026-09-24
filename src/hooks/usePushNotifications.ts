@@ -52,7 +52,8 @@ export function usePushNotifications(): UsePushNotificationsReturn {
 
     setPermission(Notification.permission);
 
-    navigator.serviceWorker.ready
+    navigator.serviceWorker
+      .register('/sw.js')
       .then((registration) => registration.pushManager.getSubscription())
       .then((subscription) => {
         setIsSubscribed(!!subscription);
@@ -81,7 +82,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
         return false;
       }
 
-      const registration = await navigator.serviceWorker.ready;
+      const registration = await navigator.serviceWorker.register('/sw.js');
       const publicKey = await getVapidPublicKey();
 
       const subscription = await registration.pushManager.subscribe({

@@ -2,29 +2,35 @@
 
 import { Bell, BellOff, Loader2 } from 'lucide-react';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
-import { useToast } from '@/hooks/useToast';
 
-export const NotificationPreferencesSection: React.FC = () => {
+interface NotificationPreferencesSectionProps {
+  onSuccess: (message: string, title?: string) => void;
+  onError: (message: string, title?: string) => void;
+}
+
+export const NotificationPreferencesSection: React.FC<NotificationPreferencesSectionProps> = ({
+  onSuccess,
+  onError
+}) => {
   const { supportStatus, permission, isSubscribed, isLoading, enable, disable } = usePushNotifications();
-  const { success, error: showError } = useToast();
 
   const handleToggle = async () => {
     if (isSubscribed) {
       const ok = await disable();
       if (ok) {
-        success('Notifications push désactivées');
+        onSuccess('Notifications push désactivées');
       } else {
-        showError('Impossible de désactiver les notifications push');
+        onError('Impossible de désactiver les notifications push');
       }
       return;
     }
 
     const ok = await enable();
     if (ok) {
-      success('Notifications push activées', 'Vous serez alerté des nouvelles commandes et changements de statut');
+      onSuccess('Notifications push activées', 'Vous serez alerté des nouvelles commandes et changements de statut');
     } else {
-      showError(
-        permission === 'denied'
+      onError(
+        typeof Notification !== 'undefined' && Notification.permission === 'denied'
           ? 'Autorisez les notifications dans les paramètres de votre navigateur pour continuer'
           : "Impossible d'activer les notifications push"
       );

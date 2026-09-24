@@ -436,7 +436,9 @@ export default function SettingsPage() {
                   )}
 
                   {/* Section Notifications */}
-                  {activeTab === 'notifications' && <NotificationPreferencesSection />}
+                  {activeTab === 'notifications' && (
+                    <NotificationPreferencesSection onSuccess={success} onError={showError} />
+                  )}
 
                 </div>
               </div>

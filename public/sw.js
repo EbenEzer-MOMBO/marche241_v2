@@ -72,16 +72,22 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
   const targetUrl = event.notification.data?.url || '/';
+  const targetAbsoluteUrl = new URL(targetUrl, self.location.origin).href;
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
-        if (client.url.includes(targetUrl) && 'focus' in client) {
-          return client.focus();
-        }
+      const exactMatch = clientList.find((client) => client.url === targetAbsoluteUrl);
+      if (exactMatch && 'focus' in exactMatch) {
+        return exactMatch.focus();
       }
+
+      const navigableClient = clientList.find((client) => 'navigate' in client && 'focus' in client);
+      if (navigableClient) {
+        return navigableClient.navigate(targetAbsoluteUrl).then((client) => client && client.focus());
+      }
+
       if (self.clients.openWindow) {
-        return self.clients.openWindow(targetUrl);
+        return self.clients.openWindow(targetAbsoluteUrl);
       }
     })
   );
