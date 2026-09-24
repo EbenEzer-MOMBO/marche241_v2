@@ -13,7 +13,8 @@ import { ImageUploadSection } from '@/components/admin/settings/ImageUploadSecti
 import { BoutiqueInfoSection } from '@/components/admin/settings/BoutiqueInfoSection';
 import { ApparenceSection } from '@/components/admin/settings/ApparenceSection';
 import { PaymentModeSection } from '@/components/admin/settings/PaymentModeSection';
-import { User, Store, Menu, Save } from 'lucide-react';
+import { NotificationPreferencesSection } from '@/components/admin/settings/NotificationPreferencesSection';
+import { User, Store, Bell, Menu, Save } from 'lucide-react';
 import { BOUTIQUE_DESCRIPTION_MAX_LENGTH } from '@/lib/constants/boutique';
 import { normalizeMsisdnInput, validateMsisdn } from '@/lib/utils/mobileMoneyMsisdn';
 
@@ -28,7 +29,7 @@ export default function SettingsPage() {
   const [boutique, setBoutique] = useState<BoutiqueData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'profil' | 'boutique' | 'securite'>('profil');
+  const [activeTab, setActiveTab] = useState<'profil' | 'boutique' | 'notifications' | 'securite'>('profil');
   const [isSaving, setIsSaving] = useState(false);
 
   // États pour le profil vendeur
@@ -358,6 +359,17 @@ export default function SettingsPage() {
                       <Store className="h-5 w-5 mr-2" />
                       Boutique
                     </button>
+                    <button
+                      onClick={() => setActiveTab('notifications')}
+                      className={`flex items-center px-6 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                        activeTab === 'notifications'
+                          ? 'border-black-500 text-black-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      <Bell className="h-5 w-5 mr-2" />
+                      Notifications
+                    </button>
                   </nav>
                 </div>
 
@@ -422,6 +434,9 @@ export default function SettingsPage() {
                       </div>
                     </div>
                   )}
+
+                  {/* Section Notifications */}
+                  {activeTab === 'notifications' && <NotificationPreferencesSection />}
 
                 </div>
               </div>
