@@ -42,3 +42,53 @@ self.addEventListener('fetch', (event) => {
       })
   );
 });
+
+// Réception d'une notification push (vendeur)
+self.addEventListener('push', (event) => {
+  if (!event.data) {
+    return;
+  }
+
+  let payload;
+  try {
+    payload = event.data.json();
+  } catch (error) {
+    payload = { title: 'Marché241', body: event.data.text() };
+  }
+
+  const title = payload.title || 'Marché241';
+  const options = {
+    body: payload.body,
+    icon: '/marche241_Web_without_text-01-01.svg',
+    badge: '/marche241_Web_without_text-01-01.svg',
+    data: { url: payload.url || '/' },
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Clic sur une notification : ouvre/focus l'onglet sur l'URL ciblée
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const targetUrl = event.notification.data?.url || '/';
+  const targetAbsoluteUrl = new URL(targetUrl, self.location.origin).href;
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      const exactMatch = clientList.find((client) => client.url === targetAbsoluteUrl);
+      if (exactMatch && 'focus' in exactMatch) {
+        return exactMatch.focus();
+      }
+
+      const navigableClient = clientList.find((client) => 'navigate' in client && 'focus' in client);
+      if (navigableClient) {
+        return navigableClient.navigate(targetAbsoluteUrl).then((client) => client && client.focus());
+      }
+
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(targetAbsoluteUrl);
+      }
+    })
+  );
+});
