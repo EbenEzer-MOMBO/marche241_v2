@@ -45,7 +45,6 @@ const SIMPLIFIED_CATEGORIES = [
     bgColor: 'bg-violet-50',
     color: 'text-violet-700',
     borderColor: 'hover:border-violet-500',
-    comingSoon: true,
   },
   {
     id: 'service' as ProductCategory,
