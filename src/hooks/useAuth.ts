@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { demanderCodeVerification, verifierCode, inscrireVendeur, getBoutiquesVendeur, DemanderCodeData, VerifierCodeData, InscriptionData, BoutiqueData } from '@/lib/services/auth';
+import { demanderCodeVerification, verifierCode, inscrireVendeur, getBoutiquesVendeur, loginWithPasskey, DemanderCodeData, VerifierCodeData, InscriptionData, BoutiqueData, VerifierCodeResponse } from '@/lib/services/auth';
 import { clearAuthTokenCookie, persistAuthTokenCookie } from '@/lib/auth-cookie';
 import { clearPendingOnboardingEmail, isOnboardingActive, markOnboardingActive } from '@/lib/onboarding/storage';
 import { useToast } from './useToast';
@@ -21,6 +21,7 @@ interface UseAuthReturn {
   error: string | null;
   demanderCode: (data: DemanderCodeData) => Promise<boolean>;
   verifier: (data: VerifierCodeData) => Promise<boolean>;
+  connecterPasskey: (email: string) => Promise<boolean>;
   inscrire: (data: InscriptionData, captchaToken?: string) => Promise<{ success: boolean; email?: string }>;
   verifierBoutique: () => Promise<BoutiqueData | null>;
   updateUser: (userData: Partial<AuthUser>) => void;
@@ -101,6 +102,44 @@ export function useAuth(): UseAuthReturn {
     }
   };
 
+  const applyVendeurSession = (response: VerifierCodeResponse): boolean => {
+    if (!response.success || !response.vendeur || !response.token) {
+      return false;
+    }
+
+    localStorage.setItem('admin_token', response.token);
+    persistAuthTokenCookie(response.token);
+    localStorage.setItem('admin_user', JSON.stringify(response.vendeur));
+
+    setUser({
+      id: response.vendeur.id.toString(),
+      email: response.vendeur.email,
+      nom: response.vendeur.nom,
+      telephone: response.vendeur.telephone,
+      ville: response.vendeur.ville,
+      numero_paiement: response.vendeur.numero_paiement ?? undefined
+    });
+    success('Connexion réussie', `Bienvenue ${response.vendeur.nom}`);
+
+    const vendeurId = String(response.vendeur.id);
+    clearPendingOnboardingEmail();
+
+    if (response.hasBoutique && response.boutique) {
+      localStorage.setItem('admin_boutique', JSON.stringify(response.boutique));
+      if (isOnboardingActive(vendeurId)) {
+        router.push('/admin/onboarding');
+      } else {
+        router.push(`/admin/${response.boutique.slug}`);
+      }
+    } else {
+      localStorage.removeItem('admin_boutique');
+      markOnboardingActive(vendeurId);
+      router.push('/admin/onboarding');
+    }
+
+    return true;
+  };
+
   const verifier = async (data: VerifierCodeData): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
@@ -108,41 +147,7 @@ export function useAuth(): UseAuthReturn {
     try {
       const response = await verifierCode(data);
       
-      if (response.success && response.vendeur && response.token) {
-        // Stocker le token et les données utilisateur
-        localStorage.setItem('admin_token', response.token);
-        persistAuthTokenCookie(response.token);
-        localStorage.setItem('admin_user', JSON.stringify(response.vendeur));
-        
-        setUser({
-          id: response.vendeur.id.toString(),
-          email: response.vendeur.email,
-          nom: response.vendeur.nom,
-          telephone: response.vendeur.telephone,
-          ville: response.vendeur.ville,
-          numero_paiement: response.vendeur.numero_paiement ?? undefined
-        });
-        success('Connexion réussie', `Bienvenue ${response.vendeur.nom}`);
-        
-        // La vérification de la boutique a déjà été faite dans verifierCode
-        console.log('📊 État de la boutique:', response.hasBoutique);
-        
-        const vendeurId = String(response.vendeur.id);
-        clearPendingOnboardingEmail();
-
-        if (response.hasBoutique && response.boutique) {
-          localStorage.setItem('admin_boutique', JSON.stringify(response.boutique));
-          if (isOnboardingActive(vendeurId)) {
-            router.push('/admin/onboarding');
-          } else {
-            router.push(`/admin/${response.boutique.slug}`);
-          }
-        } else {
-          localStorage.removeItem('admin_boutique');
-          markOnboardingActive(vendeurId);
-          router.push('/admin/onboarding');
-        }
-        
+      if (applyVendeurSession(response)) {
         return true;
       } else {
         setError(response.message);
@@ -163,6 +168,28 @@ export function useAuth(): UseAuthReturn {
       } else {
         showError(errorMessage, 'Erreur de vérification');
       }
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const connecterPasskey = async (email: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await loginWithPasskey(email);
+      if (applyVendeurSession(response)) {
+        return true;
+      }
+      setError(response.message);
+      showError(response.message, 'Clé d\'accès');
+      return false;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Connexion par clé d\'accès impossible';
+      setError(errorMessage);
+      showError(errorMessage, 'Clé d\'accès');
       return false;
     } finally {
       setIsLoading(false);
@@ -273,6 +300,7 @@ export function useAuth(): UseAuthReturn {
     error,
     demanderCode,
     verifier,
+    connecterPasskey,
     inscrire,
     verifierBoutique,
     updateUser,

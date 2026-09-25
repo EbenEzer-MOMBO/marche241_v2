@@ -13,7 +13,8 @@ import { ImageUploadSection } from '@/components/admin/settings/ImageUploadSecti
 import { BoutiqueInfoSection } from '@/components/admin/settings/BoutiqueInfoSection';
 import { ApparenceSection } from '@/components/admin/settings/ApparenceSection';
 import { PaymentModeSection } from '@/components/admin/settings/PaymentModeSection';
-import { User, Store, Menu, Save } from 'lucide-react';
+import { PasskeysSection } from '@/components/admin/settings/PasskeysSection';
+import { User, Store, Menu, Save, Shield } from 'lucide-react';
 import { BOUTIQUE_DESCRIPTION_MAX_LENGTH } from '@/lib/constants/boutique';
 import { normalizeMsisdnInput, validateMsisdn } from '@/lib/utils/mobileMoneyMsisdn';
 
@@ -53,19 +54,6 @@ export default function SettingsPage() {
     couleur_primaire: '#000000',
     couleur_secondaire: '#ffffff',
     payment_restriction_mode: 'les_deux' as 'complet_uniquement' | 'livraison_uniquement' | 'les_deux' | 'acompte_50'
-  });
-
-  // États pour la sécurité
-  const [securiteData, setSecuriteData] = useState({
-    ancien_mot_de_passe: '',
-    nouveau_mot_de_passe: '',
-    confirmer_mot_de_passe: ''
-  });
-
-  const [showPasswords, setShowPasswords] = useState({
-    ancien: false,
-    nouveau: false,
-    confirmer: false
   });
 
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
@@ -358,6 +346,17 @@ export default function SettingsPage() {
                       <Store className="h-5 w-5 mr-2" />
                       Boutique
                     </button>
+                    <button
+                      onClick={() => setActiveTab('securite')}
+                      className={`flex items-center px-6 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                        activeTab === 'securite'
+                          ? 'border-black-500 text-black-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      <Shield className="h-5 w-5 mr-2" />
+                      Sécurité
+                    </button>
                   </nav>
                 </div>
 
@@ -421,6 +420,13 @@ export default function SettingsPage() {
                         </button>
                       </div>
                     </div>
+                  )}
+
+                  {activeTab === 'securite' && (
+                    <PasskeysSection
+                      onSuccess={(message) => success(message)}
+                      onError={(message) => showError(message)}
+                    />
                   )}
 
                 </div>
