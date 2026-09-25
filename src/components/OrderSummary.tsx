@@ -150,6 +150,14 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
     panier.some((item) => isEvenementProduct(item.produit)) &&
     panier.some((item) => !isEvenementProduct(item.produit));
   const isAcompte50 = boutiqueAcompte50 && !isEventOnlyCart;
+
+  const buildConfirmationQuery = (numeroCommande: string, type: string) => {
+    const query = new URLSearchParams({ commande: numeroCommande, type });
+    if (isEventOnlyCart) {
+      query.set('evenement', '1');
+    }
+    return query.toString();
+  };
   const [itemsToDelete, setItemsToDelete] = useState<Set<number>>(new Set());
   const [showDeliveryNotes, setShowDeliveryNotes] = useState(false);
 
@@ -565,7 +573,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
             return;
           }
 
-          const returnUrl = `${window.location.origin}/${boutiqueSlug}/confirmation?commande=${encodeURIComponent(commande.commande.numero_commande)}&type=${confirmationType}`;
+          const returnUrl = `${window.location.origin}/${boutiqueSlug}/confirmation?${buildConfirmationQuery(commande.commande.numero_commande, confirmationType)}`;
 
           const paiementVisa = await initierPaiementVisa({
             transaction_id: transactionVisa.transaction.id,
@@ -843,7 +851,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
     }
 
     setTimeout(() => {
-      window.location.href = `/${boutiqueSlug}/confirmation?commande=${numeroCommande}&type=${typePaiement}`;
+      window.location.href = `/${boutiqueSlug}/confirmation?${buildConfirmationQuery(numeroCommande, typePaiement)}`;
     }, 2000);
   };
 

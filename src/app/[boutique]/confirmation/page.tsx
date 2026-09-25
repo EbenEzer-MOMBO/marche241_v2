@@ -30,6 +30,7 @@ export default function ConfirmationPage() {
   const boutiqueSlug = params.boutique as string;
   const numeroCommande = searchParams.get('commande');
   const typePaiement = searchParams.get('type');
+  const isEvenement = searchParams.get('evenement') === '1';
   const billId = searchParams.get('bill_id');
   const { boutique, config } = useBoutique(boutiqueSlug);
   const { viderLePanier } = usePanier(boutique?.id);
@@ -43,7 +44,7 @@ export default function ConfirmationPage() {
   const [delaiLivraisonDuree, setDelaiLivraisonDuree] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!boutique?.id) return;
+    if (isEvenement || !boutique?.id) return;
 
     let cancelled = false;
 
@@ -62,7 +63,7 @@ export default function ConfirmationPage() {
     return () => {
       cancelled = true;
     };
-  }, [boutique?.id]);
+  }, [boutique?.id, isEvenement]);
 
   const isPartiel = typePaiement === 'partiel';
   const boutiqueName = config?.name || boutique?.nom || 'la boutique';
@@ -118,28 +119,51 @@ export default function ConfirmationPage() {
     };
   }, [billId]);
 
+  const paiementOk = visaState !== 'verifying' && visaState !== 'failed';
   const timeline = useMemo(
-    () => [
-      {
-        id: 'confirmed',
-        label: 'Commande confirmée',
-        detail: 'à l’instant',
-        done: visaState !== 'verifying' && visaState !== 'failed',
-      },
-      {
-        id: 'prep',
-        label: 'En préparation chez le vendeur',
-        detail: 'sous 24 h · vous serez notifié sur WhatsApp',
-        done: false,
-      },
-      {
-        id: 'ship',
-        label: 'Livraison',
-        detail: `${delaiLivraisonDuree || '24-48h'} · suivi par WhatsApp`,
-        done: false,
-      },
-    ],
-    [visaState, delaiLivraisonDuree]
+    () =>
+      isEvenement
+        ? [
+            {
+              id: 'confirmed',
+              label: 'Paiement confirmé',
+              detail: 'à l’instant',
+              done: paiementOk,
+            },
+            {
+              id: 'tickets',
+              label: 'Billets envoyés',
+              detail: 'WhatsApp et e-mail (si renseigné)',
+              done: paiementOk,
+            },
+            {
+              id: 'entry',
+              label: 'Présentez le QR à l’entrée',
+              detail: 'numéro de billet + QR code',
+              done: false,
+            },
+          ]
+        : [
+            {
+              id: 'confirmed',
+              label: 'Commande confirmée',
+              detail: 'à l’instant',
+              done: paiementOk,
+            },
+            {
+              id: 'prep',
+              label: 'En préparation chez le vendeur',
+              detail: 'sous 24 h · vous serez notifié sur WhatsApp',
+              done: false,
+            },
+            {
+              id: 'ship',
+              label: 'Livraison',
+              detail: `${delaiLivraisonDuree || '24-48h'} · suivi par WhatsApp`,
+              done: false,
+            },
+          ],
+    [isEvenement, paiementOk, delaiLivraisonDuree]
   );
 
   const handleCopy = async () => {
@@ -266,7 +290,9 @@ export default function ConfirmationPage() {
               Commande confirmée
             </h1>
             <p className="mt-1.5 text-[14.5px] leading-[1.55] text-[#5f6369]">
-              Merci. {boutiqueName} a reçu votre commande et la prépare.
+              {isEvenement
+                ? `Merci. Vos billets pour ${boutiqueName} sont prêts — consultez WhatsApp ou votre e-mail.`
+                : `Merci. ${boutiqueName} a reçu votre commande et la prépare.`}
             </p>
           </div>
           {numeroCommande && (
@@ -377,8 +403,10 @@ export default function ConfirmationPage() {
               Votre commande {numeroCommande ? (
                 <span className="font-mono">{numeroCommande}</span>
               ) : null}{' '}
-              est enregistrée. Le suivi se fait uniquement par WhatsApp — aucun
-              email ne sera envoyé.
+              est enregistrée.{' '}
+              {isEvenement
+                ? 'Vos billets sont envoyés par WhatsApp et par e-mail si vous en avez fourni un.'
+                : 'Le suivi se fait uniquement par WhatsApp — aucun email ne sera envoyé.'}
             </p>
           )}
           <p className="mt-3 text-center text-[12.5px] leading-[1.6] text-[#8b8f95]">
