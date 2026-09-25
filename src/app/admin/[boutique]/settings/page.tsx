@@ -14,7 +14,8 @@ import { BoutiqueInfoSection } from '@/components/admin/settings/BoutiqueInfoSec
 import { ApparenceSection } from '@/components/admin/settings/ApparenceSection';
 import { PaymentModeSection } from '@/components/admin/settings/PaymentModeSection';
 import { PasskeysSection } from '@/components/admin/settings/PasskeysSection';
-import { User, Store, Menu, Save, Shield } from 'lucide-react';
+import { NotificationPreferencesSection } from '@/components/admin/settings/NotificationPreferencesSection';
+import { User, Store, Bell, Menu, Save, Shield } from 'lucide-react';
 import { BOUTIQUE_DESCRIPTION_MAX_LENGTH } from '@/lib/constants/boutique';
 import { normalizeMsisdnInput, validateMsisdn } from '@/lib/utils/mobileMoneyMsisdn';
 
@@ -29,7 +30,7 @@ export default function SettingsPage() {
   const [boutique, setBoutique] = useState<BoutiqueData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'profil' | 'boutique' | 'securite'>('profil');
+  const [activeTab, setActiveTab] = useState<'profil' | 'boutique' | 'notifications' | 'securite'>('profil');
   const [isSaving, setIsSaving] = useState(false);
 
   // États pour le profil vendeur
@@ -347,6 +348,17 @@ export default function SettingsPage() {
                       Boutique
                     </button>
                     <button
+                      onClick={() => setActiveTab('notifications')}
+                      className={`flex items-center px-6 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                        activeTab === 'notifications'
+                          ? 'border-black-500 text-black-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      <Bell className="h-5 w-5 mr-2" />
+                      Notifications
+                    </button>
+                    <button
                       onClick={() => setActiveTab('securite')}
                       className={`flex items-center px-6 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                         activeTab === 'securite'
@@ -420,6 +432,10 @@ export default function SettingsPage() {
                         </button>
                       </div>
                     </div>
+                  )}
+
+                  {activeTab === 'notifications' && (
+                    <NotificationPreferencesSection onSuccess={success} onError={showError} />
                   )}
 
                   {activeTab === 'securite' && (
