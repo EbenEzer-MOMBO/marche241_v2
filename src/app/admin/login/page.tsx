@@ -22,7 +22,7 @@ function LoginContent() {
   const [whatsAppExists, setWhatsAppExists] = useState<boolean | null>(null);
   const [whatsAppError, setWhatsAppError] = useState<string | null>(null);
   const [sessionExpiredMessage, setSessionExpiredMessage] = useState<string | null>(null);
-  const { demanderCode, isLoading, error, toasts, removeToast } = useAuth();
+  const { demanderCode, connecterPasskey, isLoading, error, toasts, removeToast } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -45,6 +45,14 @@ function LoginContent() {
     if (success) {
       router.push(`/admin/verify?email=${encodeURIComponent(email)}`);
     }
+  };
+
+  const handlePasskeyLogin = async () => {
+    setSessionExpiredMessage(null);
+    if (!email.trim()) {
+      return;
+    }
+    await connecterPasskey(email.trim());
   };
 
   // Vérifier le numéro WhatsApp quand il est valide
@@ -228,9 +236,28 @@ function LoginContent() {
                 )}
               </button>
 
+              <div className="relative my-2">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200" />
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-white px-2 text-gray-400">ou</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handlePasskeyLogin}
+                disabled={isLoading || !email.trim()}
+                className="w-full flex justify-center items-center py-3 px-4 border border-gray-300 rounded-lg text-sm font-medium text-gray-800 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                aria-label="Se connecter avec une clé d'accès"
+              >
+                Se connecter avec une clé d'accès
+              </button>
+
               <div className="mt-6 text-center">
                 <p className="text-xs text-gray-500">
-                  Un code de vérification à 6 chiffres sera envoyé par email
+                  Un code de vérification à 6 chiffres sera envoyé par email. La clé d'accès fonctionne après l'avoir ajoutée dans les paramètres.
                 </p>
               </div>
             </form>

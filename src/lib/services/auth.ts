@@ -445,3 +445,42 @@ export async function modifierVendeur(vendeurId: number, data: ModifierVendeurDa
     throw new Error('Impossible de modifier le profil. Veuillez réessayer.');
   }
 }
+
+export interface VendeurPasskey {
+  id: number;
+  device_name: string | null;
+  created_at: string;
+}
+
+export async function getVendeurPasskeys(): Promise<VendeurPasskey[]> {
+  const response = await api.get<{ success: boolean; passkeys: VendeurPasskey[] }>('/vendeurs/me/passkeys');
+  return response.passkeys ?? [];
+}
+
+export async function startPasskeyRegistration(deviceName?: string): Promise<VendeurPasskey> {
+  const { startRegistration } = await import('@simplewebauthn/browser');
+  const optionsResponse = await api.post<{ success: boolean; options: any }>(
+    '/vendeurs/me/passkeys/register/options',
+    {}
+  );
+  const response = await startRegistration({ optionsJSON: optionsResponse.options });
+  const verified = await api.post<{ success: boolean; passkey: VendeurPasskey }>(
+    '/vendeurs/me/passkeys/register/verify',
+    { response, device_name: deviceName }
+  );
+  return verified.passkey;
+}
+
+export async function revokeVendeurPasskey(id: number): Promise<void> {
+  await api.delete(`/vendeurs/me/passkeys/${id}`);
+}
+
+export async function loginWithPasskey(email: string): Promise<VerifierCodeResponse> {
+  const { startAuthentication } = await import('@simplewebauthn/browser');
+  const optionsResponse = await api.post<{ success: boolean; options: any }>(
+    '/vendeurs/passkeys/login/options',
+    { email }
+  );
+  const response = await startAuthentication({ optionsJSON: optionsResponse.options });
+  return api.post<VerifierCodeResponse>('/vendeurs/passkeys/login/verify', { response });
+}
