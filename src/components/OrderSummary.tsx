@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/useToast';
 import { creerCommande, CreerCommandeData } from '@/lib/services/commandes';
 import { getCommunesActives } from '@/lib/services/communes';
 import { formatDureeLivraison } from '@/lib/utils/delai-livraison';
+import { isEvenementProduct, MESSAGE_MIX_PANIER } from '@/lib/utils/product-sales-kind';
 import { initierPaiementMobile, initierPaiementVisa, verifierPaiementEnBoucle, type PaiementMobileData } from '@/lib/services/paiements';
 import { creerTransaction, type CreerTransactionData } from '@/lib/services/transactions';
 import { checkWhatsAppNumber } from '@/lib/services/whatsapp';
@@ -51,6 +52,7 @@ const PAYMENT_METHOD_OPTIONS: Array<{
 interface DeliveryAddress {
   fullName: string;
   phone: string;
+  email: string;
   address: string;
   city: string;
   district: string;
@@ -116,7 +118,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
   // - les_deux : l'utilisateur peut choisir entre les deux.
   // - acompte_50 : acompte de 50% obligatoire en ligne, solde en espèces à la livraison.
   const paymentRestrictionMode = boutiqueData?.payment_restriction_mode || 'les_deux';
-  const isAcompte50 = paymentRestrictionMode === 'acompte_50';
+  const boutiqueAcompte50 = paymentRestrictionMode === 'acompte_50';
   const [payOnDelivery, setPayOnDelivery] = useState(() => {
     if (paymentRestrictionMode === 'livraison_uniquement') return true;
     return false;
@@ -127,6 +129,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
   const [deliveryAddress, setDeliveryAddress] = useState<DeliveryAddress>({
     fullName: '',
     phone: '',
+    email: '',
     address: '',
     city: '',
     district: '',
@@ -141,6 +144,12 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
 
   // Utilisation du hook panier pour récupérer les vraies données avec isolation par boutique
   const { panier, totalItems, totalPrix, loading, supprimerItem, viderLePanier, mettreAJourQuantite } = usePanier(boutiqueId);
+  const isEventOnlyCart =
+    panier.length > 0 && panier.every((item) => isEvenementProduct(item.produit));
+  const isMixedCart =
+    panier.some((item) => isEvenementProduct(item.produit)) &&
+    panier.some((item) => !isEvenementProduct(item.produit));
+  const isAcompte50 = boutiqueAcompte50 && !isEventOnlyCart;
   const [itemsToDelete, setItemsToDelete] = useState<Set<number>>(new Set());
   const [showDeliveryNotes, setShowDeliveryNotes] = useState(false);
 
@@ -184,8 +193,13 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
       }
     };
 
+    if (isEventOnlyCart) {
+      setCommunesLoading(false);
+      return;
+    }
+
     loadCommunes();
-  }, [boutiqueId]);
+  }, [boutiqueId, isEventOnlyCart]);
 
   // Initialiser le widget Cloudflare Turnstile de façon robuste
   useEffect(() => {
@@ -279,10 +293,14 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
     return selectedCommune ? Number(selectedCommune.tarif_livraison) || 0 : 0;
   };
 
-  const deliveryFee = getDeliveryFee();
+  const deliveryFee = isEventOnlyCart ? 0 : getDeliveryFee();
 
   // Synchronisation de payOnDelivery en fonction des restrictions et des frais de livraison
   useEffect(() => {
+    if (isEventOnlyCart) {
+      setPayOnDelivery(false);
+      return;
+    }
     if (paymentRestrictionMode === 'livraison_uniquement') {
       if (deliveryFee > 0) {
         setPayOnDelivery(true);
@@ -295,7 +313,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
     } else if (deliveryFee === 0) {
       setPayOnDelivery(false);
     }
-  }, [paymentRestrictionMode, isAcompte50, deliveryFee]);
+  }, [isEventOnlyCart, paymentRestrictionMode, isAcompte50, deliveryFee]);
 
   // Calcul de l'acompte (mode acompte_50) : 50% du total (sous-total + livraison), + frais de
   // service 10% sur cette moitié. Formule identique à verifierMontantTransaction côté serveur
@@ -342,28 +360,26 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
 
   // Vérification si toutes les conditions sont remplies pour activer le bouton
   const isFormValid = () => {
-    // Vérifier que tous les champs obligatoires de l'adresse sont remplis
-    const isAddressComplete = deliveryAddress.fullName.trim() !== '' &&
-      deliveryAddress.phone.trim() !== '' &&
-      deliveryAddress.address.trim() !== '' &&
-      deliveryAddress.city.trim() !== '';
+    if (isMixedCart) {
+      return false;
+    }
 
-    // Vérifier que le numéro WhatsApp est valide et vérifié
+    const isContactComplete = deliveryAddress.fullName.trim() !== '' &&
+      deliveryAddress.phone.trim() !== '';
+    const isAddressComplete = isEventOnlyCart
+      ? isContactComplete
+      : isContactComplete &&
+        deliveryAddress.address.trim() !== '' &&
+        deliveryAddress.city.trim() !== '';
+
     const isWhatsAppValid = whatsAppExists === true && !isCheckingWhatsApp;
-
-    // Vérifier qu'un mode de paiement est sélectionné
     const isPaymentSelected = selectedPayment !== null;
-
     const isPaymentPhoneValid = selectedPayment === 'visa' || (
       paymentPhone.length === 9 &&
       paymentPhoneError === '' &&
       selectedPayment !== null
     );
-
-    // Vérifier qu'une commune est sélectionnée (même si les frais sont à 0)
-    const isCommuneSelected = deliveryAddress.city.trim() !== '';
-
-    // Si Turnstile est configuré, valider que le jeton a bien été généré
+    const isCommuneSelected = isEventOnlyCart || deliveryAddress.city.trim() !== '';
     const isTurnstileValid = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
       ? turnstileToken !== null
       : true;
@@ -373,7 +389,13 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
 
   // Génère le message approprié pour le bouton selon l'état de validation
   const getButtonMessage = () => {
-    if (!deliveryAddress.fullName || !deliveryAddress.phone || !deliveryAddress.address) {
+    if (isMixedCart) {
+      return 'Retirez les articles incompatibles';
+    }
+    if (!deliveryAddress.fullName || !deliveryAddress.phone) {
+      return isEventOnlyCart ? 'Renseignez votre nom et WhatsApp' : 'Complétez votre adresse de livraison';
+    }
+    if (!isEventOnlyCart && !deliveryAddress.address) {
       return 'Complétez votre adresse de livraison';
     }
     if (isCheckingWhatsApp) {
@@ -382,7 +404,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
     if (whatsAppExists !== true) {
       return 'Numéro WhatsApp requis';
     }
-    if (!deliveryAddress.city) {
+    if (!isEventOnlyCart && !deliveryAddress.city) {
       return 'Sélectionnez une commune pour continuer';
     }
     if (!selectedPayment) {
@@ -460,6 +482,11 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
       return;
     }
 
+    if (isMixedCart) {
+      error(MESSAGE_MIX_PANIER);
+      return;
+    }
+
     // Vérifier qu'un mode de paiement est sélectionné
     if (!selectedPayment) {
       error('Veuillez sélectionner un mode de paiement');
@@ -477,11 +504,12 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
         boutique_id: panier[0].boutique_id,
         client_nom: deliveryAddress.fullName,
         client_telephone: deliveryAddress.phone,
-        client_adresse: deliveryAddress.address,
-        client_ville: deliveryAddress.city,
-        client_commune: deliveryAddress.city,
-        client_instructions: deliveryAddress.additionalInfo,
-        frais_livraison: deliveryFee,
+        client_email: deliveryAddress.email.trim() || undefined,
+        client_adresse: isEventOnlyCart ? '' : deliveryAddress.address,
+        client_ville: isEventOnlyCart ? '' : deliveryAddress.city,
+        client_commune: isEventOnlyCart ? '' : deliveryAddress.city,
+        client_instructions: isEventOnlyCart ? '' : deliveryAddress.additionalInfo,
+        frais_livraison: isEventOnlyCart ? 0 : deliveryFee,
         taxes: getTransactionFee(),
         remise: 0,
         articles: panier.map(item => ({
@@ -503,10 +531,12 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
 
       console.log('Réponse complète de la commande:', commande);
 
-      const typePaiementTransaction = isAcompte50
-        ? 'acompte'
-        : (payOnDelivery ? 'frais_livraison' : 'paiement_complet');
-      const confirmationType = (payOnDelivery || isAcompte50) ? 'partiel' : 'complet';
+      const typePaiementTransaction = isEventOnlyCart
+        ? 'paiement_complet'
+        : isAcompte50
+          ? 'acompte'
+          : (payOnDelivery ? 'frais_livraison' : 'paiement_complet');
+      const confirmationType = (!isEventOnlyCart && (payOnDelivery || isAcompte50)) ? 'partiel' : 'complet';
 
       if (selectedPayment === 'visa') {
         setShowProgressBar(true);
@@ -564,7 +594,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
       }
 
       // Étape 2: Gestion du paiement selon le mode choisi
-      if (payOnDelivery) {
+      if (payOnDelivery && !isEventOnlyCart) {
         // ============================================
         // MODE: Paiement à la livraison (Frais uniquement)
         // ============================================
@@ -999,9 +1029,17 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
             )}
           </div>
 
-          {/* Carte 2 — Livraison */}
+          {isMixedCart && (
+            <div className="rounded-[12px] border border-[#f5c2c7] bg-[#fdecee] p-4 text-sm text-[#991b1b]" role="alert">
+              {MESSAGE_MIX_PANIER}
+            </div>
+          )}
+
+          {/* Carte 2 — Livraison / coordonnées */}
           <div className="rounded-[12px] border border-[#ececea] bg-white p-5">
-            <h2 className="mb-4 text-base font-semibold text-[#17181a]">Livraison</h2>
+            <h2 className="mb-4 text-base font-semibold text-[#17181a]">
+              {isEventOnlyCart ? 'Vos informations' : 'Livraison'}
+            </h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1.5 block text-[13px] font-medium text-[#3c4045]">Nom complet *</label>
@@ -1012,6 +1050,17 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
                   onChange={(e) => handleAddressChange('fullName', e.target.value)}
                   placeholder="Votre nom complet"
                   required
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-1.5 block text-[13px] font-medium text-[#3c4045]">Email (pour les billets)</label>
+                <input
+                  type="email"
+                  className={fieldClass}
+                  value={deliveryAddress.email}
+                  onChange={(e) => handleAddressChange('email', e.target.value)}
+                  placeholder="vous@email.com"
+                  aria-label="Email pour recevoir les billets"
                 />
               </div>
               <div>
@@ -1055,6 +1104,8 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
                   </div>
                 )}
               </div>
+              {!isEventOnlyCart && (
+                <>
               <div className="sm:col-span-2">
                 <label className="mb-1.5 block text-[13px] font-medium text-[#3c4045]">Adresse complète *</label>
                 <input
@@ -1093,6 +1144,9 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
                   </p>
                 )}
               </div>
+                </>
+              )}
+              {!isEventOnlyCart && (
               <div className="sm:col-span-2">
                 {!showDeliveryNotes ? (
                   <button
@@ -1116,6 +1170,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
                   </div>
                 )}
               </div>
+              )}
             </div>
           </div>
 
@@ -1203,7 +1258,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
           </div>
 
           {/* Carte 4 — Montant à régler maintenant */}
-          {paymentRestrictionMode === 'les_deux' && deliveryFee > 0 && (
+          {!isEventOnlyCart && paymentRestrictionMode === 'les_deux' && deliveryFee > 0 && (
             <div className="rounded-[12px] border border-[#ececea] bg-white p-5">
               <h2 className="mb-4 text-base font-semibold text-[#17181a]">Montant à régler maintenant</h2>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -1250,12 +1305,14 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
                 <span className="text-[#6b6f76]">Sous-total ({totalItems} article{totalItems > 1 ? 's' : ''})</span>
                 <span className="font-mono font-medium text-[#17181a]">{formatPrice(subtotal)}</span>
               </div>
+              {!isEventOnlyCart && (
               <div className="flex items-center justify-between">
                 <span className="text-[#6b6f76]">Livraison</span>
                 <span className="font-mono font-medium text-[#17181a]">
                   {deliveryAddress.city ? formatPrice(deliveryFee) : (communesLoading ? '—' : 'Sélectionnez une commune')}
                 </span>
               </div>
+              )}
               <div>
                 <div className="flex items-center justify-between">
                   <span className="text-[#6b6f76]">Frais de service</span>
@@ -1328,7 +1385,10 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
             </p>
 
             <div className="mt-4 space-y-1.5 text-[12.5px] text-[#6b6f76]">
-              {selectedCommune && (
+              {isEventOnlyCart && (
+                <p>Billets envoyés par e-mail et WhatsApp après paiement</p>
+              )}
+              {!isEventOnlyCart && selectedCommune && (
                 <p>
                   {selectedCommune.delai_livraison_min === 0 && selectedCommune.delai_livraison_max === 0
                     ? `Livraison immédiate à ${selectedCommune.nom_commune}`

@@ -2,6 +2,37 @@ import type { ProduitDB } from '@/lib/database-types';
 
 export type ProductSalesKind = 'produit' | 'evenement' | 'service';
 
+export const MESSAGE_MIX_PANIER =
+  'Les billets événement ne peuvent pas être mélangés avec d’autres articles. Videz le panier ou retirez les articles incompatibles.';
+
+export function isEvenementProduct(product?: {
+  variants?: unknown;
+  categorie?: { nom?: string; slug?: string } | null;
+} | null): boolean {
+  if (!product) {
+    return false;
+  }
+  return getProductSalesKind(product) === 'evenement';
+}
+
+export function panierEstMixteAvec(
+  items: Array<{ produit?: { variants?: unknown; categorie?: { nom?: string; slug?: string } | null } }>,
+  incomingIsEvent: boolean
+): boolean {
+  if (items.length === 0) {
+    return false;
+  }
+  const cartHasEvent = items.some((item) => item.produit && isEvenementProduct(item.produit));
+  const cartHasOther = items.some((item) => item.produit && !isEvenementProduct(item.produit));
+  if (incomingIsEvent && cartHasOther) {
+    return true;
+  }
+  if (!incomingIsEvent && cartHasEvent) {
+    return true;
+  }
+  return cartHasEvent && cartHasOther;
+}
+
 type VariantsBag = {
   type?: string;
   meta?: Record<string, unknown>;

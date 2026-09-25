@@ -660,7 +660,8 @@ export default function ProductDetail({
         product.boutique.id,
         product.id,
         quantity,
-        cartData
+        cartData,
+        product
       );
 
       if (isSuccess) {

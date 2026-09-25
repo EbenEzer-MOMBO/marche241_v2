@@ -76,14 +76,14 @@ export function RelatedProducts({
 
     try {
       setAddingId(produit.id);
-      const ok = await ajouterProduit(boutiqueId, produit.id, 1, {});
+      const ok = await ajouterProduit(boutiqueId, produit.id, 1, {}, produit);
       if (ok) {
         success(`${produit.nom} ajouté au panier`, 'Succès', 3000);
       } else {
         showError("Impossible d'ajouter au panier", 'Erreur', 4000);
       }
-    } catch {
-      showError("Impossible d'ajouter au panier", 'Erreur', 4000);
+    } catch (err) {
+      showError(err instanceof Error ? err.message : "Impossible d'ajouter au panier", 'Erreur', 4000);
     } finally {
       setAddingId(null);
     }

@@ -183,12 +183,13 @@ export function usePanier(boutiqueId?: number): UsePanierResult {
     boutiqueId: number,
     produitId: number,
     quantite: number,
-    variantsSelectionnes: { [key: string]: string } = {}
+    variantsSelectionnes: { [key: string]: string } = {},
+    incomingProduct?: { variants?: unknown; categorie?: { nom?: string; slug?: string } | null }
   ): Promise<boolean> => {
     try {
       setError(null);
 
-      await ajouterAuPanier(boutiqueId, produitId, quantite, variantsSelectionnes);
+      await ajouterAuPanier(boutiqueId, produitId, quantite, variantsSelectionnes, incomingProduct);
 
       // Recharger le panier après ajout
       await chargerPanier();
@@ -316,13 +317,14 @@ export function useAjoutPanier() {
     boutiqueId: number,
     produitId: number,
     quantite: number,
-    variantsSelectionnes: { [key: string]: any } = {}
+    variantsSelectionnes: { [key: string]: any } = {},
+    incomingProduct?: { variants?: unknown; categorie?: { nom?: string; slug?: string } | null }
   ): Promise<boolean> => {
     try {
       setLoading(true);
       setError(null);
 
-      await ajouterAuPanier(boutiqueId, produitId, quantite, variantsSelectionnes);
+      await ajouterAuPanier(boutiqueId, produitId, quantite, variantsSelectionnes, incomingProduct);
 
       window.dispatchEvent(new CustomEvent('cartUpdated'));
 
@@ -331,7 +333,7 @@ export function useAjoutPanier() {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors de l\'ajout au panier';
       console.error('Erreur lors de l\'ajout au panier:', err);
       setError(errorMessage);
-      return false;
+      throw err;
     } finally {
       setLoading(false);
     }

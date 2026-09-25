@@ -4,6 +4,7 @@
 
 import api from '@/lib/api';
 import { getOrCreateSessionId } from './session';
+import { isEvenementProduct, MESSAGE_MIX_PANIER, panierEstMixteAvec } from '@/lib/utils/product-sales-kind';
 
 interface AjoutPanierRequest {
   session_id: string;
@@ -126,11 +127,19 @@ export async function ajouterAuPanier(
   boutiqueId: number,
   produitId: number,
   quantite: number,
-  variantsSelectionnes: Record<string, unknown> = {}
+  variantsSelectionnes: Record<string, unknown> = {},
+  incomingProduct?: { variants?: unknown; categorie?: { nom?: string; slug?: string } | null }
 ): Promise<AjoutPanierResponse> {
   try {
     // Obtenir une session spécifique à cette boutique
     const sessionId = getOrCreateSessionId(boutiqueId);
+
+    if (incomingProduct) {
+      const panierActuel = await getPanier(boutiqueId);
+      if (panierEstMixteAvec(panierActuel.panier || [], isEvenementProduct(incomingProduct))) {
+        throw new Error(MESSAGE_MIX_PANIER);
+      }
+    }
     
     const requestData: AjoutPanierRequest = {
       session_id: sessionId,

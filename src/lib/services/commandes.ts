@@ -17,6 +17,7 @@ interface CreerCommandeData {
   boutique_id: number;
   client_nom: string;
   client_telephone: string;
+  client_email?: string;
   client_adresse: string;
   client_ville: string;
   client_commune: string;
