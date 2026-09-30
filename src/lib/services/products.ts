@@ -131,6 +131,7 @@ const buildProduitsQuery = (params: ProduitsParams = {}): URLSearchParams => {
     nouveaux: params.nouveaux,
     promotion: params.promotion,
     en_stock: params.en_stock,
+    type_vente: params.type_vente,
   });
   return queryParams;
 };

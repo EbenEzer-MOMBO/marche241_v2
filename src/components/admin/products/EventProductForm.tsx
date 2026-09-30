@@ -15,6 +15,9 @@ interface EventProductFormProps {
   boutiqueId?: number;
   boutiqueSlug?: string;
   productToEdit?: any;
+  /** 'inline' : formulaire complet sans modale ni étapes (page détail événement). */
+  variant?: 'modal' | 'inline';
+  isSaving?: boolean;
 }
 
 interface TicketVariant {
@@ -63,7 +66,10 @@ export function EventProductForm({
   categories = [],
   boutiqueSlug,
   productToEdit,
+  variant = 'modal',
+  isSaving = false,
 }: EventProductFormProps) {
+  const isInline = variant === 'inline';
   const [currentSection, setCurrentSection] = useState(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isUploading, setIsUploading] = useState(false);
@@ -147,7 +153,7 @@ export function EventProductForm({
 
   if (!isOpen || !category) return null;
 
-  const validateSection = (section: number): boolean => {
+  const collectSectionErrors = (section: number): Record<string, string> => {
     const next: Record<string, string> = {};
     if (section === 1) {
       if (!formData.nom.trim()) next.nom = 'Le nom est requis';
@@ -168,6 +174,20 @@ export function EventProductForm({
         if (t.stock < 0) next[`ticket_${i}_stock`] = 'Places invalides';
       });
     }
+    return next;
+  };
+
+  const validateSection = (section: number): boolean => {
+    const next = collectSectionErrors(section);
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
+
+  const validateAllSections = (): boolean => {
+    const next = SECTIONS.reduce<Record<string, string>>(
+      (acc, section) => ({ ...acc, ...collectSectionErrors(section.id) }),
+      {}
+    );
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -214,7 +234,8 @@ export function EventProductForm({
   };
 
   const handleSave = async () => {
-    if (!validateSection(4)) return;
+    const isValid = isInline ? validateAllSections() : validateSection(4);
+    if (!isValid) return;
     let images = uploadedImageUrls.length ? uploadedImageUrls : formData.images;
     if (images.some((i) => i.startsWith('data:'))) {
       try {
@@ -262,6 +283,280 @@ export function EventProductForm({
   const inputClass =
     'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black';
 
+  const renderInfosSection = () => (
+    <div className="space-y-4">
+      <div>
+        <label className="mb-1 block text-sm font-medium">Nom de l’événement *</label>
+        <input
+          className={inputClass}
+          value={formData.nom}
+          onChange={(e) => setFormData((p) => ({ ...p, nom: e.target.value }))}
+          placeholder="Topboy Live Session #3"
+        />
+        {errors.nom && <p className="mt-1 text-xs text-red-600">{errors.nom}</p>}
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium">Description</label>
+        <textarea
+          className={inputClass}
+          rows={4}
+          value={formData.description}
+          onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
+        />
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium">Catégorie *</label>
+        <select
+          className={inputClass}
+          value={formData.categorie_id || ''}
+          onChange={(e) => setFormData((p) => ({ ...p, categorie_id: Number(e.target.value) }))}
+        >
+          <option value="">Sélectionner</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>{c.nom}</option>
+          ))}
+        </select>
+        {errors.categorie_id && <p className="mt-1 text-xs text-red-600">{errors.categorie_id}</p>}
+      </div>
+    </div>
+  );
+
+  const renderImagesSection = () => (
+    <div className="space-y-4">
+      <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 p-8 hover:border-gray-500">
+        <Upload className="mb-2 h-8 w-8 text-gray-400" />
+        <span className="text-sm text-gray-600">Ajouter des images (affiche 3:2 recommandée)</span>
+        <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} />
+      </label>
+      {errors.images && <p className="text-xs text-red-600">{errors.images}</p>}
+      <div className="grid grid-cols-3 gap-3">
+        {formData.images.map((img, i) => (
+          <div key={i} className="relative aspect-[3/2] overflow-hidden rounded-lg bg-gray-100">
+            <Image src={img} alt="" fill className="object-cover" />
+            <button
+              type="button"
+              className="absolute right-1 top-1 rounded bg-black/70 p-1 text-white"
+              onClick={() => setFormData((p) => ({ ...p, images: p.images.filter((_, idx) => idx !== i) }))}
+              aria-label="Supprimer l’image"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderDetailsSection = () => (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-sm font-medium">Date de début *</label>
+          <input
+            type="datetime-local"
+            className={inputClass}
+            value={formData.date_debut}
+            onChange={(e) => setFormData((p) => ({ ...p, date_debut: e.target.value }))}
+          />
+          {errors.date_debut && <p className="mt-1 text-xs text-red-600">{errors.date_debut}</p>}
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium">Date de fin</label>
+          <input
+            type="datetime-local"
+            className={inputClass}
+            value={formData.date_fin}
+            onChange={(e) => setFormData((p) => ({ ...p, date_fin: e.target.value }))}
+          />
+        </div>
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium">Lieu *</label>
+        <input
+          className={inputClass}
+          value={formData.lieu}
+          onChange={(e) => setFormData((p) => ({ ...p, lieu: e.target.value }))}
+          placeholder="Institut Français, Libreville"
+        />
+        {errors.lieu && <p className="mt-1 text-xs text-red-600">{errors.lieu}</p>}
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium">Adresse</label>
+        <input
+          className={inputClass}
+          value={formData.adresse}
+          onChange={(e) => setFormData((p) => ({ ...p, adresse: e.target.value }))}
+        />
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium">Ouverture des portes</label>
+        <input
+          className={inputClass}
+          value={formData.ouverture_portes}
+          onChange={(e) => setFormData((p) => ({ ...p, ouverture_portes: e.target.value }))}
+          placeholder="19 h 30"
+        />
+      </div>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={formData.non_remboursable}
+          onChange={(e) => setFormData((p) => ({ ...p, non_remboursable: e.target.checked }))}
+        />
+        Billet non remboursable
+      </label>
+    </div>
+  );
+
+  const renderTicketsSection = () => (
+    <div className="space-y-4">
+      {errors.tickets && <p className="text-xs text-red-600">{errors.tickets}</p>}
+      {formData.tickets.map((ticket, index) => (
+        <div key={ticket.id} className="rounded-xl border border-gray-200 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-sm font-medium">Billet {index + 1}</span>
+            {formData.tickets.length > 1 && (
+              <button
+                type="button"
+                className="text-red-500 hover:text-red-700"
+                onClick={() =>
+                  setFormData((p) => ({
+                    ...p,
+                    tickets: p.tickets.filter((t) => t.id !== ticket.id),
+                  }))
+                }
+                aria-label="Supprimer le billet"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="sm:col-span-3">
+              <input
+                className={inputClass}
+                value={ticket.nom}
+                onChange={(e) =>
+                  setFormData((p) => ({
+                    ...p,
+                    tickets: p.tickets.map((t) =>
+                      t.id === ticket.id ? { ...t, nom: e.target.value } : t
+                    ),
+                  }))
+                }
+                placeholder="Nom du billet"
+              />
+              {errors[`ticket_${index}_nom`] && (
+                <p className="mt-1 text-xs text-red-600">{errors[`ticket_${index}_nom`]}</p>
+              )}
+            </div>
+            <div>
+              <input
+                type="number"
+                className={inputClass}
+                value={ticket.prix || ''}
+                onChange={(e) =>
+                  setFormData((p) => ({
+                    ...p,
+                    tickets: p.tickets.map((t) =>
+                      t.id === ticket.id ? { ...t, prix: Number(e.target.value) || 0 } : t
+                    ),
+                  }))
+                }
+                placeholder="Prix FCFA"
+              />
+              {errors[`ticket_${index}_prix`] && (
+                <p className="mt-1 text-xs text-red-600">{errors[`ticket_${index}_prix`]}</p>
+              )}
+            </div>
+            <div>
+              <input
+                type="number"
+                className={inputClass}
+                value={ticket.prix_promo ?? ''}
+                onChange={(e) =>
+                  setFormData((p) => ({
+                    ...p,
+                    tickets: p.tickets.map((t) =>
+                      t.id === ticket.id
+                        ? {
+                            ...t,
+                            prix_promo: e.target.value
+                              ? Number(e.target.value)
+                              : undefined,
+                          }
+                        : t
+                    ),
+                  }))
+                }
+                placeholder="Prix promo"
+              />
+            </div>
+            <div>
+              <input
+                type="number"
+                className={inputClass}
+                value={ticket.stock}
+                onChange={(e) =>
+                  setFormData((p) => ({
+                    ...p,
+                    tickets: p.tickets.map((t) =>
+                      t.id === ticket.id
+                        ? { ...t, stock: Number(e.target.value) || 0 }
+                        : t
+                    ),
+                  }))
+                }
+                placeholder="Places"
+              />
+            </div>
+          </div>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() => setFormData((p) => ({ ...p, tickets: [...p.tickets, newTicket()] }))}
+        className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium hover:bg-gray-50"
+      >
+        <Plus className="h-4 w-4" /> Ajouter un billet
+      </button>
+    </div>
+  );
+
+  if (isInline) {
+    return (
+      <div className="space-y-8">
+        <section>
+          <h3 className="mb-4 text-base font-semibold text-gray-900">Informations</h3>
+          {renderInfosSection()}
+        </section>
+        <section className="border-t border-gray-100 pt-6">
+          <h3 className="mb-4 text-base font-semibold text-gray-900">Images de l’événement</h3>
+          {renderImagesSection()}
+        </section>
+        <section className="border-t border-gray-100 pt-6">
+          <h3 className="mb-4 text-base font-semibold text-gray-900">Date et lieu</h3>
+          {renderDetailsSection()}
+        </section>
+        <section className="border-t border-gray-100 pt-6">
+          <h3 className="mb-4 text-base font-semibold text-gray-900">Billets</h3>
+          {renderTicketsSection()}
+        </section>
+        <div className="flex justify-end border-t border-gray-100 pt-6">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={isUploading || isSaving}
+            className="inline-flex items-center gap-2 rounded-lg bg-black px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+          >
+            <Check className="h-4 w-4" />
+            {isUploading ? 'Upload des images…' : isSaving ? 'Enregistrement…' : 'Enregistrer'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
@@ -292,245 +587,10 @@ export function EventProductForm({
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-5">
-          {currentSection === 1 && (
-            <div className="space-y-4">
-              <div>
-                <label className="mb-1 block text-sm font-medium">Nom de l’événement *</label>
-                <input
-                  className={inputClass}
-                  value={formData.nom}
-                  onChange={(e) => setFormData((p) => ({ ...p, nom: e.target.value }))}
-                  placeholder="Topboy Live Session #3"
-                />
-                {errors.nom && <p className="mt-1 text-xs text-red-600">{errors.nom}</p>}
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">Description</label>
-                <textarea
-                  className={inputClass}
-                  rows={4}
-                  value={formData.description}
-                  onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">Catégorie *</label>
-                <select
-                  className={inputClass}
-                  value={formData.categorie_id || ''}
-                  onChange={(e) => setFormData((p) => ({ ...p, categorie_id: Number(e.target.value) }))}
-                >
-                  <option value="">Sélectionner</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.nom}</option>
-                  ))}
-                </select>
-                {errors.categorie_id && <p className="mt-1 text-xs text-red-600">{errors.categorie_id}</p>}
-              </div>
-            </div>
-          )}
-
-          {currentSection === 2 && (
-            <div className="space-y-4">
-              <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 p-8 hover:border-gray-500">
-                <Upload className="mb-2 h-8 w-8 text-gray-400" />
-                <span className="text-sm text-gray-600">Ajouter des images (affiche 3:2 recommandée)</span>
-                <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} />
-              </label>
-              {errors.images && <p className="text-xs text-red-600">{errors.images}</p>}
-              <div className="grid grid-cols-3 gap-3">
-                {formData.images.map((img, i) => (
-                  <div key={i} className="relative aspect-[3/2] overflow-hidden rounded-lg bg-gray-100">
-                    <Image src={img} alt="" fill className="object-cover" />
-                    <button
-                      type="button"
-                      className="absolute right-1 top-1 rounded bg-black/70 p-1 text-white"
-                      onClick={() => setFormData((p) => ({ ...p, images: p.images.filter((_, idx) => idx !== i) }))}
-                      aria-label="Supprimer l’image"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {currentSection === 3 && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-sm font-medium">Date de début *</label>
-                  <input
-                    type="datetime-local"
-                    className={inputClass}
-                    value={formData.date_debut}
-                    onChange={(e) => setFormData((p) => ({ ...p, date_debut: e.target.value }))}
-                  />
-                  {errors.date_debut && <p className="mt-1 text-xs text-red-600">{errors.date_debut}</p>}
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium">Date de fin</label>
-                  <input
-                    type="datetime-local"
-                    className={inputClass}
-                    value={formData.date_fin}
-                    onChange={(e) => setFormData((p) => ({ ...p, date_fin: e.target.value }))}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">Lieu *</label>
-                <input
-                  className={inputClass}
-                  value={formData.lieu}
-                  onChange={(e) => setFormData((p) => ({ ...p, lieu: e.target.value }))}
-                  placeholder="Institut Français, Libreville"
-                />
-                {errors.lieu && <p className="mt-1 text-xs text-red-600">{errors.lieu}</p>}
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">Adresse</label>
-                <input
-                  className={inputClass}
-                  value={formData.adresse}
-                  onChange={(e) => setFormData((p) => ({ ...p, adresse: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">Ouverture des portes</label>
-                <input
-                  className={inputClass}
-                  value={formData.ouverture_portes}
-                  onChange={(e) => setFormData((p) => ({ ...p, ouverture_portes: e.target.value }))}
-                  placeholder="19 h 30"
-                />
-              </div>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={formData.non_remboursable}
-                  onChange={(e) => setFormData((p) => ({ ...p, non_remboursable: e.target.checked }))}
-                />
-                Billet non remboursable
-              </label>
-            </div>
-          )}
-
-          {currentSection === 4 && (
-            <div className="space-y-4">
-              {errors.tickets && <p className="text-xs text-red-600">{errors.tickets}</p>}
-              {formData.tickets.map((ticket, index) => (
-                <div key={ticket.id} className="rounded-xl border border-gray-200 p-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <span className="text-sm font-medium">Billet {index + 1}</span>
-                    {formData.tickets.length > 1 && (
-                      <button
-                        type="button"
-                        className="text-red-500 hover:text-red-700"
-                        onClick={() =>
-                          setFormData((p) => ({
-                            ...p,
-                            tickets: p.tickets.filter((t) => t.id !== ticket.id),
-                          }))
-                        }
-                        aria-label="Supprimer le billet"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    <div className="sm:col-span-3">
-                      <input
-                        className={inputClass}
-                        value={ticket.nom}
-                        onChange={(e) =>
-                          setFormData((p) => ({
-                            ...p,
-                            tickets: p.tickets.map((t) =>
-                              t.id === ticket.id ? { ...t, nom: e.target.value } : t
-                            ),
-                          }))
-                        }
-                        placeholder="Nom du billet"
-                      />
-                      {errors[`ticket_${index}_nom`] && (
-                        <p className="mt-1 text-xs text-red-600">{errors[`ticket_${index}_nom`]}</p>
-                      )}
-                    </div>
-                    <div>
-                      <input
-                        type="number"
-                        className={inputClass}
-                        value={ticket.prix || ''}
-                        onChange={(e) =>
-                          setFormData((p) => ({
-                            ...p,
-                            tickets: p.tickets.map((t) =>
-                              t.id === ticket.id ? { ...t, prix: Number(e.target.value) || 0 } : t
-                            ),
-                          }))
-                        }
-                        placeholder="Prix FCFA"
-                      />
-                      {errors[`ticket_${index}_prix`] && (
-                        <p className="mt-1 text-xs text-red-600">{errors[`ticket_${index}_prix`]}</p>
-                      )}
-                    </div>
-                    <div>
-                      <input
-                        type="number"
-                        className={inputClass}
-                        value={ticket.prix_promo ?? ''}
-                        onChange={(e) =>
-                          setFormData((p) => ({
-                            ...p,
-                            tickets: p.tickets.map((t) =>
-                              t.id === ticket.id
-                                ? {
-                                    ...t,
-                                    prix_promo: e.target.value
-                                      ? Number(e.target.value)
-                                      : undefined,
-                                  }
-                                : t
-                            ),
-                          }))
-                        }
-                        placeholder="Prix promo"
-                      />
-                    </div>
-                    <div>
-                      <input
-                        type="number"
-                        className={inputClass}
-                        value={ticket.stock}
-                        onChange={(e) =>
-                          setFormData((p) => ({
-                            ...p,
-                            tickets: p.tickets.map((t) =>
-                              t.id === ticket.id
-                                ? { ...t, stock: Number(e.target.value) || 0 }
-                                : t
-                            ),
-                          }))
-                        }
-                        placeholder="Places"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => setFormData((p) => ({ ...p, tickets: [...p.tickets, newTicket()] }))}
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium hover:bg-gray-50"
-              >
-                <Plus className="h-4 w-4" /> Ajouter un billet
-              </button>
-            </div>
-          )}
+          {currentSection === 1 && renderInfosSection()}
+          {currentSection === 2 && renderImagesSection()}
+          {currentSection === 3 && renderDetailsSection()}
+          {currentSection === 4 && renderTicketsSection()}
         </div>
 
         <div className="flex items-center justify-between border-t border-gray-200 px-5 py-4">

@@ -26,7 +26,8 @@ import {
   Copy,
   Check,
   Eye,
-  BadgeCheck
+  BadgeCheck,
+  Ticket
 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
 import { ToastContainer } from '@/components/ui/Toast';
@@ -107,6 +108,12 @@ export default function Sidebar({ boutique, isMobileMenuOpen = false, onToggleMo
       icon: Package,
       current: pathname.includes('/products'),
       showAlert: alerts.produits
+    },
+    {
+      name: 'Événements',
+      href: `/admin/${boutique.slug}/evenements`,
+      icon: Ticket,
+      current: pathname.includes('/evenements')
     },
     {
       name: 'Commandes',

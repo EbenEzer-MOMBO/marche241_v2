@@ -156,6 +156,8 @@ export type ApiProduitsQuery = {
   nouveaux?: boolean;
   promotion?: boolean;
   en_stock?: boolean;
+  /** Filtre API : uniquement les événements, ou tout sauf les événements. */
+  type_vente?: 'evenement' | 'autre';
 };
 
 export const toApiProduitsQuery = (
@@ -209,6 +211,7 @@ export const appendApiProduitsQuery = (
   append('featured', params.featured);
   append('nouveaux', params.nouveaux);
   append('promotion', params.promotion);
+  append('type_vente', params.type_vente);
   if (params.en_stock !== undefined) {
     queryParams.set('en_stock', params.en_stock ? 'true' : 'false');
   }
