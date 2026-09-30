@@ -70,7 +70,7 @@ export function buildEventProductApiPayload(data: EventFormPayload) {
     images,
     image_principale: data.image_principale || images[0] || undefined,
     variants,
-    statut: data.statut || 'actif',
+    statut: data.statut || 'brouillon',
   };
 }
 

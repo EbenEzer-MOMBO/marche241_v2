@@ -20,6 +20,8 @@ export interface StatsEvenement {
   billets_vendus: number;
   billets_scannes: number;
   revenus: number;
+  /** Billets émis par type de billet (clé = nom du billet). */
+  ventes_par_type: Record<string, number>;
 }
 
 interface ParticipantsResponse {
@@ -58,4 +60,18 @@ export async function marquerBilletScanne(
     throw new Error(response.message || 'Impossible de mettre à jour le billet');
   }
   return response.billet;
+}
+
+/**
+ * Renvoie à l'acheteur l'email de ses billets (même email qu'à l'achat).
+ */
+export async function renvoyerEmailBillets(commandeId: number): Promise<string> {
+  const response = await api.post<{ success: boolean; message?: string }>(
+    `/billets/commande/${commandeId}/renvoyer-email`,
+    {}
+  );
+  if (!response.success) {
+    throw new Error(response.message || "Impossible de renvoyer l'email");
+  }
+  return response.message || 'Email renvoyé';
 }

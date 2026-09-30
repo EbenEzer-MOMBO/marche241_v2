@@ -118,9 +118,10 @@ function EvenementsContent() {
   const handleCreate = async (data: EventFormPayload) => {
     if (!boutique) return;
     try {
-      const payload = buildEventProductApiPayload(data);
+      // Un nouvel événement n'est jamais publié directement : le vendeur le publie depuis sa page.
+      const payload = buildEventProductApiPayload({ ...data, statut: 'brouillon' });
       const cree = await creerProduit({ ...payload, boutique_id: boutique.id });
-      success('Événement créé avec succès', 'Succès');
+      success('Événement créé en brouillon : publiez-le quand il est prêt', 'Succès');
       setShowCreateForm(false);
       router.push(`/admin/${boutique.slug}/evenements/${cree.id}`);
     } catch (error: unknown) {

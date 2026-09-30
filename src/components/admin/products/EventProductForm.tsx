@@ -1,9 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { X, ArrowLeft, ArrowRight, Check, Upload, Plus, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { X, ArrowLeft, ArrowRight, Check, Upload, Plus, Trash2, Lock, Ticket } from 'lucide-react';
 import Image from 'next/image';
 import { ProductCategory } from '@/lib/constants/product-categories';
+import { FRAIS_SERVICE_POURCENTAGE, prixAvecFraisService } from '@/lib/constants/frais-service';
+
+const formatFcfa = (montant: number) =>
+  `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(montant)} FCFA`;
 
 interface EventProductFormProps {
   isOpen: boolean;
@@ -18,6 +22,11 @@ interface EventProductFormProps {
   /** 'inline' : formulaire complet sans modale ni étapes (page détail événement). */
   variant?: 'modal' | 'inline';
   isSaving?: boolean;
+  /**
+   * Billets déjà vendus par type (clé = nom du billet). Dès la première vente,
+   * les infos clés et les billets vendus sont figés et leurs places ne peuvent qu'augmenter.
+   */
+  ventesParType?: Record<string, number>;
 }
 
 interface TicketVariant {
@@ -68,8 +77,23 @@ export function EventProductForm({
   productToEdit,
   variant = 'modal',
   isSaving = false,
+  ventesParType = {},
 }: EventProductFormProps) {
   const isInline = variant === 'inline';
+  const estVerrouille = Object.values(ventesParType).some((n) => n > 0);
+
+  // Places restantes enregistrées par billet : plancher après la première vente.
+  const stocksInitiaux = useMemo(() => {
+    const tickets = productToEdit?.tickets || productToEdit?.variants?.variants || [];
+    return Object.fromEntries(
+      (Array.isArray(tickets) ? tickets : [])
+        .filter((t: any) => t?.id)
+        .map((t: any) => [String(t.id), Number(t.stock) || 0])
+    ) as Record<string, number>;
+  }, [productToEdit]);
+
+  const vendusDuBillet = (ticket: TicketVariant) =>
+    ticket.id in stocksInitiaux ? ventesParType[ticket.nom] || 0 : 0;
   const [currentSection, setCurrentSection] = useState(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isUploading, setIsUploading] = useState(false);
@@ -78,7 +102,7 @@ export function EventProductForm({
     nom: '',
     description: '',
     categorie_id: 0,
-    statut: 'actif',
+    statut: 'brouillon',
     images: [],
     date_debut: '',
     date_fin: '',
@@ -103,7 +127,7 @@ export function EventProductForm({
         nom: productToEdit.nom || '',
         description: productToEdit.description || '',
         categorie_id: productToEdit.categorie_id || 0,
-        statut: productToEdit.statut || 'actif',
+        statut: productToEdit.statut || 'brouillon',
         images: productToEdit.images || [],
         date_debut: meta.date_debut ? String(meta.date_debut).slice(0, 16) : '',
         date_fin: meta.date_fin ? String(meta.date_fin).slice(0, 16) : '',
@@ -139,7 +163,7 @@ export function EventProductForm({
       nom: '',
       description: '',
       categorie_id: eventCat?.id || 0,
-      statut: 'actif',
+      statut: 'brouillon',
       images: [],
       date_debut: '',
       date_fin: '',
@@ -157,7 +181,9 @@ export function EventProductForm({
     const next: Record<string, string> = {};
     if (section === 1) {
       if (!formData.nom.trim()) next.nom = 'Le nom est requis';
-      if (!formData.categorie_id) next.categorie_id = 'La catégorie est requise';
+      if (!formData.categorie_id) {
+        next.categorie_id = 'Catégorie « Événements » introuvable : contactez le support Marché 241';
+      }
     }
     if (section === 2 && formData.images.length === 0) {
       next.images = 'Au moins une image est requise';
@@ -172,6 +198,10 @@ export function EventProductForm({
         if (!t.nom.trim()) next[`ticket_${i}_nom`] = 'Nom requis';
         if (t.prix <= 0) next[`ticket_${i}_prix`] = 'Prix > 0 requis';
         if (t.stock < 0) next[`ticket_${i}_stock`] = 'Places invalides';
+        const plancher = stocksInitiaux[t.id];
+        if (vendusDuBillet(t) > 0 && plancher !== undefined && t.stock < plancher) {
+          next[`ticket_${i}_stock`] = `Les places ne peuvent qu'augmenter (minimum ${plancher})`;
+        }
       });
     }
     return next;
@@ -281,14 +311,22 @@ export function EventProductForm({
   };
 
   const inputClass =
-    'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black';
+    'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500';
+
+  const renderLabel = (texte: string, verrouille = false) => (
+    <label className="mb-1 flex items-center gap-1 text-sm font-medium">
+      {texte}
+      {verrouille && <Lock className="h-3.5 w-3.5 text-gray-400" aria-label="Non modifiable" />}
+    </label>
+  );
 
   const renderInfosSection = () => (
     <div className="space-y-4">
       <div>
-        <label className="mb-1 block text-sm font-medium">Nom de l’événement *</label>
+        {renderLabel('Nom de l’événement *', estVerrouille)}
         <input
           className={inputClass}
+          disabled={estVerrouille}
           value={formData.nom}
           onChange={(e) => setFormData((p) => ({ ...p, nom: e.target.value }))}
           placeholder="Topboy Live Session #3"
@@ -305,17 +343,11 @@ export function EventProductForm({
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium">Catégorie *</label>
-        <select
-          className={inputClass}
-          value={formData.categorie_id || ''}
-          onChange={(e) => setFormData((p) => ({ ...p, categorie_id: Number(e.target.value) }))}
-        >
-          <option value="">Sélectionner</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>{c.nom}</option>
-          ))}
-        </select>
+        <label className="mb-1 block text-sm font-medium">Catégorie</label>
+        <div className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+          <Ticket className="h-4 w-4 text-gray-500" />
+          {categories.find((c) => c.id === formData.categorie_id)?.nom || 'Événements'}
+        </div>
         {errors.categorie_id && <p className="mt-1 text-xs text-red-600">{errors.categorie_id}</p>}
       </div>
     </div>
@@ -351,29 +383,32 @@ export function EventProductForm({
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <label className="mb-1 block text-sm font-medium">Date de début *</label>
+          {renderLabel('Date de début *', estVerrouille)}
           <input
             type="datetime-local"
             className={inputClass}
+            disabled={estVerrouille}
             value={formData.date_debut}
             onChange={(e) => setFormData((p) => ({ ...p, date_debut: e.target.value }))}
           />
           {errors.date_debut && <p className="mt-1 text-xs text-red-600">{errors.date_debut}</p>}
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium">Date de fin</label>
+          {renderLabel('Date de fin', estVerrouille)}
           <input
             type="datetime-local"
             className={inputClass}
+            disabled={estVerrouille}
             value={formData.date_fin}
             onChange={(e) => setFormData((p) => ({ ...p, date_fin: e.target.value }))}
           />
         </div>
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium">Lieu *</label>
+        {renderLabel('Lieu *', estVerrouille)}
         <input
           className={inputClass}
+          disabled={estVerrouille}
           value={formData.lieu}
           onChange={(e) => setFormData((p) => ({ ...p, lieu: e.target.value }))}
           placeholder="Institut Français, Libreville"
@@ -381,9 +416,10 @@ export function EventProductForm({
         {errors.lieu && <p className="mt-1 text-xs text-red-600">{errors.lieu}</p>}
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium">Adresse</label>
+        {renderLabel('Adresse', estVerrouille)}
         <input
           className={inputClass}
+          disabled={estVerrouille}
           value={formData.adresse}
           onChange={(e) => setFormData((p) => ({ ...p, adresse: e.target.value }))}
         />
@@ -397,126 +433,138 @@ export function EventProductForm({
           placeholder="19 h 30"
         />
       </div>
-      <label className="flex items-center gap-2 text-sm">
+      <label className={`flex items-center gap-2 text-sm ${estVerrouille ? 'text-gray-500' : ''}`}>
         <input
           type="checkbox"
+          disabled={estVerrouille}
           checked={formData.non_remboursable}
           onChange={(e) => setFormData((p) => ({ ...p, non_remboursable: e.target.checked }))}
         />
         Billet non remboursable
+        {estVerrouille && <Lock className="h-3.5 w-3.5 text-gray-400" aria-label="Non modifiable" />}
       </label>
     </div>
   );
 
+  const majBillet = (id: string, changement: Partial<TicketVariant>) =>
+    setFormData((p) => ({
+      ...p,
+      tickets: p.tickets.map((t) => (t.id === id ? { ...t, ...changement } : t)),
+    }));
+
   const renderTicketsSection = () => (
     <div className="space-y-4">
       {errors.tickets && <p className="text-xs text-red-600">{errors.tickets}</p>}
-      {formData.tickets.map((ticket, index) => (
-        <div key={ticket.id} className="rounded-xl border border-gray-200 p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <span className="text-sm font-medium">Billet {index + 1}</span>
-            {formData.tickets.length > 1 && (
-              <button
-                type="button"
-                className="text-red-500 hover:text-red-700"
-                onClick={() =>
-                  setFormData((p) => ({
-                    ...p,
-                    tickets: p.tickets.filter((t) => t.id !== ticket.id),
-                  }))
-                }
-                aria-label="Supprimer le billet"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+      {formData.tickets.map((ticket, index) => {
+        const vendus = vendusDuBillet(ticket);
+        const billetVerrouille = vendus > 0;
+        const prixEffectif = (ticket.prix_promo ?? 0) > 0 ? ticket.prix_promo! : ticket.prix;
+        const plancher = billetVerrouille ? stocksInitiaux[ticket.id] : undefined;
+
+        return (
+          <div key={ticket.id} className="rounded-xl border border-gray-200 p-4">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <span className="flex items-center gap-2 text-sm font-medium">
+                Billet {index + 1}
+                {billetVerrouille && (
+                  <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+                    {vendus} vendu{vendus > 1 ? 's' : ''}
+                  </span>
+                )}
+              </span>
+              {formData.tickets.length > 1 && !billetVerrouille && (
+                <button
+                  type="button"
+                  className="text-red-500 hover:text-red-700"
+                  onClick={() =>
+                    setFormData((p) => ({
+                      ...p,
+                      tickets: p.tickets.filter((t) => t.id !== ticket.id),
+                    }))
+                  }
+                  aria-label="Supprimer le billet"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="sm:col-span-3">
+                <label className="mb-1 flex items-center gap-1 text-xs font-medium text-gray-600">
+                  Nom du billet *{billetVerrouille && <Lock className="h-3 w-3 text-gray-400" />}
+                </label>
+                <input
+                  className={inputClass}
+                  disabled={billetVerrouille}
+                  value={ticket.nom}
+                  onChange={(e) => majBillet(ticket.id, { nom: e.target.value })}
+                  placeholder="Nom du billet"
+                />
+                {errors[`ticket_${index}_nom`] && (
+                  <p className="mt-1 text-xs text-red-600">{errors[`ticket_${index}_nom`]}</p>
+                )}
+              </div>
+              <div>
+                <label className="mb-1 flex items-center gap-1 text-xs font-medium text-gray-600">
+                  Prix (FCFA) *{billetVerrouille && <Lock className="h-3 w-3 text-gray-400" />}
+                </label>
+                <input
+                  type="number"
+                  className={inputClass}
+                  disabled={billetVerrouille}
+                  value={ticket.prix || ''}
+                  onChange={(e) => majBillet(ticket.id, { prix: Number(e.target.value) || 0 })}
+                  placeholder="Prix FCFA"
+                />
+                {errors[`ticket_${index}_prix`] && (
+                  <p className="mt-1 text-xs text-red-600">{errors[`ticket_${index}_prix`]}</p>
+                )}
+              </div>
+              <div>
+                <label className="mb-1 flex items-center gap-1 text-xs font-medium text-gray-600">
+                  Prix promo (FCFA){billetVerrouille && <Lock className="h-3 w-3 text-gray-400" />}
+                </label>
+                <input
+                  type="number"
+                  className={inputClass}
+                  disabled={billetVerrouille}
+                  value={ticket.prix_promo ?? ''}
+                  onChange={(e) =>
+                    majBillet(ticket.id, { prix_promo: e.target.value ? Number(e.target.value) : undefined })
+                  }
+                  placeholder="Optionnel"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">
+                  {billetVerrouille ? 'Places restantes' : 'Places disponibles'}
+                </label>
+                <input
+                  type="number"
+                  min={plancher ?? 0}
+                  className={inputClass}
+                  value={ticket.stock}
+                  onChange={(e) => majBillet(ticket.id, { stock: Number(e.target.value) || 0 })}
+                  placeholder="Places"
+                />
+                {errors[`ticket_${index}_stock`] ? (
+                  <p className="mt-1 text-xs text-red-600">{errors[`ticket_${index}_stock`]}</p>
+                ) : (
+                  plancher !== undefined && (
+                    <p className="mt-1 text-xs text-gray-500">Vous pouvez seulement en ajouter</p>
+                  )
+                )}
+              </div>
+            </div>
+            {prixEffectif > 0 && (
+              <p className="mt-3 text-xs text-gray-500">
+                Prix affiché : <span className="font-medium text-gray-700">{formatFcfa(prixAvecFraisService(prixEffectif))}</span>{' '}
+                (frais de service {Math.round(FRAIS_SERVICE_POURCENTAGE * 100)} % inclus)
+              </p>
             )}
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="sm:col-span-3">
-              <label className="mb-1 block text-xs font-medium text-gray-600">Nom du billet *</label>
-              <input
-                className={inputClass}
-                value={ticket.nom}
-                onChange={(e) =>
-                  setFormData((p) => ({
-                    ...p,
-                    tickets: p.tickets.map((t) =>
-                      t.id === ticket.id ? { ...t, nom: e.target.value } : t
-                    ),
-                  }))
-                }
-                placeholder="Nom du billet"
-              />
-              {errors[`ticket_${index}_nom`] && (
-                <p className="mt-1 text-xs text-red-600">{errors[`ticket_${index}_nom`]}</p>
-              )}
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Prix (FCFA) *</label>
-              <input
-                type="number"
-                className={inputClass}
-                value={ticket.prix || ''}
-                onChange={(e) =>
-                  setFormData((p) => ({
-                    ...p,
-                    tickets: p.tickets.map((t) =>
-                      t.id === ticket.id ? { ...t, prix: Number(e.target.value) || 0 } : t
-                    ),
-                  }))
-                }
-                placeholder="Prix FCFA"
-              />
-              {errors[`ticket_${index}_prix`] && (
-                <p className="mt-1 text-xs text-red-600">{errors[`ticket_${index}_prix`]}</p>
-              )}
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Prix promo (FCFA)</label>
-              <input
-                type="number"
-                className={inputClass}
-                value={ticket.prix_promo ?? ''}
-                onChange={(e) =>
-                  setFormData((p) => ({
-                    ...p,
-                    tickets: p.tickets.map((t) =>
-                      t.id === ticket.id
-                        ? {
-                            ...t,
-                            prix_promo: e.target.value
-                              ? Number(e.target.value)
-                              : undefined,
-                          }
-                        : t
-                    ),
-                  }))
-                }
-                placeholder="Optionnel"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Places disponibles</label>
-              <input
-                type="number"
-                className={inputClass}
-                value={ticket.stock}
-                onChange={(e) =>
-                  setFormData((p) => ({
-                    ...p,
-                    tickets: p.tickets.map((t) =>
-                      t.id === ticket.id
-                        ? { ...t, stock: Number(e.target.value) || 0 }
-                        : t
-                    ),
-                  }))
-                }
-                placeholder="Places"
-              />
-            </div>
-          </div>
-        </div>
-      ))}
+        );
+      })}
       <button
         type="button"
         onClick={() => setFormData((p) => ({ ...p, tickets: [...p.tickets, newTicket()] }))}
@@ -530,6 +578,16 @@ export function EventProductForm({
   if (isInline) {
     return (
       <div className="space-y-8">
+        {estVerrouille && (
+          <div className="flex gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+            <Lock className="mt-0.5 h-4 w-4 flex-shrink-0" />
+            <p>
+              Des billets ont déjà été vendus : le nom, la date, le lieu et le prix des billets vendus ne sont plus
+              modifiables. Vous pouvez toujours changer la description, les images, ajouter un type de billet ou
+              ajouter des places.
+            </p>
+          </div>
+        )}
         <section>
           <h3 className="mb-4 text-base font-semibold text-gray-900">Informations</h3>
           {renderInfosSection()}
