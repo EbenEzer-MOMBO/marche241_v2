@@ -24,6 +24,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { ToastContainer } from '@/components/ui/Toast';
+import ConfirmationModal from '@/components/ui/ConfirmationModal';
 import Sidebar from '@/components/admin/Sidebar';
 import { EventProductForm } from '@/components/admin/products/EventProductForm';
 import { EvenementShareBar } from '@/components/admin/EvenementShareBar';
@@ -167,6 +168,7 @@ export default function EvenementDetailPage() {
   const [billetsEnCours, setBilletsEnCours] = useState<Set<number>>(new Set());
   const [groupesOuverts, setGroupesOuverts] = useState<Set<string>>(new Set());
   const [emailEnCours, setEmailEnCours] = useState<string | null>(null);
+  const [emailAConfirmer, setEmailAConfirmer] = useState<GroupeAcheteur | null>(null);
 
   const chargerParticipants = useCallback(async () => {
     try {
@@ -314,14 +316,9 @@ export default function EvenementDetailPage() {
     }
   };
 
+  // Confirmation via modale (window.confirm est bloqué dans certains navigateurs intégrés).
   const renvoyerEmail = async (groupe: GroupeAcheteur) => {
     if (!groupe.email) return;
-    const nbCommandes = groupe.commandes.length;
-    const confirme = window.confirm(
-      `Renvoyer à ${groupe.email} l'email avec ${nbCommandes > 1 ? `les billets de ses ${nbCommandes} commandes` : 'ses billets'} ?`
-    );
-    if (!confirme) return;
-
     setEmailEnCours(groupe.cle);
     try {
       await Promise.all(groupe.commandes.map((c) => renvoyerEmailBillets(c.id)));
@@ -516,7 +513,7 @@ export default function EvenementDetailPage() {
           <div className="flex items-center justify-end gap-2 pl-6 md:pl-0">
             {groupe.email && (
               <button
-                onClick={() => renvoyerEmail(groupe)}
+                onClick={() => setEmailAConfirmer(groupe)}
                 disabled={emailEnCours === groupe.cle}
                 className="rounded-full bg-emerald-500 p-2 text-white hover:bg-emerald-600 disabled:cursor-wait disabled:opacity-60"
                 title="Renvoyer l’email des billets"
@@ -602,6 +599,23 @@ export default function EvenementDetailPage() {
   return (
     <div className="h-screen bg-gray-50 flex overflow-hidden max-w-[100vw]">
       <ToastContainer toasts={toasts} onClose={removeToast} />
+      <ConfirmationModal
+        isOpen={emailAConfirmer !== null}
+        onClose={() => setEmailAConfirmer(null)}
+        onConfirm={() => (emailAConfirmer ? renvoyerEmail(emailAConfirmer) : undefined)}
+        title="Renvoyer les billets"
+        message={
+          emailAConfirmer
+            ? `Renvoyer à ${emailAConfirmer.email} l’email contenant ${
+                emailAConfirmer.commandes.length > 1
+                  ? `les billets de ses ${emailAConfirmer.commandes.length} commandes (${emailAConfirmer.commandes.length} emails)`
+                  : 'ses billets'
+              } ?`
+            : ''
+        }
+        confirmText="Renvoyer"
+        type="info"
+      />
 
       <Sidebar
         boutique={boutique}
