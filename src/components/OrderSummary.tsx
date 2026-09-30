@@ -512,7 +512,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
         boutique_id: panier[0].boutique_id,
         client_nom: deliveryAddress.fullName,
         client_telephone: deliveryAddress.phone,
-        client_email: deliveryAddress.email.trim() || undefined,
+        client_email: isEventOnlyCart ? deliveryAddress.email.trim() || undefined : undefined,
         client_adresse: isEventOnlyCart ? '' : deliveryAddress.address,
         client_ville: isEventOnlyCart ? '' : deliveryAddress.city,
         client_commune: isEventOnlyCart ? '' : deliveryAddress.city,
@@ -1060,17 +1060,6 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
                   required
                 />
               </div>
-              <div className="sm:col-span-2">
-                <label className="mb-1.5 block text-[13px] font-medium text-[#3c4045]">Email (pour les billets)</label>
-                <input
-                  type="email"
-                  className={fieldClass}
-                  value={deliveryAddress.email}
-                  onChange={(e) => handleAddressChange('email', e.target.value)}
-                  placeholder="vous@email.com"
-                  aria-label="Email pour recevoir les billets"
-                />
-              </div>
               <div>
                 <label className="mb-1.5 block text-[13px] font-medium text-[#3c4045]">WhatsApp *</label>
                 <PhoneNumberInput
@@ -1112,6 +1101,20 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
                   </div>
                 )}
               </div>
+              {/* L'email ne sert qu'à recevoir les billets : uniquement pour un panier événement. */}
+              {isEventOnlyCart && (
+                <div className="sm:col-span-2">
+                  <label className="mb-1.5 block text-[13px] font-medium text-[#3c4045]">Email (pour les billets)</label>
+                  <input
+                    type="email"
+                    className={fieldClass}
+                    value={deliveryAddress.email}
+                    onChange={(e) => handleAddressChange('email', e.target.value)}
+                    placeholder="vous@email.com"
+                    aria-label="Email pour recevoir les billets"
+                  />
+                </div>
+              )}
               {!isEventOnlyCart && (
                 <>
               <div className="sm:col-span-2">
