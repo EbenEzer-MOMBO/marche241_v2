@@ -200,6 +200,17 @@ export interface CommandeArticle {
   produit?: ProduitDB;
 }
 
+export interface Billet {
+  id: number;
+  commande_id: number;
+  produit_id: number;
+  type_billet: string;
+  numero: number;
+  jeton: string;
+  scanne_le?: Date | null;
+  date_creation: Date;
+}
+
 // Table transactions
 export interface Transaction {
   id: number;

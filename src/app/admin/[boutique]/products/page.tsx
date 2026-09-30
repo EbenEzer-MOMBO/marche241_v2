@@ -110,7 +110,8 @@ export default function ProductsPage() {
                 page: currentPage,
                 limite: pageSize,
                 tri_par: sortBy,
-                ordre: sortOrder
+                ordre: sortOrder,
+                type_vente: 'autre'
             };
 
             console.log('📋 Paramètres de la requête:', params);
@@ -346,6 +347,11 @@ export default function ProductsPage() {
     };
 
     const handleSelectCategory = (category: ProductCategory) => {
+        if (category === 'evenement' && boutique) {
+            setShowCategoryModal(false);
+            router.push(`/admin/${boutique.slug}/evenements?nouveau=1`);
+            return;
+        }
         setSelectedCategory(category);
         setShowCategoryModal(false);
         setShowSimplifiedModal(true);
