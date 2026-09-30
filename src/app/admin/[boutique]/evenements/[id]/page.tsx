@@ -710,7 +710,7 @@ export default function EvenementDetailPage() {
             {(
               [
                 { id: 'details', label: 'Détails' },
-                { id: 'participants', label: `Participants (${groupes.length})` },
+                { id: 'participants', label: `Participants (${participants.length})` },
               ] as const
             ).map((o) => (
               <button
