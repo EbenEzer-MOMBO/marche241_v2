@@ -59,6 +59,13 @@ const SECTIONS = [
   { id: 4, label: 'Billets' },
 ];
 
+/** Date/heure courante au format d'un input datetime-local (heure locale). */
+const maintenantLocal = () => {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+};
+
 const newTicket = (): TicketVariant => ({
   id: `ticket-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
   nom: 'Billet standard',
@@ -189,7 +196,18 @@ export function EventProductForm({
       next.images = 'Au moins une image est requise';
     }
     if (section === 3) {
-      if (!formData.date_debut) next.date_debut = 'La date de début est requise';
+      if (!formData.date_debut) {
+        next.date_debut = 'La date de début est requise';
+      } else if (!productToEdit && new Date(formData.date_debut).getTime() <= Date.now()) {
+        next.date_debut = 'La date de début doit être dans le futur';
+      }
+      if (
+        formData.date_debut &&
+        formData.date_fin &&
+        new Date(formData.date_fin).getTime() <= new Date(formData.date_debut).getTime()
+      ) {
+        next.date_fin = 'La date de fin doit être postérieure à la date de début';
+      }
       if (!formData.lieu.trim()) next.lieu = 'Le lieu est requis';
     }
     if (section === 4) {
@@ -388,6 +406,7 @@ export function EventProductForm({
             type="datetime-local"
             className={inputClass}
             disabled={estVerrouille}
+            min={productToEdit ? undefined : maintenantLocal()}
             value={formData.date_debut}
             onChange={(e) => setFormData((p) => ({ ...p, date_debut: e.target.value }))}
           />
@@ -399,9 +418,11 @@ export function EventProductForm({
             type="datetime-local"
             className={inputClass}
             disabled={estVerrouille}
+            min={formData.date_debut || (productToEdit ? undefined : maintenantLocal())}
             value={formData.date_fin}
             onChange={(e) => setFormData((p) => ({ ...p, date_fin: e.target.value }))}
           />
+          {errors.date_fin && <p className="mt-1 text-xs text-red-600">{errors.date_fin}</p>}
         </div>
       </div>
       <div>
