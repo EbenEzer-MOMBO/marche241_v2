@@ -9,6 +9,7 @@ import {
   Clock,
   Download,
   Eye,
+  Loader2,
   Mail,
   Menu,
   PiggyBank,
@@ -206,15 +207,21 @@ export default function EvenementDetailPage() {
   };
 
   const toggleScan = async (participant: ParticipantBillet) => {
+    const ancienScan = participant.scanne_le;
+    const definirScan = (scanneLe: string | null) =>
+      setParticipants((prev) => prev.map((p) => (p.id === participant.id ? { ...p, scanne_le: scanneLe } : p)));
+    const delta = ancienScan ? -1 : 1;
+
+    // Mise à jour optimiste : l'affichage bascule immédiatement, on revient en arrière en cas d'erreur.
     setBilletEnCours(participant.id);
+    definirScan(ancienScan ? null : new Date().toISOString());
+    setStats((prev) => ({ ...prev, billets_scannes: prev.billets_scannes + delta }));
     try {
-      const billet = await marquerBilletScanne(participant.id, !participant.scanne_le);
-      setParticipants((prev) => prev.map((p) => (p.id === participant.id ? { ...p, scanne_le: billet.scanne_le } : p)));
-      setStats((prev) => ({
-        ...prev,
-        billets_scannes: prev.billets_scannes + (billet.scanne_le ? 1 : 0) - (participant.scanne_le ? 1 : 0),
-      }));
+      const billet = await marquerBilletScanne(participant.id, !ancienScan);
+      definirScan(billet.scanne_le);
     } catch (error: unknown) {
+      definirScan(ancienScan);
+      setStats((prev) => ({ ...prev, billets_scannes: prev.billets_scannes - delta }));
       showError(error instanceof Error ? error.message : 'Erreur lors de la mise à jour du billet', 'Erreur');
     } finally {
       setBilletEnCours(null);
@@ -298,6 +305,55 @@ export default function EvenementDetailPage() {
     );
   }
 
+  const renderBadgePaiement = (p: ParticipantBillet) => (
+    <span
+      className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${
+        p.statut_paiement === 'paye' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+      }`}
+    >
+      {LIBELLES_PAIEMENT[p.statut_paiement] || p.statut_paiement}
+    </span>
+  );
+
+  const renderActions = (p: ParticipantBillet) => (
+    <div className="flex flex-shrink-0 justify-end gap-2">
+      <a
+        href={`/billets/${p.jeton}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="rounded-full bg-gray-100 p-2 text-gray-700 hover:bg-gray-200"
+        title="Voir le billet"
+      >
+        <Eye className="h-4 w-4" />
+      </a>
+      {p.client_email && (
+        <a
+          href={`mailto:${p.client_email}`}
+          className="rounded-full bg-emerald-500 p-2 text-white hover:bg-emerald-600"
+          title="Envoyer un email"
+        >
+          <Mail className="h-4 w-4" />
+        </a>
+      )}
+      <button
+        onClick={() => toggleScan(p)}
+        disabled={billetEnCours === p.id}
+        className={`rounded-full p-2 text-white disabled:cursor-wait ${
+          p.scanne_le ? 'bg-gray-500 hover:bg-gray-600' : 'bg-black hover:bg-gray-800'
+        }`}
+        title={p.scanne_le ? 'Annuler le scan' : 'Marquer comme scanné'}
+      >
+        {billetEnCours === p.id ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : p.scanne_le ? (
+          <Undo2 className="h-4 w-4" />
+        ) : (
+          <ScanLine className="h-4 w-4" />
+        )}
+      </button>
+    </div>
+  );
+
   const cartesStats = [
     { label: 'Billets vendus', valeur: String(stats.billets_vendus), icon: Ticket },
     { label: 'Revenus (commandes payées)', valeur: formatFcfa(stats.revenus), icon: PiggyBank },
@@ -316,7 +372,7 @@ export default function EvenementDetailPage() {
 
       <div className="flex-1 flex flex-col min-h-0 w-full">
         <div className="bg-white shadow-sm border-b px-4 lg:px-6 py-3 lg:py-4">
-          <div className="flex flex-wrap justify-between items-center gap-3">
+          <div className="flex justify-between items-center gap-3">
             <div className="flex items-center min-w-0 flex-1">
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -332,18 +388,21 @@ export default function EvenementDetailPage() {
                 <ArrowLeft className="h-5 w-5 text-gray-600" />
               </Link>
               <h1 className="min-w-0 truncate text-lg lg:text-2xl font-bold text-gray-900">
-                À propos de : {produit.nom}
+                <span className="hidden sm:inline">À propos de : </span>
+                {produit.nom}
               </h1>
             </div>
             <button
               onClick={toggleStatut}
               disabled={isTogglingStatut}
-              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors disabled:opacity-50 ${
+              aria-label={estPublie ? 'Dépublier l’événement' : 'Publier l’événement'}
+              title={estPublie ? 'Dépublier l’événement' : 'Publier l’événement'}
+              className={`inline-flex flex-shrink-0 items-center gap-2 rounded-lg p-2 sm:px-4 text-sm font-semibold text-white transition-colors disabled:opacity-50 ${
                 estPublie ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
               }`}
             >
               {estPublie ? <XCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
-              {estPublie ? 'Dépublier l’événement' : 'Publier l’événement'}
+              <span className="hidden sm:inline">{estPublie ? 'Dépublier l’événement' : 'Publier l’événement'}</span>
             </button>
           </div>
         </div>
@@ -453,7 +512,7 @@ export default function EvenementDetailPage() {
                   {participants.length === 0 ? 'Aucun billet vendu pour le moment.' : 'Aucun participant ne correspond à la recherche.'}
                 </p>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="hidden overflow-x-auto md:block">
                   <table className="min-w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-200 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -488,53 +547,51 @@ export default function EvenementDetailPage() {
                               <XCircle className="mx-auto h-5 w-5 text-gray-300" aria-label="Non scanné" />
                             )}
                           </td>
-                          <td className="py-3 pr-4 whitespace-nowrap">
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                                p.statut_paiement === 'paye' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
-                              }`}
-                            >
-                              {LIBELLES_PAIEMENT[p.statut_paiement] || p.statut_paiement}
-                            </span>
-                          </td>
+                          <td className="py-3 pr-4 whitespace-nowrap">{renderBadgePaiement(p)}</td>
                           <td className="py-3 pr-4 whitespace-nowrap text-gray-700">{formatDateHeure(p.date_creation)}</td>
-                          <td className="py-3">
-                            <div className="flex justify-end gap-2">
-                              <a
-                                href={`/billets/${p.jeton}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="rounded-full bg-gray-100 p-2 text-gray-700 hover:bg-gray-200"
-                                title="Voir le billet"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </a>
-                              {p.client_email && (
-                                <a
-                                  href={`mailto:${p.client_email}`}
-                                  className="rounded-full bg-emerald-500 p-2 text-white hover:bg-emerald-600"
-                                  title="Envoyer un email"
-                                >
-                                  <Mail className="h-4 w-4" />
-                                </a>
-                              )}
-                              <button
-                                onClick={() => toggleScan(p)}
-                                disabled={billetEnCours === p.id}
-                                className={`rounded-full p-2 text-white disabled:opacity-50 ${
-                                  p.scanne_le ? 'bg-gray-500 hover:bg-gray-600' : 'bg-black hover:bg-gray-800'
-                                }`}
-                                title={p.scanne_le ? 'Annuler le scan' : 'Marquer comme scanné'}
-                              >
-                                {p.scanne_le ? <Undo2 className="h-4 w-4" /> : <ScanLine className="h-4 w-4" />}
-                              </button>
-                            </div>
-                          </td>
+                          <td className="py-3">{renderActions(p)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
+              )}
+
+              {participantsFiltres.length > 0 && (
+                <ul className="divide-y divide-gray-100 md:hidden">
+                  {participantsFiltres.map((p) => (
+                    <li key={p.id} className="py-3 space-y-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-900">
+                            #{p.numero} <span className="font-normal text-gray-500">· {p.type_billet}</span>
+                          </p>
+                          <p className="truncate text-sm text-gray-900">{p.client_nom}</p>
+                          <p className="truncate text-xs text-gray-500">{p.client_telephone}</p>
+                        </div>
+                        {renderBadgePaiement(p)}
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <p
+                          className={`inline-flex items-center gap-1 text-xs ${
+                            p.scanne_le ? 'text-green-700' : 'text-gray-500'
+                          }`}
+                        >
+                          {p.scanne_le ? (
+                            <>
+                              <CheckCircle2 className="h-4 w-4" /> Scanné le {formatDateHeure(p.scanne_le)}
+                            </>
+                          ) : (
+                            <>
+                              <XCircle className="h-4 w-4 text-gray-300" /> Non scanné
+                            </>
+                          )}
+                        </p>
+                        {renderActions(p)}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           )}

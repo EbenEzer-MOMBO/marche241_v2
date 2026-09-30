@@ -433,6 +433,7 @@ export function EventProductForm({
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="sm:col-span-3">
+              <label className="mb-1 block text-xs font-medium text-gray-600">Nom du billet *</label>
               <input
                 className={inputClass}
                 value={ticket.nom}
@@ -451,6 +452,7 @@ export function EventProductForm({
               )}
             </div>
             <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">Prix (FCFA) *</label>
               <input
                 type="number"
                 className={inputClass}
@@ -470,6 +472,7 @@ export function EventProductForm({
               )}
             </div>
             <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">Prix promo (FCFA)</label>
               <input
                 type="number"
                 className={inputClass}
@@ -489,10 +492,11 @@ export function EventProductForm({
                     ),
                   }))
                 }
-                placeholder="Prix promo"
+                placeholder="Optionnel"
               />
             </div>
             <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">Places disponibles</label>
               <input
                 type="number"
                 className={inputClass}
