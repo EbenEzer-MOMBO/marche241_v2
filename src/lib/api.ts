@@ -177,6 +177,18 @@ async function apiRequest<T>(
 const inflightGetRequests = new Map<string, Promise<unknown>>();
 const recentGetResults = new Map<string, { expiresAt: number; value: unknown }>();
 const GET_CACHE_TTL_MS = 2000;
+/** Incrémentée à chaque écriture : une GET lancée avant une écriture ne doit pas être réutilisée. */
+let generationCacheGet = 0;
+
+/**
+ * Invalide le cache des GET après une écriture (POST/PUT/PATCH/DELETE) : sinon une lecture
+ * faite juste avant (ex. panier vide avant l'ajout) serait resservie pendant 2 s.
+ */
+function invaliderCacheGet(): void {
+  generationCacheGet += 1;
+  recentGetResults.clear();
+  inflightGetRequests.clear();
+}
 
 function coalesceGet<T>(cacheKey: string, factory: () => Promise<T>): Promise<T> {
   const cached = recentGetResults.get(cacheKey);
@@ -189,19 +201,33 @@ function coalesceGet<T>(cacheKey: string, factory: () => Promise<T>): Promise<T>
     return existing as Promise<T>;
   }
 
+  const generation = generationCacheGet;
   const promise = factory()
     .then((value) => {
-      recentGetResults.set(cacheKey, {
-        value,
-        expiresAt: Date.now() + GET_CACHE_TTL_MS,
-      });
+      if (generation === generationCacheGet) {
+        recentGetResults.set(cacheKey, {
+          value,
+          expiresAt: Date.now() + GET_CACHE_TTL_MS,
+        });
+      }
       return value;
     })
     .finally(() => {
-      inflightGetRequests.delete(cacheKey);
+      if (inflightGetRequests.get(cacheKey) === promise) {
+        inflightGetRequests.delete(cacheKey);
+      }
     });
   inflightGetRequests.set(cacheKey, promise);
   return promise;
+}
+
+/** Requête d'écriture : invalide le cache des GET une fois terminée (succès ou échec). */
+async function requeteEcriture<T>(endpoint: string, options: RequestInit, isPreview: boolean): Promise<T> {
+  try {
+    return await apiRequest<T>(endpoint, options, isPreview);
+  } finally {
+    invaliderCacheGet();
+  }
 }
 
 /**
@@ -233,7 +259,7 @@ export const api = {
 
   post: async <T>(endpoint: string, data?: any, options?: RequestInit): Promise<T> => {
     const isPreview = await isPreviewRequest();
-    return apiRequest<T>(endpoint, {
+    return requeteEcriture<T>(endpoint, {
       ...options,
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
@@ -242,7 +268,7 @@ export const api = {
 
   put: async <T>(endpoint: string, data?: any, options?: RequestInit): Promise<T> => {
     const isPreview = await isPreviewRequest();
-    return apiRequest<T>(endpoint, {
+    return requeteEcriture<T>(endpoint, {
       ...options,
       method: 'PUT',
       body: data ? JSON.stringify(data) : undefined,
@@ -251,7 +277,7 @@ export const api = {
 
   patch: async <T>(endpoint: string, data?: any, options?: RequestInit): Promise<T> => {
     const isPreview = await isPreviewRequest();
-    return apiRequest<T>(endpoint, {
+    return requeteEcriture<T>(endpoint, {
       ...options,
       method: 'PATCH',
       body: data ? JSON.stringify(data) : undefined,
@@ -260,7 +286,7 @@ export const api = {
 
   delete: async <T>(endpoint: string, options?: RequestInit): Promise<T> => {
     const isPreview = await isPreviewRequest();
-    return apiRequest<T>(endpoint, { ...options, method: 'DELETE' }, isPreview);
+    return requeteEcriture<T>(endpoint, { ...options, method: 'DELETE' }, isPreview);
   },
 };
 
