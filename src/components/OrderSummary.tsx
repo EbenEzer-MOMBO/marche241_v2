@@ -310,18 +310,16 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
       return;
     }
     if (paymentRestrictionMode === 'livraison_uniquement') {
-      if (deliveryFee > 0) {
-        setPayOnDelivery(true);
-      } else {
-        // Si livraison gratuite, on ne peut pas payer uniquement les frais de livraison (qui sont de 0) en ligne
-        setPayOnDelivery(false);
-      }
+      // Tant qu'aucune commune n'est choisie, on reste en « livraison uniquement » (0 FCFA
+      // maintenant) pour que le client comprenne d'emblée ce qu'il paiera.
+      // Livraison gratuite sur la commune choisie : pas de frais à payer en ligne → paiement complet.
+      setPayOnDelivery(!deliveryAddress.city || deliveryFee > 0);
     } else if (paymentRestrictionMode === 'complet_uniquement' || isAcompte50) {
       setPayOnDelivery(false);
     } else if (deliveryFee === 0) {
       setPayOnDelivery(false);
     }
-  }, [isEventOnlyCart, paymentRestrictionMode, isAcompte50, deliveryFee]);
+  }, [isEventOnlyCart, paymentRestrictionMode, isAcompte50, deliveryFee, deliveryAddress.city]);
 
   // Calcul de l'acompte (mode acompte_50) : 50% du total (sous-total + livraison), + frais de
   // service 10% sur cette moitié. Formule identique à verifierMontantTransaction côté serveur
@@ -1342,7 +1340,9 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
                 className="mt-3 rounded-[9px] p-3 text-[12.5px]"
                 style={{ backgroundColor: 'var(--shop-primary-tint)', color: 'var(--shop-primary-dark)' }}
               >
-                Vous payez la livraison + frais maintenant. {formatPrice(remainingAmount)} restant à régler à la réception.
+                Vous payez la livraison + frais maintenant
+                {deliveryAddress.city ? '' : ' (montant selon votre commune)'}. {formatPrice(remainingAmount)} restant à
+                régler à la réception.
               </div>
             )}
 
