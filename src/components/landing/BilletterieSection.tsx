@@ -72,19 +72,8 @@ const CarteChargement = () => (
 
 /** Aucun événement à venir : la section reste visible pour faire connaître la billetterie. */
 const AucunEvenement = () => (
-  <div className="relative overflow-hidden rounded-2xl border border-white/15">
-    <Image
-      src="/images/billetterie/concert-fond.jpg"
-      alt=""
-      fill
-      sizes="(max-width: 1200px) 100vw, 1160px"
-      className="object-cover"
-    />
-    <div
-      aria-hidden
-      className="absolute inset-0 bg-gradient-to-t from-[#0b0f0c]/95 via-[#0b0f0c]/70 to-[#0b0f0c]/40"
-    />
-    <div className="relative flex flex-col items-center gap-3 px-6 py-14 text-center md:py-20">
+  <div className="rounded-2xl border border-white/15 bg-black/35 backdrop-blur-sm">
+    <div className="flex flex-col items-center gap-3 px-6 py-12 text-center md:py-16">
       <CalendarDays className="h-8 w-8 text-[#a9d3d4]" aria-hidden />
       <p className="text-lg font-bold text-white md:text-2xl">
         Les prochains événements arrivent bientôt
@@ -112,15 +101,20 @@ export const BilletterieSection: React.FC = () => {
       id="billetterie"
       className="relative overflow-hidden bg-[#0b0f0c] py-8 lg:py-[72px]"
     >
+      <div className="absolute inset-0 z-0">
+        <Image
+          src="/images/billetterie/concert-fond.jpg"
+          alt=""
+          fill
+          sizes="100vw"
+          className="object-cover"
+        />
+      </div>
       <div
         aria-hidden
-        className="absolute inset-0"
-        style={{
-          background:
-            'radial-gradient(700px 380px at 85% 10%,rgba(116,173,175,.22),transparent 65%),radial-gradient(600px 360px at 5% 100%,rgba(80,142,39,.24),transparent 65%)',
-        }}
+        className="absolute inset-0 z-0 bg-gradient-to-r from-black/85 via-black/65 to-black/45"
       />
-      <div className="container relative mx-auto px-5 lg:px-10">
+      <div className="container relative z-10 mx-auto px-5 lg:px-10">
         <div className="mx-auto flex max-w-[1160px] flex-col gap-[18px] lg:gap-9">
           <div className="flex flex-col gap-[18px] lg:flex-row lg:items-end lg:justify-between lg:gap-12">
             <div className="flex max-w-[620px] flex-col gap-[18px] lg:gap-4">
