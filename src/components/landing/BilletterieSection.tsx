@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, CalendarDays } from 'lucide-react';
 import { EvenementAffiche, EvenementDateBlock } from '@/components/evenements/EvenementVisuels';
@@ -71,15 +72,28 @@ const CarteChargement = () => (
 
 /** Aucun événement à venir : la section reste visible pour faire connaître la billetterie. */
 const AucunEvenement = () => (
-  <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-white/20 bg-white/[0.03] px-6 py-10 text-center">
-    <CalendarDays className="h-8 w-8 text-[#a9d3d4]" aria-hidden />
-    <p className="text-base font-semibold text-white md:text-lg">
-      Les prochains événements arrivent bientôt
-    </p>
-    <p className="max-w-md text-sm leading-relaxed text-gray-400">
-      Concerts, soirées et salons seront annoncés ici dès leur ouverture à la réservation.
-      Organisateur ? Publiez le vôtre en premier.
-    </p>
+  <div className="relative overflow-hidden rounded-2xl border border-white/15">
+    <Image
+      src="/images/billetterie/concert-fond.jpg"
+      alt=""
+      fill
+      sizes="(max-width: 1200px) 100vw, 1160px"
+      className="object-cover"
+    />
+    <div
+      aria-hidden
+      className="absolute inset-0 bg-gradient-to-t from-[#0b0f0c]/95 via-[#0b0f0c]/70 to-[#0b0f0c]/40"
+    />
+    <div className="relative flex flex-col items-center gap-3 px-6 py-14 text-center md:py-20">
+      <CalendarDays className="h-8 w-8 text-[#a9d3d4]" aria-hidden />
+      <p className="text-lg font-bold text-white md:text-2xl">
+        Les prochains événements arrivent bientôt
+      </p>
+      <p className="max-w-md text-sm leading-relaxed text-gray-200 md:text-[15px]">
+        Concerts, soirées et salons seront annoncés ici dès leur ouverture à la réservation.
+        Organisateur ? Publiez le vôtre en premier.
+      </p>
+    </div>
   </div>
 );
 
