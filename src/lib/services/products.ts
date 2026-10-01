@@ -232,7 +232,7 @@ export async function creerProduit(produitData: {
   images?: string[];
   image_principale?: string;
   variants?: any;
-  statut: 'actif' | 'inactif' | 'brouillon';
+  statut: 'actif' | 'inactif' | 'brouillon' | 'en_attente_validation';
 }): Promise<ProduitDB> {
   try {
     const response = await api.post<ProduitMutationResponse>(
@@ -276,7 +276,7 @@ export async function modifierProduit(id: number, produitData: {
   images?: string[];
   image_principale?: string;
   variants?: any;
-  statut?: 'actif' | 'inactif' | 'brouillon';
+  statut?: 'actif' | 'inactif' | 'brouillon' | 'en_attente_validation';
 }): Promise<ProduitDB> {
   try {
     const response = await api.put<ProduitMutationResponse>(
