@@ -8,7 +8,7 @@ import { Marche241Logo } from '@/components/Marche241Logo';
 interface LandingHeaderProps {
   isAuthenticated?: boolean;
   boutiqueSlug?: string | null;
-  activePage?: 'home' | 'boutiques' | 'produits';
+  activePage?: 'home' | 'boutiques' | 'produits' | 'evenements';
 }
 
 const navLinkClass =
@@ -31,7 +31,7 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({
             <Marche241Logo iconHeight={36} textHeight={26} priority />
 
             <div className="hidden md:flex items-center gap-6">
-              {activePage === 'boutiques' || activePage === 'produits' ? (
+              {activePage !== 'home' ? (
                 <>
                   <Link href="/" className={navLinkClass}>
                     Accueil
@@ -56,6 +56,16 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({
                   >
                     Produits
                   </Link>
+                  <Link
+                    href="/evenements"
+                    className={
+                      activePage === 'evenements'
+                        ? 'text-sm font-semibold text-gray-900 border-b-2 border-[#508e27] pb-0.5'
+                        : navLinkClass
+                    }
+                  >
+                    Événements
+                  </Link>
                   <Link href="/#faq" className={navLinkClass}>
                     FAQ
                   </Link>
@@ -73,6 +83,9 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({
                   </Link>
                   <Link href="/produits" className={navLinkClass}>
                     Produits
+                  </Link>
+                  <Link href="/evenements" className={navLinkClass}>
+                    Événements
                   </Link>
                   <a href="#faq" className={navLinkClass}>
                     FAQ
@@ -134,7 +147,7 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({
         {isMobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-gray-200">
             <div className="flex flex-col gap-4">
-              {activePage === 'boutiques' || activePage === 'produits' ? (
+              {activePage !== 'home' ? (
                 <>
                   <Link href="/" className={navLinkClass} onClick={handleCloseMenu}>
                     Accueil
@@ -144,6 +157,9 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({
                   </Link>
                   <Link href="/produits" className={navLinkClass} onClick={handleCloseMenu}>
                     Produits
+                  </Link>
+                  <Link href="/evenements" className={navLinkClass} onClick={handleCloseMenu}>
+                    Événements
                   </Link>
                   <Link href="/#faq" className={navLinkClass} onClick={handleCloseMenu}>
                     FAQ
@@ -162,6 +178,9 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({
                   </Link>
                   <Link href="/produits" className={navLinkClass} onClick={handleCloseMenu}>
                     Produits
+                  </Link>
+                  <Link href="/evenements" className={navLinkClass} onClick={handleCloseMenu}>
+                    Événements
                   </Link>
                   <a href="#faq" className={navLinkClass} onClick={handleCloseMenu}>
                     FAQ
