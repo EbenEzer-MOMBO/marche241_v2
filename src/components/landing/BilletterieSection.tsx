@@ -1,7 +1,8 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, CalendarDays } from 'lucide-react';
 import { EvenementAffiche, EvenementDateBlock } from '@/components/evenements/EvenementVisuels';
 import { useEvenementsAVenir } from '@/hooks/useEvenementsAVenir';
 import {
@@ -56,15 +57,41 @@ const CarteEvenementSombre = ({ evenement }: { evenement: EvenementPublic }) => 
   </Link>
 );
 
+const CarteChargement = () => (
+  <div
+    aria-hidden
+    className="flex w-[250px] flex-none animate-pulse flex-col overflow-hidden rounded-[14px] border border-white/10 bg-[#141a16] md:w-auto md:rounded-2xl"
+  >
+    <div className="h-[140px] bg-white/5 md:h-[170px]" />
+    <div className="flex flex-col gap-2 p-3.5 md:p-[18px]">
+      <div className="h-4 w-3/4 rounded bg-white/10" />
+      <div className="h-3 w-1/2 rounded bg-white/10" />
+    </div>
+  </div>
+);
+
+/** Aucun événement à venir : la section reste visible pour faire connaître la billetterie. */
+const AucunEvenement = () => (
+  <div className="rounded-2xl border border-white/15 bg-black/35 backdrop-blur-sm">
+    <div className="flex flex-col items-center gap-3 px-6 py-12 text-center md:py-16">
+      <CalendarDays className="h-8 w-8 text-[#a9d3d4]" aria-hidden />
+      <p className="text-lg font-bold text-white md:text-2xl">
+        Les prochains événements arrivent bientôt
+      </p>
+      <p className="max-w-md text-sm leading-relaxed text-gray-200 md:text-[15px]">
+        Concerts, soirées et salons seront annoncés ici dès leur ouverture à la réservation.
+        Organisateur ? Publiez le vôtre en premier.
+      </p>
+    </div>
+  </div>
+);
+
 /**
- * Section billetterie de l'accueil : masquée tant qu'aucun événement n'est publié.
+ * Section billetterie de l'accueil, toujours visible : les 3 prochains événements,
+ * ou un état d'attente s'il n'y en a aucun.
  */
 export const BilletterieSection: React.FC = () => {
   const { evenements, isLoading } = useEvenementsAVenir();
-
-  if (isLoading || evenements.length === 0) {
-    return null;
-  }
 
   const total = evenements.length;
   const aLaUne = evenements.slice(0, NB_EVENEMENTS_ACCUEIL);
@@ -74,15 +101,20 @@ export const BilletterieSection: React.FC = () => {
       id="billetterie"
       className="relative overflow-hidden bg-[#0b0f0c] py-8 lg:py-[72px]"
     >
+      <div className="absolute inset-0 z-0">
+        <Image
+          src="/images/billetterie/concert-fond.jpg"
+          alt=""
+          fill
+          sizes="100vw"
+          className="object-cover"
+        />
+      </div>
       <div
         aria-hidden
-        className="absolute inset-0"
-        style={{
-          background:
-            'radial-gradient(700px 380px at 85% 10%,rgba(116,173,175,.22),transparent 65%),radial-gradient(600px 360px at 5% 100%,rgba(80,142,39,.24),transparent 65%)',
-        }}
+        className="absolute inset-0 z-0 bg-gradient-to-r from-black/85 via-black/65 to-black/45"
       />
-      <div className="container relative mx-auto px-5 lg:px-10">
+      <div className="container relative z-10 mx-auto px-5 lg:px-10">
         <div className="mx-auto flex max-w-[1160px] flex-col gap-[18px] lg:gap-9">
           <div className="flex flex-col gap-[18px] lg:flex-row lg:items-end lg:justify-between lg:gap-12">
             <div className="flex max-w-[620px] flex-col gap-[18px] lg:gap-4">
@@ -114,17 +146,27 @@ export const BilletterieSection: React.FC = () => {
                 Événements à venir
                 <ArrowRight className="h-5 w-5" />
               </Link>
-              <span className="text-[13px] text-gray-400">
-                {total} événement{total > 1 ? 's' : ''} à venir
-              </span>
+              {total > 0 && (
+                <span className="text-[13px] text-gray-400">
+                  {total} événement{total > 1 ? 's' : ''} à venir
+                </span>
+              )}
             </div>
           </div>
 
-          <div className="-mr-5 flex snap-x gap-3 overflow-x-auto pb-1 pr-5 [scrollbar-width:none] md:mr-0 md:grid md:grid-cols-3 md:gap-5 md:overflow-visible md:pr-0">
-            {aLaUne.map((evenement) => (
-              <CarteEvenementSombre key={evenement.id} evenement={evenement} />
-            ))}
-          </div>
+          {!isLoading && total === 0 ? (
+            <AucunEvenement />
+          ) : (
+            <div className="-mr-5 flex snap-x gap-3 overflow-x-auto pb-1 pr-5 [scrollbar-width:none] md:mr-0 md:grid md:grid-cols-3 md:gap-5 md:overflow-visible md:pr-0">
+              {isLoading
+                ? Array.from({ length: NB_EVENEMENTS_ACCUEIL }).map((_, index) => (
+                    <CarteChargement key={index} />
+                  ))
+                : aLaUne.map((evenement) => (
+                    <CarteEvenementSombre key={evenement.id} evenement={evenement} />
+                  ))}
+            </div>
+          )}
 
           <Link
             href="/evenements"
