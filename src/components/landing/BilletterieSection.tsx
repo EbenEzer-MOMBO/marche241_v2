@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, CalendarDays } from 'lucide-react';
 import { EvenementAffiche, EvenementDateBlock } from '@/components/evenements/EvenementVisuels';
 import { useEvenementsAVenir } from '@/hooks/useEvenementsAVenir';
 import {
@@ -56,15 +56,39 @@ const CarteEvenementSombre = ({ evenement }: { evenement: EvenementPublic }) => 
   </Link>
 );
 
+const CarteChargement = () => (
+  <div
+    aria-hidden
+    className="flex w-[250px] flex-none animate-pulse flex-col overflow-hidden rounded-[14px] border border-white/10 bg-[#141a16] md:w-auto md:rounded-2xl"
+  >
+    <div className="h-[140px] bg-white/5 md:h-[170px]" />
+    <div className="flex flex-col gap-2 p-3.5 md:p-[18px]">
+      <div className="h-4 w-3/4 rounded bg-white/10" />
+      <div className="h-3 w-1/2 rounded bg-white/10" />
+    </div>
+  </div>
+);
+
+/** Aucun événement à venir : la section reste visible pour faire connaître la billetterie. */
+const AucunEvenement = () => (
+  <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-white/20 bg-white/[0.03] px-6 py-10 text-center">
+    <CalendarDays className="h-8 w-8 text-[#a9d3d4]" aria-hidden />
+    <p className="text-base font-semibold text-white md:text-lg">
+      Les prochains événements arrivent bientôt
+    </p>
+    <p className="max-w-md text-sm leading-relaxed text-gray-400">
+      Concerts, soirées et salons seront annoncés ici dès leur ouverture à la réservation.
+      Organisateur ? Publiez le vôtre en premier.
+    </p>
+  </div>
+);
+
 /**
- * Section billetterie de l'accueil : masquée tant qu'aucun événement n'est publié.
+ * Section billetterie de l'accueil, toujours visible : les 3 prochains événements,
+ * ou un état d'attente s'il n'y en a aucun.
  */
 export const BilletterieSection: React.FC = () => {
   const { evenements, isLoading } = useEvenementsAVenir();
-
-  if (isLoading || evenements.length === 0) {
-    return null;
-  }
 
   const total = evenements.length;
   const aLaUne = evenements.slice(0, NB_EVENEMENTS_ACCUEIL);
@@ -114,17 +138,27 @@ export const BilletterieSection: React.FC = () => {
                 Événements à venir
                 <ArrowRight className="h-5 w-5" />
               </Link>
-              <span className="text-[13px] text-gray-400">
-                {total} événement{total > 1 ? 's' : ''} à venir
-              </span>
+              {total > 0 && (
+                <span className="text-[13px] text-gray-400">
+                  {total} événement{total > 1 ? 's' : ''} à venir
+                </span>
+              )}
             </div>
           </div>
 
-          <div className="-mr-5 flex snap-x gap-3 overflow-x-auto pb-1 pr-5 [scrollbar-width:none] md:mr-0 md:grid md:grid-cols-3 md:gap-5 md:overflow-visible md:pr-0">
-            {aLaUne.map((evenement) => (
-              <CarteEvenementSombre key={evenement.id} evenement={evenement} />
-            ))}
-          </div>
+          {!isLoading && total === 0 ? (
+            <AucunEvenement />
+          ) : (
+            <div className="-mr-5 flex snap-x gap-3 overflow-x-auto pb-1 pr-5 [scrollbar-width:none] md:mr-0 md:grid md:grid-cols-3 md:gap-5 md:overflow-visible md:pr-0">
+              {isLoading
+                ? Array.from({ length: NB_EVENEMENTS_ACCUEIL }).map((_, index) => (
+                    <CarteChargement key={index} />
+                  ))
+                : aLaUne.map((evenement) => (
+                    <CarteEvenementSombre key={evenement.id} evenement={evenement} />
+                  ))}
+            </div>
+          )}
 
           <Link
             href="/evenements"
