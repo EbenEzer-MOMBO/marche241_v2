@@ -8,6 +8,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   ChevronDown,
+  Clock,
   Download,
   Eye,
   Loader2,
@@ -16,6 +17,7 @@ import {
   PiggyBank,
   ScanLine,
   Search,
+  Send,
   Ticket,
   Undo2,
   X,
@@ -234,6 +236,8 @@ export default function EvenementDetailPage() {
 
   const productToEdit = useMemo(() => (produit ? eventProductToFormValue(produit) : null), [produit]);
   const estPublie = produit?.statut === 'actif';
+  const estEnAttente = produit?.statut === 'en_attente_validation';
+  const estBrouillon = produit?.statut === 'brouillon';
 
   const handleSave = async (data: EventFormPayload) => {
     if (!produit) return;
@@ -251,8 +255,8 @@ export default function EvenementDetailPage() {
         images: payload.images,
         image_principale: payload.image_principale,
         variants: payload.variants,
-        // Le statut se pilote via le bouton Publier / Dépublier.
-        statut: produit.statut === 'actif' || produit.statut === 'brouillon' ? produit.statut : 'inactif',
+        // Le statut ne change pas à l'enregistrement : la publication est validée par l'équipe Marché 241.
+        statut: produit.statut === 'archive' ? undefined : produit.statut,
       });
       setProduit(misAJour);
       success('Événement enregistré', 'Succès');
@@ -267,13 +271,21 @@ export default function EvenementDetailPage() {
     }
   };
 
-  const toggleStatut = async () => {
+  /** Demande (ou annule la demande) de publication : la mise en ligne est validée par l'équipe. */
+  const changerDemandePublication = async () => {
     if (!produit) return;
     setIsTogglingStatut(true);
     try {
-      const misAJour = await modifierProduit(produit.id, { statut: estPublie ? 'inactif' : 'actif' });
+      const misAJour = await modifierProduit(produit.id, {
+        statut: estEnAttente ? 'brouillon' : 'en_attente_validation',
+      });
       setProduit(misAJour);
-      success(estPublie ? 'Événement dépublié' : 'Événement publié', 'Succès');
+      success(
+        estEnAttente
+          ? 'Demande de publication annulée'
+          : 'Demande envoyée : l’équipe Marché 241 vérifie votre événement avant sa mise en ligne',
+        'Succès'
+      );
     } catch (error: unknown) {
       showError(error instanceof Error ? error.message : 'Erreur lors de la mise à jour', 'Erreur');
     } finally {
@@ -645,42 +657,102 @@ export default function EvenementDetailPage() {
                 {produit.nom}
               </h1>
             </div>
-            <button
-              onClick={toggleStatut}
-              disabled={isTogglingStatut}
-              aria-label={estPublie ? 'Dépublier l’événement' : 'Publier l’événement'}
-              title={estPublie ? 'Dépublier l’événement' : 'Publier l’événement'}
-              className={`inline-flex flex-shrink-0 items-center gap-2 rounded-lg p-2 sm:px-4 text-sm font-semibold text-white transition-colors disabled:opacity-50 ${
-                estPublie ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
-              }`}
-            >
-              {estPublie ? <XCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
-              <span className="hidden sm:inline">{estPublie ? 'Dépublier l’événement' : 'Publier l’événement'}</span>
-            </button>
+            {estBrouillon ? (
+              <button
+                onClick={changerDemandePublication}
+                disabled={isTogglingStatut}
+                aria-label="Demander la publication"
+                title="Demander la publication"
+                className="inline-flex flex-shrink-0 items-center gap-2 rounded-lg bg-green-600 p-2 sm:px-4 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+              >
+                <Send className="h-4 w-4" />
+                <span className="hidden sm:inline">Demander la publication</span>
+              </button>
+            ) : (
+              <span
+                className={`inline-flex flex-shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
+                  estPublie
+                    ? 'bg-green-100 text-green-800'
+                    : estEnAttente
+                      ? 'bg-amber-100 text-amber-800'
+                      : 'bg-gray-100 text-gray-700'
+                }`}
+              >
+                {estPublie ? (
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                ) : estEnAttente ? (
+                  <Clock className="h-3.5 w-3.5" />
+                ) : (
+                  <XCircle className="h-3.5 w-3.5" />
+                )}
+                {estPublie ? 'Publié' : estEnAttente ? 'En attente de validation' : 'Dépublié'}
+              </span>
+            )}
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6">
-          {!estPublie && (
+          {estBrouillon && (
             <div className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex gap-3">
                 <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
                 <div>
                   <p className="text-sm font-semibold text-amber-900">Événement non publié</p>
                   <p className="text-sm text-amber-800">
-                    Il n’est pas visible sur votre boutique. Vérifiez les informations puis publiez-le pour ouvrir la
-                    billetterie.
+                    Il n’est pas encore visible. Vérifiez les informations puis demandez sa publication : l’équipe
+                    Marché 241 vérifie chaque événement avant d’ouvrir la billetterie.
                   </p>
                 </div>
               </div>
               <button
-                onClick={toggleStatut}
+                onClick={changerDemandePublication}
                 disabled={isTogglingStatut}
                 className="inline-flex flex-shrink-0 items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"
               >
-                <CheckCircle2 className="h-4 w-4" /> Publier maintenant
+                <Send className="h-4 w-4" /> Demander la publication
               </button>
             </div>
+          )}
+
+          {estEnAttente && (
+            <div className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex gap-3">
+                <Clock className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
+                <div>
+                  <p className="text-sm font-semibold text-amber-900">En attente de validation</p>
+                  <p className="text-sm text-amber-800">
+                    L’équipe Marché 241 vérifie votre événement. Vous recevrez un email dès sa mise en ligne. Vous
+                    pouvez encore le modifier en attendant.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={changerDemandePublication}
+                disabled={isTogglingStatut}
+                className="inline-flex flex-shrink-0 items-center justify-center gap-2 rounded-lg border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-900 hover:bg-amber-100 disabled:opacity-50"
+              >
+                <Undo2 className="h-4 w-4" /> Annuler la demande
+              </button>
+            </div>
+          )}
+
+          {produit.statut === 'inactif' && (
+            <div className="flex gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <XCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-gray-500" />
+              <div>
+                <p className="text-sm font-semibold text-gray-900">Dépublié par l’équipe Marché 241</p>
+                <p className="text-sm text-gray-600">
+                  L’événement n’est plus visible ni en vente. Contactez-nous sur WhatsApp pour le remettre en ligne.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {estPublie && (
+            <p className="text-xs text-gray-500">
+              Événement en ligne. Vos modifications sont appliquées immédiatement. Pour le retirer de la vente,
+              contactez l’équipe Marché 241.
+            </p>
           )}
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

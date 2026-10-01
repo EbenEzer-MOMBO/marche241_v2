@@ -24,6 +24,7 @@ const STATUT_LABELS: Record<string, { label: string; className: string }> = {
   actif: { label: 'Publié', className: 'bg-green-100 text-green-800' },
   inactif: { label: 'Dépublié', className: 'bg-gray-100 text-gray-700' },
   brouillon: { label: 'Brouillon', className: 'bg-yellow-100 text-yellow-800' },
+  en_attente_validation: { label: 'En attente de validation', className: 'bg-amber-100 text-amber-800' },
   archive: { label: 'Archivé', className: 'bg-gray-100 text-gray-500' },
 };
 
@@ -118,10 +119,10 @@ function EvenementsContent() {
   const handleCreate = async (data: EventFormPayload) => {
     if (!boutique) return;
     try {
-      // Un nouvel événement n'est jamais publié directement : le vendeur le publie depuis sa page.
+      // Un nouvel événement démarre en brouillon : le vendeur demande ensuite sa publication à l'équipe.
       const payload = buildEventProductApiPayload({ ...data, statut: 'brouillon' });
       const cree = await creerProduit({ ...payload, boutique_id: boutique.id });
-      success('Événement créé en brouillon : publiez-le quand il est prêt', 'Succès');
+      success('Événement créé en brouillon : demandez sa publication quand il est prêt', 'Succès');
       setShowCreateForm(false);
       router.push(`/admin/${boutique.slug}/evenements/${cree.id}`);
     } catch (error: unknown) {

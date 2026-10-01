@@ -8,6 +8,7 @@ import { BoutiqueLogoStrip } from '@/components/landing/BoutiqueLogoStrip';
 import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
 import { FeaturesSection } from '@/components/landing/FeaturesSection';
 import { MoneySection } from '@/components/landing/MoneySection';
+import { BilletterieSection } from '@/components/landing/BilletterieSection';
 import { FAQSection } from '@/components/landing/FAQSection';
 import { CTASection } from '@/components/landing/CTASection';
 import { SocialMediaSection } from '@/components/landing/SocialMediaSection';
@@ -66,6 +67,7 @@ export default function LandingHomeClient() {
         <BoutiqueLogoStrip boutiques={boutiques} />
         <HowItWorksSection boutiqueCount={count} />
         <FeaturesSection />
+        <BilletterieSection />
         <MoneySection />
         <FAQSection />
         <CTASection boutiqueCount={count} />

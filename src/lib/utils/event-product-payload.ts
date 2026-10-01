@@ -16,7 +16,7 @@ export interface EventFormPayload {
   nom: string;
   description?: string;
   categorie_id: number;
-  statut?: 'actif' | 'inactif' | 'brouillon';
+  statut?: 'actif' | 'inactif' | 'brouillon' | 'en_attente_validation';
   images?: string[];
   image_principale?: string;
   meta?: Record<string, unknown>;
