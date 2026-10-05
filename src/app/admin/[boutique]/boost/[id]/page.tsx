@@ -215,7 +215,9 @@ function DetailContenu({ ctx }: { ctx: BoostPageContexte }) {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <p className="py-8 text-center text-sm text-gray-500">Les statistiques apparaîtront après le début de la diffusion.</p>
+              <p className="py-8 text-center text-sm text-gray-500">
+                {boost.date_debut ? 'Aucune statistique disponible pour le moment.' : 'Les statistiques apparaîtront après le début de la diffusion.'}
+              </p>
             )}
           </div>
 

@@ -679,7 +679,8 @@ export default function BoostWizard({
                         <p className="text-xs font-medium uppercase text-gray-500">{p.nom}</p>
                         <p className="mt-1 text-base font-bold text-gray-900">{formaterFcfa(p.total_fcfa)}</p>
                         <p className="text-xs text-gray-500">{p.duree_jours} jours conseillés</p>
-                        {est?.min ? <p className="mt-1 text-xs text-gray-600">~{formaterNombre(est.min)}+ vues/jour</p> : null}
+                        {/* Le volume total ne dépend que du budget (CPM), pas de la durée choisie */}
+                        {est?.min ? <p className="mt-1 text-xs text-gray-600">~{formaterNombre(est.min * form.duree_jours)}+ vues au total</p> : null}
                       </button>
                     );
                   })}
