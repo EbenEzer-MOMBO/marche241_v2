@@ -499,8 +499,24 @@ export default function BoostWizard({
     [impressions, form.total_fcfa]
   );
 
+  // À l'étape 0 et au paiement (devis figé), le retour ramène à la liste des publicités
+  const retourEnHaut = (
+    <button
+      type="button"
+      onClick={() => (etape === 0 || etape === 4 ? router.push(`/admin/${boutique.slug}/boost`) : setEtape(etape - 1))}
+      className="mb-4 inline-flex items-center gap-1 rounded-lg px-2 py-1.5 -ml-2 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+    >
+      <ArrowLeft className="h-4 w-4" /> {etape === 0 || etape === 4 ? 'Mes publicités' : 'Retour'}
+    </button>
+  );
+
   if (etape === 0) {
-    return <TypePubSelector plateformeDisponible={parametres.types.plateforme} onChoisirMeta={() => { setEtape(1); if (!brouillon && !produitInitialId) void appliquerPrefill(null); }} />;
+    return (
+      <div className="mx-auto max-w-3xl">
+        {retourEnHaut}
+        <TypePubSelector plateformeDisponible={parametres.types.plateforme} onChoisirMeta={() => { setEtape(1); if (!brouillon && !produitInitialId) void appliquerPrefill(null); }} />
+      </div>
+    );
   }
 
   const durees = parametres.durees.filter((d) => d >= parametres.duree_min_jours && d <= parametres.duree_max_jours);
@@ -516,6 +532,8 @@ export default function BoostWizard({
           phoneNumber={msisdn}
         />
       )}
+
+      {retourEnHaut}
 
       {/* Stepper */}
       <ol className="mb-6 grid grid-cols-4 gap-2">
