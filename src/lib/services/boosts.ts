@@ -169,8 +169,14 @@ export async function estimerImpressionsBoost(totauxFcfa: number[], dureeJours: 
   return verifier(r, 'Estimation indisponible').impressions;
 }
 
-export async function getBoostsBoutique(boutiqueId: number): Promise<Boost[]> {
-  const r = await api.get<Reponse<{ boosts: Boost[] }>>(`/boosts/boutique/${boutiqueId}`);
+/** Boost de la liste vendeur : produit promu et totaux de diffusion en plus. */
+export type BoostListe = Boost & {
+  produit_nom: string | null;
+  totaux: { impressions: number; clics: number; messages: number };
+};
+
+export async function getBoostsBoutique(boutiqueId: number): Promise<BoostListe[]> {
+  const r = await api.get<Reponse<{ boosts: BoostListe[] }>>(`/boosts/boutique/${boutiqueId}`);
   return verifier(r, 'Impossible de récupérer les boosts').boosts || [];
 }
 
