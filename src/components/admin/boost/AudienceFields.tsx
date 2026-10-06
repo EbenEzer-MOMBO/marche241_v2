@@ -22,6 +22,15 @@ function basculer<T>(liste: T[], valeur: T): T[] {
   return liste.includes(valeur) ? liste.filter((v) => v !== valeur) : [...liste, valeur];
 }
 
+/** Intérêts regroupés par thème ; un seul groupe sans titre si l'API ne fournit pas les groupes. */
+function groupesInterets(parametres: ParametresBoost) {
+  const groupes = parametres.groupes_interets ?? [];
+  if (!groupes.length || parametres.interets.some((i) => !i.groupe)) return [{ code: 'tous', nom: '', interets: parametres.interets }];
+  return groupes
+    .map((g) => ({ ...g, interets: parametres.interets.filter((i) => i.groupe === g.code) }))
+    .filter((g) => g.interets.length > 0);
+}
+
 /** Champs de ciblage (port de AudienceFields de boost_meta). */
 export default function AudienceFields({
   ciblage,
@@ -116,19 +125,29 @@ export default function AudienceFields({
       </div>
 
       <div>
-        <p className="mb-2 text-sm font-medium text-gray-900">Centres d’intérêt</p>
-        <div className="flex flex-wrap gap-2">
-          {parametres.interets.map((i) => (
-            <Puce
-              key={i.code}
-              actif={ciblage.interets.includes(i.code)}
-              onClick={() => {
-                if (!ciblage.interets.includes(i.code) && ciblage.interets.length >= 10) return;
-                onChange({ interets: basculer(ciblage.interets, i.code) });
-              }}
-            >
-              {i.nom}
-            </Puce>
+        <div className="mb-2 flex items-baseline justify-between gap-2">
+          <p className="text-sm font-medium text-gray-900">Centres d’intérêt</p>
+          <span className="text-xs text-gray-500">{ciblage.interets.length}/10</span>
+        </div>
+        <div className="space-y-3">
+          {groupesInterets(parametres).map((groupe) => (
+            <div key={groupe.code}>
+              {groupe.nom && <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-gray-500">{groupe.nom}</p>}
+              <div className="flex flex-wrap gap-2">
+                {groupe.interets.map((i) => (
+                  <Puce
+                    key={i.code}
+                    actif={ciblage.interets.includes(i.code)}
+                    onClick={() => {
+                      if (!ciblage.interets.includes(i.code) && ciblage.interets.length >= 10) return;
+                      onChange({ interets: basculer(ciblage.interets, i.code) });
+                    }}
+                  >
+                    {i.nom}
+                  </Puce>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
         <p className="mt-1 text-xs text-gray-500">10 maximum. Aucun = audience large.</p>

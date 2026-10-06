@@ -38,7 +38,9 @@ export interface ParametresBoost {
   pays: OptionCiblage[];
   villes: Array<{ cle: string; nom: string }>;
   langues: Array<{ locale: string; nom: string }>;
-  interets: OptionCiblage[];
+  /** `groupe` = code de `groupes_interets` (absent si l'API est plus ancienne). */
+  interets: Array<OptionCiblage & { groupe?: string }>;
+  groupes_interets?: OptionCiblage[];
   statuts: Record<StatutBoost, string>;
   mode_simule: boolean;
 }
