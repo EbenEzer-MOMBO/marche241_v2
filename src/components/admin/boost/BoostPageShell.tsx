@@ -124,7 +124,7 @@ export default function BoostPageShell({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 lg:p-6">{children(ctx)}</div>
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 lg:p-6">{children(ctx)}</div>
       </div>
     </div>
   );

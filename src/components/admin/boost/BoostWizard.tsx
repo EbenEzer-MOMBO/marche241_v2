@@ -488,6 +488,12 @@ export default function BoostWizard({
   };
 
   // ---------------------------------------------------------------- rendu
+  // Chaque étape repart du haut : sinon on arrive au milieu de l'étape suivante (scroll conservé)
+  const haut = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    haut.current?.scrollIntoView({ block: 'start' });
+  }, [etape]);
+
   const estimationCourante = useMemo(
     () => impressions?.find((i) => i.total_fcfa === form.total_fcfa) ?? null,
     [impressions, form.total_fcfa]
@@ -500,7 +506,7 @@ export default function BoostWizard({
   const durees = parametres.durees.filter((d) => d >= parametres.duree_min_jours && d <= parametres.duree_max_jours);
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div ref={haut} className="mx-auto max-w-6xl scroll-mt-6">
       {compteARebours && (
         <PaymentCountdown
           duration={120}
@@ -801,7 +807,7 @@ export default function BoostWizard({
           )}
 
           {etape < 4 && (
-            <div className="mt-8 flex flex-col-reverse gap-2 border-t border-gray-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mt-6 flex flex-col-reverse gap-2 border-t border-gray-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
                 <button type="button" onClick={() => setEtape(etape - 1)} className="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-100">
                   <ArrowLeft className="h-4 w-4" /> Retour
