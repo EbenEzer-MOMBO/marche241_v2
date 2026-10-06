@@ -22,7 +22,8 @@ import {
     Star,
     TrendingUp,
     Grid3X3,
-    List
+    List,
+    Megaphone
 } from 'lucide-react';
 import ConfirmationModal from '@/components/ui/ConfirmationModal';
 import { CategorySelectionModal, SimplifiedProductModal } from '@/components/admin/products';
@@ -1211,6 +1212,14 @@ export default function ProductsPage() {
                                                                 {product.actif ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                                                             </button>
                                                             <button
+                                                                onClick={() => boutique && router.push(`/admin/${boutique.slug}/boost/new?produit=${product.id}`)}
+                                                                className="p-1.5 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                                                                title="Booster sur Facebook & Instagram"
+                                                                aria-label="Booster ce produit"
+                                                            >
+                                                                <Megaphone className="h-4 w-4" />
+                                                            </button>
+                                                            <button
                                                                 onClick={() => handleEditProduct(product)}
                                                                 className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"
                                                                 title="Modifier"
@@ -1320,6 +1329,13 @@ export default function ProductsPage() {
                                                                     }`}
                                                             >
                                                                 {product.actif ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                                                            </button>
+                                                            <button
+                                                                onClick={() => boutique && router.push(`/admin/${boutique.slug}/boost/new?produit=${product.id}`)}
+                                                                className="p-1 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                                                                aria-label="Booster ce produit"
+                                                            >
+                                                                <Megaphone className="h-3 w-3" />
                                                             </button>
                                                             <button
                                                                 onClick={() => handleEditProduct(product)}

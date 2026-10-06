@@ -34,8 +34,10 @@ import {
   X,
   Share,
   Square,
-  BarChart3
+  BarChart3,
+  Megaphone
 } from 'lucide-react';
+import { DEGRADE_META } from '@/components/admin/boost/styles';
 
 export default function BoutiqueDashboard() {
   const router = useRouter();
@@ -398,6 +400,24 @@ export default function BoutiqueDashboard() {
               )}
             </div>
           )}
+
+          {/* Boost publicitaire Meta */}
+          <button
+            type="button"
+            onClick={() => router.push(`/admin/${boutique.slug}/boost/new`)}
+            className="mb-6 flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 text-left shadow-sm transition hover:shadow-md"
+          >
+            <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg" style={{ background: DEGRADE_META }}>
+              <Megaphone className="h-5 w-5 text-white" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-semibold text-gray-900">Boostez votre boutique sur Facebook & Instagram</span>
+              <span className="block text-sm text-gray-500">À partir de 3 000 FCFA, Marché 241 diffuse votre publicité pour vous.</span>
+            </span>
+            <span className="hidden sm:inline rounded-lg px-3 py-2 text-sm font-medium text-white shadow-sm" style={{ background: DEGRADE_META }}>
+              Créer une publicité
+            </span>
+          </button>
 
           {/* Stats Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6 mb-6 sm:mb-8">
