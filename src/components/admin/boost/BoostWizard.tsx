@@ -654,11 +654,11 @@ export default function BoostWizard({
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={form.image_url} alt="" className="h-16 w-28 rounded-lg border border-gray-200 object-cover" />
                   )}
-                  <span className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
                     {upload ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
                     {form.image_url ? 'Changer le visuel' : 'Ajouter un visuel'}
-                    <input type="file" accept="image/*" className="hidden" disabled={upload} onChange={(e) => void choisirVisuel(e.target.files?.[0])} />
-                  </span>
+                    <input type="file" accept="image/*" className="sr-only" disabled={upload} onChange={(e) => void choisirVisuel(e.target.files?.[0])} />
+                  </label>
                 </div>
               </Champ>
 
@@ -746,8 +746,12 @@ export default function BoostWizard({
                         <p className="text-xs font-medium uppercase text-gray-500">{p.nom}</p>
                         <p className="mt-1 text-base font-bold text-gray-900">{formaterFcfa(p.total_fcfa)}</p>
                         <p className="text-xs text-gray-500">{p.duree_jours} jours conseillés</p>
-                        {/* Le volume total ne dépend que du budget (CPM), pas de la durée choisie */}
-                        {est?.min ? <p className="mt-1 text-xs text-gray-600">~{formaterNombre(est.min * form.duree_jours)}+ vues au total</p> : null}
+                        {/* min/max = impressions par jour pour la durée actuellement choisie (API) */}
+                        {est?.min ? (
+                          <p className="mt-1 text-xs text-gray-600">
+                            ~{formaterNombre(est.min)}–{formaterNombre(est.max ?? est.min)} vues / jour
+                          </p>
+                        ) : null}
                       </button>
                     );
                   })}
