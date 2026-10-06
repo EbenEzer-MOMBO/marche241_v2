@@ -750,6 +750,11 @@ export default function BoostWizard({
                       Soit {formaterFcfa(devis.budget_jour_fcfa)} par jour pendant {form.duree_jours} jours
                       {estimationCourante?.min ? <> · environ {formaterNombre(estimationCourante.min)} à {formaterNombre(estimationCourante.max ?? estimationCourante.min)} vues par jour</> : null}.
                     </p>
+                    {devis.frais_encaissement_fcfa > 0 && (
+                      <p className="text-xs text-gray-500">
+                        En cas de remboursement, {formaterFcfa(devis.frais_encaissement_fcfa)} de frais d’encaissement (paiement mobile money ou carte) restent retenus.
+                      </p>
+                    )}
                   </dl>
                 ) : (
                   <p className="text-gray-500">Calcul du devis…</p>
@@ -768,7 +773,8 @@ export default function BoostWizard({
                   <div className="flex justify-between border-t border-gray-200 pt-1.5 text-base"><dt className="font-semibold">À payer</dt><dd className="font-bold">{formaterFcfa(boost.total_fcfa)}</dd></div>
                 </dl>
                 <p className="mt-2 text-xs text-gray-500">
-                  Diffusion de {boost.duree_jours} jours après validation par l’équipe Marché 241. En cas de refus, ou si le budget n’est pas entièrement dépensé, la différence vous est remboursée.
+                  Diffusion de {boost.duree_jours} jours après validation par l’équipe Marché 241. En cas de refus, ou si le budget n’est pas entièrement dépensé, la différence vous est remboursée
+                  {boost.frais_encaissement_fcfa > 0 ? <>, hors frais d’encaissement de {formaterFcfa(boost.frais_encaissement_fcfa)} (non remboursables)</> : null}.
                 </p>
               </div>
 

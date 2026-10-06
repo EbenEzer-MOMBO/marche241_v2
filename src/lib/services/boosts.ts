@@ -27,6 +27,8 @@ export interface ParametresBoost {
   commission_bps: number;
   commission_min_fcfa: number;
   tva_bps: number;
+  /** Frais d'encaissement non remboursables (250 = 2,5 % du total payé). */
+  frais_encaissement_bps: number;
   budget_jour_min_fcfa: number;
   packs: PackBoost[];
   kill_switch: boolean;
@@ -50,6 +52,8 @@ export interface DevisBoost {
   total_fcfa: number;
   duree_jours: number;
   budget_jour_fcfa: number;
+  /** Part du total retenue en cas de remboursement (frais eBilling). */
+  frais_encaissement_fcfa: number;
 }
 
 export interface DonneesBrouillonBoost {
