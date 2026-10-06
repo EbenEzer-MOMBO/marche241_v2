@@ -31,6 +31,8 @@ import {
   Megaphone
 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
+import { useGuide } from '@/hooks/useGuide';
+import { DEGRADE_META, DEGRADE_META_CLAIR, TEXTE_META } from '@/components/admin/boost/styles';
 import { ToastContainer } from '@/components/ui/Toast';
 
 interface SidebarProps {
@@ -45,6 +47,10 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   current?: boolean;
   showAlert?: boolean;
+  /** Mise en avant (dégradé Meta) : nouvelle fonctionnalité Publicité */
+  special?: boolean;
+  /** Pastille « Nouveau » */
+  nouveau?: boolean;
 }
 
 export default function Sidebar({ boutique, isMobileMenuOpen = false, onToggleMobileMenu }: SidebarProps) {
@@ -61,6 +67,8 @@ export default function Sidebar({ boutique, isMobileMenuOpen = false, onToggleMo
 
   // Hook pour les toasts
   const { toasts, removeToast, success, error: showError } = useToast();
+  // Pastille « Nouveau » sur Publicité tant que la visite guidée n'a été ni terminée ni passée
+  const guidePublicite = useGuide('publicite');
 
   // Charger les alertes au montage
   useEffect(() => {
@@ -132,7 +140,9 @@ export default function Sidebar({ boutique, isMobileMenuOpen = false, onToggleMo
       name: 'Publicité',
       href: `/admin/${boutique.slug}/boost`,
       icon: Megaphone,
-      current: pathname.includes('/boost')
+      current: pathname.includes('/boost'),
+      special: true,
+      nouveau: !guidePublicite.vue
     },
     {
       name: 'Frais livraison',
@@ -291,14 +301,29 @@ export default function Sidebar({ boutique, isMobileMenuOpen = false, onToggleMo
               key={item.name}
               onClick={() => router.push(item.href)}
               className={`w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors relative ${
-                item.current
-                  ? 'bg-black text-white'
-                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                item.special
+                  ? item.current
+                    ? 'text-white shadow-sm'
+                    : 'hover:brightness-95'
+                  : item.current
+                    ? 'bg-black text-white'
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
               }`}
+              style={item.special ? { background: item.current ? DEGRADE_META : DEGRADE_META_CLAIR, color: item.current ? undefined : TEXTE_META } : undefined}
             >
               <Icon className={`h-5 w-5 ${isCollapsed ? '' : 'mr-3'} flex-shrink-0`} />
               {!isCollapsed && (
                 <span className="truncate flex-1 text-left">{item.name}</span>
+              )}
+              {item.nouveau && (
+                <span
+                  className={`flex-shrink-0 rounded-full text-[10px] font-semibold uppercase leading-none text-white ${
+                    isCollapsed ? 'absolute -top-1 -right-1 h-2.5 w-2.5' : 'ml-2 px-1.5 py-1'
+                  }`}
+                  style={{ background: item.current ? 'rgba(255,255,255,0.25)' : DEGRADE_META }}
+                >
+                  {isCollapsed ? '' : 'Nouveau'}
+                </span>
               )}
               {item.showAlert && (
                 <span className={`flex-shrink-0 ${isCollapsed ? 'absolute -top-1 -right-1' : 'ml-auto'}`}>

@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   CalendarDays,
   ChevronRight,
+  CircleHelp,
   Eye,
   Megaphone,
   MessageCircle,
@@ -14,6 +16,8 @@ import {
 } from 'lucide-react';
 import BoostPageShell, { BoostPageContexte } from '@/components/admin/boost/BoostPageShell';
 import StatutBoostBadge from '@/components/admin/boost/StatutBoostBadge';
+import VisiteGuidee, { EtapeVisite } from '@/components/admin/guide/VisiteGuidee';
+import { useGuide } from '@/hooks/useGuide';
 import type { ObjectifBoost, StatutBoost } from '@/lib/database-types';
 import {
   BoostListe,
@@ -100,10 +104,79 @@ function Tuile({ libelle, valeur, aide }: { libelle: string; valeur: string; aid
   );
 }
 
-function ListeBoosts({ ctx }: { ctx: BoostPageContexte }) {
+/** Visite guidée de la page : les étapes sans cible présente (liste vide…) sont sautées. */
+const ETAPES_VISITE: EtapeVisite[] = [
+  {
+    titre: 'Nouveau : vos publicités Facebook & Instagram',
+    texte: (
+      <>
+        Faites connaître votre boutique ou un produit auprès de milliers de personnes au Gabon, sans compte publicitaire :
+        Marché 241 crée et diffuse la publicité pour vous.
+      </>
+    )
+  },
+  {
+    cible: 'boost-nouvelle',
+    titre: 'Créez une publicité en quelques minutes',
+    texte: 'Choisissez quoi promouvoir, votre audience et votre budget, à partir de 3 000 FCFA. Le brouillon est enregistré automatiquement.'
+  },
+  {
+    cible: 'boost-vide',
+    titre: 'Lancez votre première publicité',
+    texte: 'Ce bouton ouvre le même parcours guidé, étape par étape.'
+  },
+  {
+    cible: 'boost-resume',
+    titre: 'Vos résultats en un coup d’œil',
+    texte: 'Publicités en ligne, brouillons à finaliser, budget investi et vues obtenues, toutes publicités confondues.'
+  },
+  {
+    cible: 'boost-carte',
+    titre: 'Le suivi de chaque publicité',
+    texte: 'Objectif, audience, budget dépensé, vues et clics. La ligne en couleur indique la prochaine étape : finaliser, payer, attendre la validation…'
+  },
+  {
+    titre: 'Comment ça marche',
+    texte: (
+      <ol className="list-decimal space-y-1 pl-4">
+        <li>Vous payez par mobile money ou carte.</li>
+        <li>L’équipe Marché 241 vérifie la publicité.</li>
+        <li>Elle est diffusée sur Facebook et Instagram ; vous suivez vues et clics ici.</li>
+        <li>En cas de refus ou de budget non dépensé, la différence vous est remboursée (hors frais d’encaissement).</li>
+      </ol>
+    )
+  }
+];
+
+function ListeBoosts({ ctx, rejouer }: { ctx: BoostPageContexte; rejouer: number }) {
   const { boutique, erreur } = ctx;
+  const router = useRouter();
   const [boosts, setBoosts] = useState<BoostListe[] | null>(null);
   const [parametres, setParametres] = useState<ParametresBoost | null>(null);
+  const guide = useGuide('publicite');
+  const [visite, setVisite] = useState(false);
+
+  // Premier passage : la visite démarre seule une fois la liste affichée (cibles présentes)
+  useEffect(() => {
+    if (guide.pret && !guide.vue && boosts !== null) setVisite(true);
+  }, [guide.pret, guide.vue, boosts]);
+
+  useEffect(() => {
+    if (rejouer > 0) setVisite(true);
+  }, [rejouer]);
+
+  const passer = () => {
+    setVisite(false);
+    void guide.enregistrer('ignore');
+  };
+  const terminer = () => {
+    setVisite(false);
+    void guide.enregistrer('termine');
+    router.push(`/admin/${boutique.slug}/boost/new`);
+  };
+  const fenetreVisite = (
+    <VisiteGuidee ouverte={visite} etapes={ETAPES_VISITE} libelleFin="Créer ma publicité" onPasser={passer} onTerminer={terminer} />
+  );
 
   useEffect(() => {
     getBoostsBoutique(boutique.id)
@@ -137,6 +210,8 @@ function ListeBoosts({ ctx }: { ctx: BoostPageContexte }) {
 
   if (boosts.length === 0) {
     return (
+      <>
+      {fenetreVisite}
       <div className="mx-auto max-w-xl rounded-xl border border-dashed border-gray-300 bg-white p-8 sm:p-10 text-center">
         <Megaphone className="mx-auto mb-3 h-12 w-12 text-gray-300" />
         <p className="font-medium text-gray-900">Aucune publicité pour le moment</p>
@@ -145,17 +220,20 @@ function ListeBoosts({ ctx }: { ctx: BoostPageContexte }) {
         </p>
         <Link
           href={`/admin/${boutique.slug}/boost/new`}
+          data-guide="boost-vide"
           className="mt-5 inline-flex items-center gap-2 rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
         >
           <Plus className="h-4 w-4" /> Créer ma première publicité
         </Link>
       </div>
+      </>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+      {fenetreVisite}
+      <div data-guide="boost-resume" className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
         <Tuile libelle="En ligne" valeur={String(resume.enLigne)} aide={`${boosts.length} publicité${boosts.length > 1 ? 's' : ''} au total`} />
         <Tuile libelle="À finaliser" valeur={String(resume.aFinaliser)} aide="Brouillons et paiements en attente" />
         <Tuile libelle="Budget investi" valeur={formaterFcfa(resume.investi)} aide="Publicités payées" />
@@ -163,7 +241,7 @@ function ListeBoosts({ ctx }: { ctx: BoostPageContexte }) {
       </div>
 
       <div className="space-y-3">
-        {boosts.map((b) => {
+        {boosts.map((b, i) => {
           const lien =
             b.statut === 'brouillon' || b.statut === 'en_attente_paiement'
               ? `/admin/${boutique.slug}/boost/new?draftId=${b.id}`
@@ -179,6 +257,7 @@ function ListeBoosts({ ctx }: { ctx: BoostPageContexte }) {
             <Link
               key={b.id}
               href={lien}
+              data-guide={i === 0 ? 'boost-carte' : undefined}
               className="group flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-3 sm:p-4 shadow-sm transition hover:shadow-md"
             >
               <div className="h-16 w-16 sm:h-20 sm:w-28 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">
@@ -251,22 +330,35 @@ function ListeBoosts({ ctx }: { ctx: BoostPageContexte }) {
 }
 
 export default function BoostsPage() {
+  const [rejouer, setRejouer] = useState(0);
   return (
     <BoostPageShell
       titre="Publicité"
       sousTitre="Vos publicités Facebook et Instagram"
       sousChemin="/boost"
       actions={({ boutique }) => (
-        <Link
-          href={`/admin/${boutique.slug}/boost/new`}
-          className="inline-flex items-center gap-2 rounded-lg bg-black px-3 py-2 lg:px-4 text-sm font-medium text-white hover:bg-gray-800 flex-shrink-0"
-        >
-          <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">Nouvelle publicité</span>
-        </Link>
+        <div className="flex flex-shrink-0 items-center gap-1 sm:gap-2">
+          <button
+            type="button"
+            onClick={() => setRejouer((n) => n + 1)}
+            className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+            aria-label="Revoir la présentation"
+            title="Revoir la présentation"
+          >
+            <CircleHelp className="h-5 w-5" />
+          </button>
+          <Link
+            href={`/admin/${boutique.slug}/boost/new`}
+            data-guide="boost-nouvelle"
+            className="inline-flex items-center gap-2 rounded-lg bg-black px-3 py-2 lg:px-4 text-sm font-medium text-white hover:bg-gray-800"
+          >
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Nouvelle publicité</span>
+          </Link>
+        </div>
       )}
     >
-      {(ctx) => <ListeBoosts ctx={ctx} />}
+      {(ctx) => <ListeBoosts ctx={ctx} rejouer={rejouer} />}
     </BoostPageShell>
   );
 }
