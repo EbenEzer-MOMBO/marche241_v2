@@ -68,6 +68,33 @@ const OBJECTIFS: Array<{ id: ObjectifBoost; titre: string; texte: string; icone:
   { id: 'notoriete', titre: 'Visibilité', texte: 'Montrer votre publicité au plus grand nombre', icone: Eye }
 ];
 
+/** Champs dont l'erreur s'affiche sous la saisie (les autres apparaissent en tête du formulaire). */
+const CHAMPS_AFFICHES = new Set([
+  'produit_id',
+  'image_url',
+  'titre',
+  'texte_principal',
+  'description',
+  'whatsapp_e164',
+  'url_destination',
+  'total_fcfa',
+  'duree_jours',
+  'ciblage.age_min'
+]);
+
+const LIEN_EXEMPLE = 'ex. https://marche241.ga/ma-boutique';
+const WHATSAPP_E164 = /^\+[1-9]\d{7,14}$/;
+
+/** Adresse web complète en http(s) avec un nom de domaine (même règle que l'API). */
+function estLienWeb(valeur: string): boolean {
+  try {
+    const url = new URL(valeur.trim());
+    return (url.protocol === 'http:' || url.protocol === 'https:') && url.hostname.includes('.');
+  } catch {
+    return false;
+  }
+}
+
 const CIBLAGE_DEFAUT: CiblageBoost = { pays: ['GA'], villes: [], age_min: 18, age_max: 65, sexes: [], langues: [], interets: [] };
 
 interface Formulaire {
@@ -114,8 +141,9 @@ function versApi(f: Formulaire, etape: number): DonneesBrouillonBoost {
     texte_principal: f.texte_principal || null,
     description: f.description || null,
     image_url: f.image_url || null,
-    url_destination: f.url_destination || null,
-    whatsapp_e164: f.whatsapp_e164 ? f.whatsapp_e164.replace(/\s/g, '') : null,
+    // Saisie en cours (« https: », « +241… ») : non envoyée, sinon l'API rejetterait tout le brouillon
+    url_destination: estLienWeb(f.url_destination) ? f.url_destination.trim() : null,
+    whatsapp_e164: WHATSAPP_E164.test(f.whatsapp_e164.replace(/\s/g, '')) ? f.whatsapp_e164.replace(/\s/g, '') : null,
     total_fcfa: f.total_fcfa,
     duree_jours: f.duree_jours,
     ciblage: { ...f.ciblage, etape_wizard: etape }
@@ -345,24 +373,29 @@ export default function BoostWizard({
   const validerEtape = (n: number): boolean => {
     const e: Record<string, string> = {};
     if (n === 1) {
-      if (form.type_cible === 'produit' && !form.produit_id) e.produit_id = 'Choisissez le produit à promouvoir';
+      if (form.type_cible === 'produit' && !form.produit_id) e.produit_id = 'Choisissez le produit à mettre en avant';
       if (form.titre.trim().length < 3) e.titre = 'Le titre doit contenir au moins 3 caractères';
       if (form.texte_principal.trim().length < 5) e.texte_principal = 'Le texte doit contenir au moins 5 caractères';
-      if (!form.image_url) e.image_url = 'Ajoutez un visuel';
+      if (!form.image_url) e.image_url = 'Ajoutez un visuel pour votre publicité';
     }
     if (n === 2) {
-      if (form.objectif === 'whatsapp' && !/^\+[1-9]\d{7,14}$/.test(form.whatsapp_e164.replace(/\s/g, ''))) {
-        e.whatsapp_e164 = 'Numéro WhatsApp au format international (ex. +24177000000)';
+      if (form.objectif === 'whatsapp' && !WHATSAPP_E164.test(form.whatsapp_e164.replace(/\s/g, ''))) {
+        e.whatsapp_e164 = 'Le numéro WhatsApp doit être au format international (ex. +24177000000)';
       }
-      if (form.objectif !== 'whatsapp' && !form.url_destination) e.url_destination = 'Lien de destination requis';
-      if (form.ciblage.age_min > form.ciblage.age_max) e['ciblage.age_min'] = 'Âges incohérents';
+      if (form.objectif !== 'whatsapp') {
+        if (!form.url_destination.trim()) e.url_destination = 'Le lien de destination est obligatoire';
+        else if (!estLienWeb(form.url_destination)) {
+          e.url_destination = `Le lien de destination doit être une adresse web commençant par http:// ou https:// (${LIEN_EXEMPLE})`;
+        }
+      }
+      if (form.ciblage.age_min > form.ciblage.age_max) e['ciblage.age_min'] = 'L’âge minimum doit être inférieur ou égal à l’âge maximum';
     }
     if (n === 3) {
       if (!Number.isInteger(form.total_fcfa) || form.total_fcfa < parametres.total_min_fcfa || form.total_fcfa > parametres.total_max_fcfa) {
-        e.total_fcfa = `Montant entre ${formaterFcfa(parametres.total_min_fcfa)} et ${formaterFcfa(parametres.total_max_fcfa)}`;
+        e.total_fcfa = `Le montant doit être compris entre ${formaterFcfa(parametres.total_min_fcfa)} et ${formaterFcfa(parametres.total_max_fcfa)}`;
       }
       if (devis && devis.budget_jour_fcfa < parametres.budget_jour_min_fcfa) {
-        e.duree_jours = `Budget publicitaire trop faible (${formaterFcfa(devis.budget_jour_fcfa)}/jour, minimum ${formaterFcfa(parametres.budget_jour_min_fcfa)}) : augmentez le montant ou réduisez la durée`;
+        e.duree_jours = `Budget publicitaire trop faible pour ${form.duree_jours} jours (${formaterFcfa(devis.budget_jour_fcfa)} par jour, minimum ${formaterFcfa(parametres.budget_jour_min_fcfa)}) : augmentez le montant ou réduisez la durée`;
       }
     }
     setErreurs(e);
@@ -494,6 +527,9 @@ export default function BoostWizard({
     haut.current?.scrollIntoView({ block: 'start' });
   }, [etape]);
 
+  // Erreurs (souvent renvoyées par l'API) sans zone d'affichage dédiée sous un champ
+  const erreursSansChamp = Object.entries(erreurs).filter(([champ]) => !CHAMPS_AFFICHES.has(champ));
+
   const estimationCourante = useMemo(
     () => impressions?.find((i) => i.total_fcfa === form.total_fcfa) ?? null,
     [impressions, form.total_fcfa]
@@ -563,6 +599,13 @@ export default function BoostWizard({
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0 rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
+          {erreursSansChamp.length > 0 && (
+            <ul className="mb-5 space-y-1 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+              {erreursSansChamp.map(([champ, message]) => (
+                <li key={champ}>{message}</li>
+              ))}
+            </ul>
+          )}
           {etape === 1 && (
             <div className="space-y-5">
               <div>
@@ -757,7 +800,9 @@ export default function BoostWizard({
                     )}
                   </dl>
                 ) : (
-                  <p className="text-gray-500">Calcul du devis…</p>
+                  <p className="text-gray-500">
+                    {erreurs.total_fcfa ? 'Corrigez le montant pour voir le détail du prix.' : 'Calcul du devis…'}
+                  </p>
                 )}
               </div>
             </div>
