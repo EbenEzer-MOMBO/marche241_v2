@@ -215,7 +215,7 @@ function ListeBoosts({ ctx, rejouer }: { ctx: BoostPageContexte; rejouer: number
       {fenetreVisite}
       <div className="mx-auto max-w-xl rounded-xl border border-dashed border-gray-300 bg-white p-8 sm:p-10 text-center">
         <Megaphone className="mx-auto mb-3 h-12 w-12 text-gray-300" />
-        <p className="font-medium text-gray-900">Aucune publicité pour le moment</p>
+        <p className="font-medium text-gray-900">Aucune publicité Facebook ou Instagram pour le moment</p>
         <p className="mt-1 text-sm text-gray-500">
           Faites connaître votre boutique sur Facebook et Instagram à partir de 3 000 FCFA. Marché 241 s’occupe de tout.
         </p>

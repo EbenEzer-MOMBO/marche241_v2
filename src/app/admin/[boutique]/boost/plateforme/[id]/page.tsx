@@ -243,8 +243,9 @@ function DetailContenu({ ctx }: { ctx: BoostPageContexte }) {
 }
 
 export default function DetailBannierePage() {
+  const params = useParams();
   return (
-    <BoostPageShell titre="Bannière sur Marché 241" sousTitre="Suivi de votre mise en avant" sousChemin="/boost">
+    <BoostPageShell titre="Bannière sur Marché 241" sousTitre="Suivi de votre mise en avant" sousChemin={`/boost/plateforme/${params.id}`}>
       {(ctx) => (
         <Suspense fallback={null}>
           <DetailContenu ctx={ctx} />
