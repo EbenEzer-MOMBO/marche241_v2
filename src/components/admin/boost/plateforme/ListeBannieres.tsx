@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { CalendarDays, ChevronRight, Eye, MousePointerClick, Sparkles } from 'lucide-react';
 import type { BoutiqueData } from '@/lib/services/auth';
@@ -34,15 +34,26 @@ function prochaineEtape(p: PubliciteListe): { texte: string; classe: string } | 
 /** Bannières sponsorisées de la boutique (section de la page « Publicité »). Rien si aucune bannière. */
 export default function ListeBannieres({ boutique, erreur }: { boutique: BoutiqueData; erreur: (message: string) => void }) {
   const [publicites, setPublicites] = useState<PubliciteListe[] | null>(null);
+  // Le chargement ne dépend que de la boutique : la fonction d'erreur reste hors des dépendances
+  // pour qu'un toast (qui re-rend la page) ne relance jamais la requête.
+  const signalerErreur = useRef(erreur);
+  useEffect(() => {
+    signalerErreur.current = erreur;
+  }, [erreur]);
 
   useEffect(() => {
+    let annule = false;
     getPublicitesBoutique(boutique.id)
-      .then(setPublicites)
+      .then((liste) => !annule && setPublicites(liste))
       .catch((err) => {
-        erreur(messageErreur(err, 'Impossible de charger vos bannières'));
+        if (annule) return;
+        signalerErreur.current(messageErreur(err, 'Impossible de charger vos bannières'));
         setPublicites([]);
       });
-  }, [boutique.id, erreur]);
+    return () => {
+      annule = true;
+    };
+  }, [boutique.id]);
 
   if (!publicites || publicites.length === 0) return null;
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Megaphone, Menu } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -38,6 +38,10 @@ export default function BoostPageShell({
   const slugUrl = params.boutique as string;
   const { user, verifierBoutique } = useAuth();
   const { toasts, removeToast, success, error } = useToast();
+  // Callbacks stables : les pages les mettent en dépendance de leurs effets de chargement. Une fonction
+  // recréée à chaque rendu relançait les appels à chaque toast (boucle requête → erreur → toast → requête).
+  const succesCtx = useCallback((message: string, titre?: string) => success(message, titre ?? 'Succès'), [success]);
+  const erreurCtx = useCallback((message: string, titre?: string) => error(message, titre ?? 'Erreur', 8000), [error]);
   const [boutique, setBoutique] = useState<BoutiqueData | null>(null);
   const [chargement, setChargement] = useState(true);
   const [menuMobile, setMenuMobile] = useState(false);
@@ -95,8 +99,8 @@ export default function BoostPageShell({
 
   const ctx: BoostPageContexte = {
     boutique,
-    succes: (message, t) => success(message, t ?? 'Succès'),
-    erreur: (message, t) => error(message, t ?? 'Erreur', 8000)
+    succes: succesCtx,
+    erreur: erreurCtx
   };
 
   return (
