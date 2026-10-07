@@ -57,3 +57,13 @@ middleware.ts                 mode maintenance + prévisualisation vendeur (?pre
 
 - Besoin d'un nouveau champ ou endpoint → le faire d'abord dans `../marche241-api` (route + Joi + Swagger), puis consommer ici.
 - Nouvelle origine / domaine du front → prévenir que l'API doit mettre à jour `CORS_ORIGIN`, `FRONTEND_URL`, `WEBAUTHN_ORIGIN`.
+
+## Exécution des plans (résumé)
+
+Plan validé → 3 étapes obligatoires (détail dans `../CLAUDE.md`, section « Exécution des plans ») :
+
+1. **Lancement avec Ralph si disponible** : `/ralph-loop "<plan + critères de fin, tests et vérifs visuelles inclus>" --max-iterations 20 --completion-promise "PLAN TERMINE"`. Toujours fixer `--max-iterations` ; n'émettre la promesse que si tout est fait et vérifié. Sans Ralph : exécution pas à pas, en le signalant.
+2. **Tests** : `npx tsc --noEmit` puis `npm run lint`. Un échec bloque la suite.
+3. **Vérifications visuelles** : serveurs `api` + `front` via `.claude/launch.json`, ouvrir chaque écran modifié dans le navigateur intégré en **desktop et mobile (375 px)**, états vide / chargement / erreur, console sans erreur, appels réseau vers l'API corrects ; dérouler le parcours concerné (cf. « Parcours critiques ») et joindre des captures.
+
+Le compte rendu final liste ce qui a été testé, vérifié visuellement, et ce qui n'a pas pu l'être (avec la raison).
