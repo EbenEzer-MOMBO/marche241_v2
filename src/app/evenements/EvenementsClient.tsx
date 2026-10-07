@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, CalendarX, Search, X } from 'lucide-react';
 import { LandingHeader } from '@/components/landing/LandingHeader';
+import { BanniereSponsorisee } from '@/components/pub/BanniereSponsorisee';
 import Footer from '@/components/Footer';
 import { ErrorState } from '@/components/LoadingStates';
 import { EvenementAffiche, EvenementDateBlock } from '@/components/evenements/EvenementVisuels';
@@ -315,6 +316,8 @@ export default function EvenementsClient() {
             </div>
           </div>
         </section>
+
+        <BanniereSponsorisee page="evenements" creneau="pages" className="mx-auto block max-w-[1360px] px-4 pt-5 lg:px-10" />
 
         <section className="border-b border-gray-200">
           <div className="container mx-auto flex items-center justify-between gap-4 px-4 py-3 lg:px-10 lg:py-3.5">

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import BoostPageShell, { BoostPageContexte } from '@/components/admin/boost/BoostPageShell';
 import StatutBoostBadge from '@/components/admin/boost/StatutBoostBadge';
+import ListeBannieres from '@/components/admin/boost/plateforme/ListeBannieres';
 import VisiteGuidee, { EtapeVisite } from '@/components/admin/guide/VisiteGuidee';
 import { useGuide } from '@/hooks/useGuide';
 import type { ObjectifBoost, StatutBoost } from '@/lib/database-types';
@@ -214,7 +215,7 @@ function ListeBoosts({ ctx, rejouer }: { ctx: BoostPageContexte; rejouer: number
       {fenetreVisite}
       <div className="mx-auto max-w-xl rounded-xl border border-dashed border-gray-300 bg-white p-8 sm:p-10 text-center">
         <Megaphone className="mx-auto mb-3 h-12 w-12 text-gray-300" />
-        <p className="font-medium text-gray-900">Aucune publicité pour le moment</p>
+        <p className="font-medium text-gray-900">Aucune publicité Facebook ou Instagram pour le moment</p>
         <p className="mt-1 text-sm text-gray-500">
           Faites connaître votre boutique sur Facebook et Instagram à partir de 3 000 FCFA. Marché 241 s’occupe de tout.
         </p>
@@ -225,6 +226,9 @@ function ListeBoosts({ ctx, rejouer }: { ctx: BoostPageContexte; rejouer: number
         >
           <Plus className="h-4 w-4" /> Créer ma première publicité
         </Link>
+      </div>
+      <div className="mt-6">
+        <ListeBannieres boutique={boutique} erreur={erreur} />
       </div>
       </>
     );
@@ -325,6 +329,8 @@ function ListeBoosts({ ctx, rejouer }: { ctx: BoostPageContexte; rejouer: number
           );
         })}
       </div>
+
+      <ListeBannieres boutique={boutique} erreur={erreur} />
     </div>
   );
 }
@@ -334,7 +340,7 @@ export default function BoostsPage() {
   return (
     <BoostPageShell
       titre="Publicité"
-      sousTitre="Vos publicités Facebook et Instagram"
+      sousTitre="Vos publicités Facebook, Instagram et sur Marché 241"
       sousChemin="/boost"
       actions={({ boutique }) => (
         <div className="flex flex-shrink-0 items-center gap-1 sm:gap-2">

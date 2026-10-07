@@ -14,6 +14,7 @@ import { getProduitsMarketplace } from '@/lib/services/products';
 import { getCategoriesMarketplace } from '@/lib/services/categories';
 import { getCommunesMarketplace } from '@/lib/services/communes';
 import type { ProduitDB } from '@/lib/database-types';
+import { BanniereSponsorisee } from '@/components/pub/BanniereSponsorisee';
 
 const TAILLE_LOT = 12;
 
@@ -125,6 +126,13 @@ export default function MarketplaceProduitsClient() {
           </div>
         </section>
 
+        <BanniereSponsorisee
+          page={resolvedCategorieId ? 'categorie' : 'produits'}
+          categorieId={resolvedCategorieId}
+          creneau="pages"
+          className="mx-auto block max-w-[1360px] px-4 pt-5 lg:px-10"
+        />
+
         <section className="mx-auto max-w-[1360px] px-4 py-6 lg:px-10">
           <ProductListingFilters
             variant="market"
@@ -138,6 +146,10 @@ export default function MarketplaceProduitsClient() {
             onCloseFiltres={() => setFiltresOuverts(false)}
             resultCount={totalProducts}
           />
+
+          {resolvedCategorieId && (
+            <BanniereSponsorisee page="categorie" categorieId={resolvedCategorieId} creneau="categorie" className="mb-6 block" />
+          )}
 
           {loading ? (
             <div className="py-8">

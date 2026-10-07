@@ -550,7 +550,11 @@ export default function BoostWizard({
     return (
       <div className="mx-auto max-w-3xl">
         {retourEnHaut}
-        <TypePubSelector plateformeDisponible={parametres.types.plateforme} onChoisirMeta={() => { setEtape(1); if (!brouillon && !produitInitialId) void appliquerPrefill(null); }} />
+        <TypePubSelector
+          plateformeDisponible={parametres.types.plateforme}
+          boutiqueId={boutique.id}
+          onChoisirPlateforme={() => router.push(`/admin/${boutique.slug}/boost/plateforme/new`)}
+          onChoisirMeta={() => { setEtape(1); if (!brouillon && !produitInitialId) void appliquerPrefill(null); }} />
       </div>
     );
   }
