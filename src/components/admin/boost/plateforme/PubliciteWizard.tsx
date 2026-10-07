@@ -346,7 +346,7 @@ export default function PubliciteWizard({
     }
     setUpload(cible);
     try {
-      const r = await uploadImage(fichier, boutique.slug, 'publicites');
+      const r = await uploadImage(fichier, boutique.slug, 'mises-en-avant');
       majForm(cible === 'desktop' ? { image_url: r.url } : { image_mobile_url: r.url });
     } catch (err) {
       setErreurs((e) => ({ ...e, [champ]: messageErreur(err, "Échec de l'envoi de l'image") }));

@@ -1,6 +1,8 @@
 /**
  * Publicité interne (bannières sponsorisées sur les pages publiques Marché 241).
- * Routes API : /publicites (cf. marche241-api/src/routes/publicite.routes.ts, docs/PUBLICITE_INTERNE.md).
+ * Routes API : /mises-en-avant (cf. marche241-api/src/routes/publicite.routes.ts, docs/PUBLICITE_INTERNE.md).
+ * Ne jamais appeler /publicites depuis le navigateur : les bloqueurs de pub (Liste FR) bloquent les URL
+ * contenant /publicites/, ce qui casse la page Publicité et les bannières chez les visiteurs équipés.
  */
 
 import api from '@/lib/api';
@@ -31,7 +33,7 @@ function verifier<T extends { success: boolean; message?: string }>(r: T, defaut
 export async function getBannieresPage(page: PagePublicite, categorieId?: number | null): Promise<BannierePubliciteDiffusee[]> {
   try {
     const query = `page=${page}${categorieId ? `&categorie_id=${categorieId}` : ''}`;
-    const r = await api.get<Reponse<{ bannieres: BannierePubliciteDiffusee[] }>>(`/publicites/diffusion?${query}`);
+    const r = await api.get<Reponse<{ bannieres: BannierePubliciteDiffusee[] }>>(`/mises-en-avant/diffusion?${query}`);
     return r.success ? r.bannieres ?? [] : [];
   } catch {
     return [];
@@ -40,14 +42,14 @@ export async function getBannieresPage(page: PagePublicite, categorieId?: number
 
 /** URL de clic : l'API compte le clic puis redirige vers le lien enregistré de la bannière. */
 export function urlClicBanniere(id: number, page: PagePublicite): string {
-  return `${config.apiBaseUrl}/publicites/${id}/clic?page=${page}`;
+  return `${config.apiBaseUrl}/mises-en-avant/${id}/clic?page=${page}`;
 }
 
 /** Signale un affichage (sans attendre la réponse, sans jamais lever). */
 export function signalerAffichageBanniere(id: number, page: PagePublicite): void {
   try {
     const jeton = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
-    void fetch(`${config.apiBaseUrl}/publicites/${id}/affichage`, {
+    void fetch(`${config.apiBaseUrl}/mises-en-avant/${id}/affichage`, {
       method: 'POST',
       keepalive: true,
       headers: { 'Content-Type': 'application/json', ...(jeton ? { Authorization: `Bearer ${jeton}` } : {}) },
@@ -130,7 +132,7 @@ export interface DetailPublicite {
 }
 
 export async function getParametresPublicite(boutiqueId: number): Promise<ParametresPubliciteVendeur> {
-  const r = await api.get<Reponse<{ parametres: ParametresPubliciteVendeur }>>(`/publicites/parametres?boutique_id=${boutiqueId}`);
+  const r = await api.get<Reponse<{ parametres: ParametresPubliciteVendeur }>>(`/mises-en-avant/parametres?boutique_id=${boutiqueId}`);
   return verifier(r, 'Paramètres de publicité indisponibles').parametres;
 }
 
@@ -142,46 +144,46 @@ export async function getDisponibilitesPublicite(
   const query = new URLSearchParams({ formule });
   if (categorieId) query.set('categorie_id', String(categorieId));
   if (exclureId) query.set('exclure_id', String(exclureId));
-  const r = await api.get<Reponse<{ disponibilites: DisponibiliteSemaine[] }>>(`/publicites/disponibilites?${query.toString()}`);
+  const r = await api.get<Reponse<{ disponibilites: DisponibiliteSemaine[] }>>(`/mises-en-avant/disponibilites?${query.toString()}`);
   return verifier(r, 'Disponibilités indisponibles').disponibilites;
 }
 
 export async function getDevisPublicite(formule: FormulePublicite, nbSemaines: number): Promise<DevisPublicite> {
-  const r = await api.post<Reponse<{ devis: DevisPublicite }>>('/publicites/devis', { formule, nb_semaines: nbSemaines });
+  const r = await api.post<Reponse<{ devis: DevisPublicite }>>('/mises-en-avant/devis', { formule, nb_semaines: nbSemaines });
   return verifier(r, 'Devis indisponible').devis;
 }
 
 export async function getPublicitesBoutique(boutiqueId: number): Promise<PubliciteListe[]> {
-  const r = await api.get<Reponse<{ publicites: PubliciteListe[] }>>(`/publicites/boutique/${boutiqueId}`);
+  const r = await api.get<Reponse<{ publicites: PubliciteListe[] }>>(`/mises-en-avant/boutique/${boutiqueId}`);
   return verifier(r, 'Impossible de récupérer les bannières').publicites || [];
 }
 
 export async function getDetailPublicite(id: number): Promise<DetailPublicite> {
-  const r = await api.get<Reponse<DetailPublicite>>(`/publicites/${id}`);
+  const r = await api.get<Reponse<DetailPublicite>>(`/mises-en-avant/${id}`);
   return verifier(r, 'Bannière introuvable');
 }
 
 export async function creerBrouillonPublicite(boutiqueId: number, donnees: DonneesBrouillonPublicite): Promise<Publicite> {
-  const r = await api.post<Reponse<{ publicite: Publicite }>>('/publicites', { boutique_id: boutiqueId, ...donnees });
+  const r = await api.post<Reponse<{ publicite: Publicite }>>('/mises-en-avant', { boutique_id: boutiqueId, ...donnees });
   return verifier(r, 'Impossible de créer le brouillon').publicite;
 }
 
 export async function enregistrerBrouillonPublicite(id: number, donnees: DonneesBrouillonPublicite): Promise<Publicite> {
-  const r = await api.put<Reponse<{ publicite: Publicite }>>(`/publicites/${id}`, donnees);
+  const r = await api.put<Reponse<{ publicite: Publicite }>>(`/mises-en-avant/${id}`, donnees);
   return verifier(r, "Impossible d'enregistrer le brouillon").publicite;
 }
 
 export async function supprimerBrouillonPublicite(id: number): Promise<void> {
-  verifier(await api.delete<Reponse<object>>(`/publicites/${id}`), 'Impossible de supprimer le brouillon');
+  verifier(await api.delete<Reponse<object>>(`/mises-en-avant/${id}`), 'Impossible de supprimer le brouillon');
 }
 
 export async function soumettrePublicite(id: number): Promise<Publicite> {
-  const r = await api.post<Reponse<{ publicite: Publicite }>>(`/publicites/${id}/soumettre`, {});
+  const r = await api.post<Reponse<{ publicite: Publicite }>>(`/mises-en-avant/${id}/soumettre`, {});
   return verifier(r, 'Réservation impossible').publicite;
 }
 
 export async function annulerSoumissionPublicite(id: number): Promise<Publicite> {
-  const r = await api.post<Reponse<{ publicite: Publicite }>>(`/publicites/${id}/annuler-soumission`, {});
+  const r = await api.post<Reponse<{ publicite: Publicite }>>(`/mises-en-avant/${id}/annuler-soumission`, {});
   return verifier(r, 'Impossible de revenir au brouillon').publicite;
 }
 
@@ -189,7 +191,7 @@ export async function payerPublicite(
   id: number,
   demande: { mode: 'mobile' | 'carte'; operateur?: 'airtelmoney' | 'moovmoney'; msisdn?: string; return_url?: string }
 ): Promise<{ bill_id: string; transaction_id: number; redirect?: boolean; url?: string; message?: string }> {
-  const r = await api.post<Reponse<{ bill_id: string; transaction_id: number; redirect?: boolean; url?: string }>>(`/publicites/${id}/paiement`, demande);
+  const r = await api.post<Reponse<{ bill_id: string; transaction_id: number; redirect?: boolean; url?: string }>>(`/mises-en-avant/${id}/paiement`, demande);
   return verifier(r, "Impossible d'initier le paiement");
 }
 
