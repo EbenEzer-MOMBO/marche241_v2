@@ -131,7 +131,7 @@ function DetailContenu({ ctx }: { ctx: BoostPageContexte }) {
     bandeau = { classe: 'bg-yellow-50 text-yellow-800', texte: 'Paiement non finalisé.' };
 
   return (
-    <div className="mx-auto max-w-6xl space-y-5">
+    <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link href={`/admin/${boutique.slug}/boost`} className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-black">
           <ArrowLeft className="h-4 w-4" /> Mes publicités

@@ -558,7 +558,7 @@ export default function BoostWizard({
   const durees = parametres.durees.filter((d) => d >= parametres.duree_min_jours && d <= parametres.duree_max_jours);
 
   return (
-    <div ref={haut} className="mx-auto max-w-6xl scroll-mt-6">
+    <div ref={haut} className="scroll-mt-6">
       {compteARebours && (
         <PaymentCountdown
           duration={120}
