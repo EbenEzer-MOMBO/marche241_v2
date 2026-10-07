@@ -6,6 +6,7 @@ import { Search, Store, ArrowRight, X } from 'lucide-react';
 import { getAllBoutiquesActives } from '@/lib/services/boutiques';
 import { Boutique } from '@/lib/database-types';
 import { LandingHeader } from '@/components/landing/LandingHeader';
+import { BanniereSponsorisee } from '@/components/pub/BanniereSponsorisee';
 import { BoutiqueCard } from '@/components/landing/BoutiqueCard';
 import { AfficheBoutiquesSkeleton } from '@/components/landing/AfficheBoutiquesSkeleton';
 import { InstallAppButton } from '@/components/InstallAppButton';
@@ -174,6 +175,8 @@ export default function MarchePage() {
             </div>
           </div>
         </section>
+
+        <BanniereSponsorisee page="boutiques" creneau="pages" className="mx-auto block max-w-[1360px] px-4 pt-5 lg:px-10" />
 
         {!loading && !error && villeFilters.length > 0 && (
           <div className="border-b border-gray-200 bg-white px-4 lg:px-10 py-3.5">

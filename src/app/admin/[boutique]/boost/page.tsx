@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import BoostPageShell, { BoostPageContexte } from '@/components/admin/boost/BoostPageShell';
 import StatutBoostBadge from '@/components/admin/boost/StatutBoostBadge';
+import ListeBannieres from '@/components/admin/boost/plateforme/ListeBannieres';
 import VisiteGuidee, { EtapeVisite } from '@/components/admin/guide/VisiteGuidee';
 import { useGuide } from '@/hooks/useGuide';
 import type { ObjectifBoost, StatutBoost } from '@/lib/database-types';
@@ -226,6 +227,9 @@ function ListeBoosts({ ctx, rejouer }: { ctx: BoostPageContexte; rejouer: number
           <Plus className="h-4 w-4" /> Créer ma première publicité
         </Link>
       </div>
+      <div className="mt-6">
+        <ListeBannieres boutique={boutique} erreur={erreur} />
+      </div>
       </>
     );
   }
@@ -325,6 +329,8 @@ function ListeBoosts({ ctx, rejouer }: { ctx: BoostPageContexte; rejouer: number
           );
         })}
       </div>
+
+      <ListeBannieres boutique={boutique} erreur={erreur} />
     </div>
   );
 }
@@ -334,7 +340,7 @@ export default function BoostsPage() {
   return (
     <BoostPageShell
       titre="Publicité"
-      sousTitre="Vos publicités Facebook et Instagram"
+      sousTitre="Vos publicités Facebook, Instagram et sur Marché 241"
       sousChemin="/boost"
       actions={({ boutique }) => (
         <div className="flex flex-shrink-0 items-center gap-1 sm:gap-2">

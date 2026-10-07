@@ -16,6 +16,7 @@ import { StickyMobileCta } from '@/components/landing/StickyMobileCta';
 import Footer from '@/components/Footer';
 import { InstallAppButton } from '@/components/InstallAppButton';
 import { useLandingBoutiques } from '@/hooks/useLandingBoutiques';
+import { BanniereSponsorisee } from '@/components/pub/BanniereSponsorisee';
 
 /**
  * Contenu marketing toujours rendu (SEO / LCP).
@@ -64,6 +65,7 @@ export default function LandingHomeClient() {
 
       <main className="pt-[68px]">
         <HeroBanner boutiqueCount={count} featuredBoutiques={boutiques} />
+        <BanniereSponsorisee page="accueil" creneau="accueil" className="container mx-auto block px-4 pb-2 pt-6 lg:px-10" />
         <BoutiqueLogoStrip boutiques={boutiques} />
         <HowItWorksSection boutiqueCount={count} />
         <FeaturesSection />
