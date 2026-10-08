@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import ProductDetail from '@/components/ProductDetail';
+import { SuiviVue } from '@/components/storefront/SuiviVue';
 import { getBoutiqueConfig, type BoutiqueConfig } from '@/lib/boutiques';
 import { getBoutiqueBySlug } from '@/lib/services/boutiques';
 import { getProduitById, formatApiProduitPourDetail, formatProduitPourAffichage } from '@/lib/services/produits';
@@ -94,6 +95,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
       />
+      <SuiviVue typeEntite="produit" entiteId={productData.id} />
       <ProductDetail 
         productId={id}
         productData={productData}

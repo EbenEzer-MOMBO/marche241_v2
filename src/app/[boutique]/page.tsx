@@ -2,6 +2,7 @@ import MainLayout from '@/components/MainLayout';
 import HeroSection from '@/components/HeroSection';
 import TrendingByCategory from '@/components/TrendingByCategory';
 import { BoutiqueShareBar } from '@/components/storefront/BoutiqueShareBar';
+import { SuiviVue } from '@/components/storefront/SuiviVue';
 import { getBoutiqueConfig, getBoutiqueBySlug, type BoutiqueConfig } from '@/lib/boutiques';
 import { notFound } from 'next/navigation';
 
@@ -49,6 +50,7 @@ export default async function BoutiquePage({ params }: BoutiquePageProps) {
 
   return (
     <MainLayout boutiqueName={boutique}>
+      <SuiviVue typeEntite="boutique" entiteId={boutiqueData.id} />
       <HeroSection boutiqueName={boutique} />
       <TrendingByCategory boutiqueName={boutique} />
       <BoutiqueShareBar

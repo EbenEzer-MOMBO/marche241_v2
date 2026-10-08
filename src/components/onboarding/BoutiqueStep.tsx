@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/useToast';
 import PhoneNumberInput from '@/components/ui/PhoneNumberInput';
 import { BOUTIQUE_DESCRIPTION_MAX_LENGTH } from '@/lib/constants/boutique';
 import { markOnboardingActive } from '@/lib/onboarding/storage';
+import { estVilleListe, normaliserVille, VILLES_BOUTIQUE } from '@/lib/villes-gabon';
 
 export const BoutiqueStep = () => {
   const router = useRouter();
@@ -28,6 +29,8 @@ export const BoutiqueStep = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPhoneValid, setIsPhoneValid] = useState(false);
+  const [villeListe, setVilleListe] = useState('');
+  const [villeAutre, setVilleAutre] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -35,9 +38,19 @@ export const BoutiqueStep = () => {
         ...prev,
         telephone: prev.telephone || user.telephone || '',
         email: prev.email || user.email || '',
-        ville: prev.ville || user.ville || '',
+        ville: prev.ville || (user.ville ? normaliserVille(user.ville) : ''),
       }));
       markOnboardingActive(user.id);
+      const ville = user.ville ? normaliserVille(user.ville) : '';
+      if (!ville) {
+        return;
+      }
+      if (estVilleListe(ville)) {
+        setVilleListe((courante) => courante || ville);
+      } else {
+        setVilleListe((courante) => courante || 'Autre');
+        setVilleAutre((courante) => courante || ville);
+      }
     }
   }, [user]);
 
@@ -50,11 +63,13 @@ export const BoutiqueStep = () => {
     setFormData((prev) => ({ ...prev, [name]: nextValue }));
   };
 
+  const villeEnvoyee = villeListe === 'Autre' ? villeAutre.trim() : villeListe;
+
   const isFormValid = () =>
     formData.nom.trim() !== '' &&
     formData.description.trim() !== '' &&
     formData.adresse.trim() !== '' &&
-    formData.ville.trim() !== '';
+    villeEnvoyee.trim() !== '';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,7 +86,7 @@ export const BoutiqueStep = () => {
         nom: formData.nom.trim(),
         description: formData.description.trim(),
         adresse: formData.adresse.trim(),
-        ville: formData.ville.trim(),
+        ville: villeEnvoyee,
         telephone: formData.telephone.trim() || undefined,
         email: formData.email.trim() || undefined,
       };
@@ -172,16 +187,33 @@ export const BoutiqueStep = () => {
             <label htmlFor="ville" className="mb-2 block text-sm font-medium text-gray-700">
               Ville *
             </label>
-            <input
-              type="text"
+            <select
               id="ville"
               name="ville"
-              value={formData.ville}
-              onChange={handleInputChange}
+              value={villeListe}
+              onChange={(e) => setVilleListe(e.target.value)}
               required
-              placeholder="Libreville, Port-Gentil, etc."
               className="block w-full rounded-lg border border-gray-300 px-3 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-black"
-            />
+            >
+              <option value="">Choisir une ville</option>
+              {VILLES_BOUTIQUE.map((ville) => (
+                <option key={ville} value={ville}>
+                  {ville}
+                </option>
+              ))}
+              <option value="Autre">Autre</option>
+            </select>
+            {villeListe === 'Autre' && (
+              <input
+                type="text"
+                id="ville-autre"
+                value={villeAutre}
+                onChange={(e) => setVilleAutre(e.target.value)}
+                required
+                placeholder="Précisez la ville"
+                className="mt-2 block w-full rounded-lg border border-gray-300 px-3 py-3 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-black"
+              />
+            )}
           </div>
 
           <div>
