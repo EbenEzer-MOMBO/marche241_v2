@@ -81,7 +81,7 @@ const SKIP_TRACKING_HEADER = 'x-skip-view-tracking';
  * Import dynamique de next/headers pour ne jamais le faire atterrir dans le
  * bundle client (server-only).
  */
-async function isPreviewRequest(): Promise<boolean> {
+export async function isPreviewRequest(): Promise<boolean> {
   if (typeof window !== 'undefined') {
     if (new URLSearchParams(window.location.search).get('preview') === '1') {
       return true;

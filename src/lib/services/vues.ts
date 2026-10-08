@@ -2,7 +2,8 @@
  * Service pour la gestion du tracking des vues (boutiques et produits)
  */
 
-import api from '@/lib/api';
+import api, { isPreviewRequest } from '@/lib/api';
+import config from '@/lib/config';
 
 /**
  * Interface pour les statistiques de vues d'une boutique
@@ -239,5 +240,49 @@ export async function getProduitsLesPlusVus(
     // En attendant que le backend implémente cette route,
     // on peut retourner un tableau vide
     return [];
+  }
+}
+
+export async function enregistrerVue(params: {
+  type_entite: 'boutique' | 'produit';
+  entite_id: number;
+}): Promise<void> {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  if (await isPreviewRequest()) {
+    return;
+  }
+
+  const jour = new Date().toISOString().slice(0, 10);
+  const cle = `vue:${params.type_entite}:${params.entite_id}:${jour}`;
+  try {
+    if (sessionStorage.getItem(cle)) {
+      return;
+    }
+    sessionStorage.setItem(cle, '1');
+  } catch {
+    // sessionStorage indisponible : on envoie quand même
+  }
+
+  const utm = new URLSearchParams(window.location.search).get('utm_source');
+  try {
+    await fetch(`${config.apiBaseUrl}/vues`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type_entite: params.type_entite,
+        entite_id: params.entite_id,
+        referrer: document.referrer || undefined,
+        utm_source: utm || undefined
+      }),
+      keepalive: true
+    });
+  } catch {
+    try {
+      sessionStorage.removeItem(cle);
+    } catch {
+      // ignore
+    }
   }
 }
