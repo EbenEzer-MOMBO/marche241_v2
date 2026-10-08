@@ -30,7 +30,7 @@ const defaultRequestConfig: RequestInit = {
  * cookie `admin_token` côté serveur (posé à la connexion) pour que le SSR
  * reconnaisse le vendeur/admin et n'enregistre pas ses propres visites.
  */
-async function getAuthToken(): Promise<string | null> {
+export async function getAuthToken(): Promise<string | null> {
   if (typeof window !== 'undefined') {
     return localStorage.getItem('admin_token');
   }

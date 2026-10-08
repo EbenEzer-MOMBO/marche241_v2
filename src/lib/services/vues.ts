@@ -2,7 +2,7 @@
  * Service pour la gestion du tracking des vues (boutiques et produits)
  */
 
-import api, { isPreviewRequest } from '@/lib/api';
+import api, { getAuthToken, isPreviewRequest } from '@/lib/api';
 import config from '@/lib/config';
 
 /**
@@ -266,17 +266,23 @@ export async function enregistrerVue(params: {
   }
 
   const utm = new URLSearchParams(window.location.search).get('utm_source');
+  // Le jeton permet à l'API d'exclure le vendeur qui visite sa propre boutique
+  const token = await getAuthToken();
   try {
+    // Pas de keepalive : envoyé au montage, et keepalive + préflight CORS échoue sur certains navigateurs
+    // Appel direct (pas api.post) : un POST via api invaliderait le cache des GET à chaque page vue
     await fetch(`${config.apiBaseUrl}/vues`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
       body: JSON.stringify({
         type_entite: params.type_entite,
         entite_id: params.entite_id,
         referrer: document.referrer || undefined,
         utm_source: utm || undefined
-      }),
-      keepalive: true
+      })
     });
   } catch {
     try {
