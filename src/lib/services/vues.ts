@@ -243,6 +243,15 @@ export async function getProduitsLesPlusVus(
   }
 }
 
+/** Fuseau du téléphone : un VPN ne le modifie pas, l'API en déduit le pays. */
+function fuseauNavigateur(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function enregistrerVue(params: {
   type_entite: 'boutique' | 'produit';
   entite_id: number;
@@ -281,7 +290,8 @@ export async function enregistrerVue(params: {
         type_entite: params.type_entite,
         entite_id: params.entite_id,
         referrer: document.referrer || undefined,
-        utm_source: utm || undefined
+        utm_source: utm || undefined,
+        fuseau: fuseauNavigateur()
       })
     });
   } catch {
