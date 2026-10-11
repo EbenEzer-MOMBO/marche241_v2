@@ -118,7 +118,7 @@ export function ProductCard({
 
         {/* Prix */}
         <div className="mb-3">
-          {product.est_en_promotion && product.prix_original ? (
+          {product.prix_original && product.prix_original > product.prix ? (
             <div className="flex items-center gap-2">
               <span className="text-lg font-bold text-gray-900">
                 {formatPrice(product.prix)}

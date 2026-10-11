@@ -542,7 +542,8 @@ export default function ProductsPage() {
                     nom: productData.nom,
                     slug: genererSlugProduit(productData.nom),
                     description: productData.description || '',
-                    prix: prixPrincipal,
+                    // Contrat API : prix = prix normal, prix_promo = prix promotionnel (ou null)
+                    prix: prixOriginal ?? prixPrincipal,
                     prix_promo: prixOriginal ? prixPrincipal : null,
                     en_stock: stockTotal,
                     categorie_id: productData.categorie_id,
@@ -1163,7 +1164,7 @@ export default function ProductsPage() {
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap">
                                                         <div className="text-sm text-gray-900">{formatPrice(product.prix)}</div>
-                                                        {product.prix_original && (
+                                                        {product.prix_original && product.prix_original > product.prix && (
                                                             <div className="text-sm text-gray-500 line-through">{formatPrice(product.prix_original)}</div>
                                                         )}
                                                     </td>
@@ -1315,7 +1316,7 @@ export default function ProductsPage() {
                                                             </p>
                                                             <div className="flex items-center mt-1 space-x-2">
                                                                 <span className="text-sm font-semibold text-gray-900">{formatPrice(product.prix)}</span>
-                                                                {product.prix_original && (
+                                                                {product.prix_original && product.prix_original > product.prix && (
                                                                     <span className="text-xs text-gray-500 line-through">{formatPrice(product.prix_original)}</span>
                                                                 )}
                                                             </div>

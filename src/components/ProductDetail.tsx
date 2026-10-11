@@ -464,7 +464,7 @@ export default function ProductDetail({
     }
 
     // Si produit avec prix promo, afficher le prix original
-    if (product.prix_original) {
+    if (product.prix_original && product.prix_original > product.prix) {
       return product.prix_original;
     }
 
