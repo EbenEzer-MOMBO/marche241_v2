@@ -9,6 +9,7 @@ import type { PersonnalisationEtatFormulaire, PersonnalisationProduitDef } from 
 import { ProductPersonnalisationsFields } from './ProductPersonnalisationsFields';
 import { getColorSwatch } from '@/lib/utils/color-swatch';
 
+import { prixBarreVariante, prixEffectif } from '@/lib/utils/prix-promo';
 interface ClothingVariant {
   id: string;
   image?: string;
@@ -121,13 +122,10 @@ export function ClothingProductDisplay({
   // Calculer le prix actuel
   const getCurrentPrice = () => {
     if (!selectedVariant) return 0;
-    return selectedVariant.prix_promo || selectedVariant.prix;
+    return prixEffectif(selectedVariant);
   };
 
-  const getOriginalPrice = () => {
-    if (!selectedVariant || !selectedVariant.prix_promo) return null;
-    return selectedVariant.prix;
-  };
+  const getOriginalPrice = () => prixBarreVariante(selectedVariant);
 
   // Obtenir les couleurs uniques
   const couleurs = Array.from(new Set(variants.map(v => v.couleur).filter(Boolean)));

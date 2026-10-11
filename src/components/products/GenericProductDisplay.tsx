@@ -8,6 +8,7 @@ import { Package } from 'lucide-react';
 import type { PersonnalisationEtatFormulaire, PersonnalisationProduitDef } from '@/lib/types/personnalisations';
 import { ProductPersonnalisationsFields } from './ProductPersonnalisationsFields';
 
+import { prixBarreVariante, prixEffectif } from '@/lib/utils/prix-promo';
 interface GenericVariant {
   id: string;
   image?: string;
@@ -166,13 +167,10 @@ export function GenericProductDisplay({
   // Calculer le prix actuel
   const getCurrentPrice = () => {
     if (!selectedVariant) return 0;
-    return selectedVariant.prix_promo || selectedVariant.prix;
+    return prixEffectif(selectedVariant);
   };
 
-  const getOriginalPrice = () => {
-    if (!selectedVariant || !selectedVariant.prix_promo) return null;
-    return selectedVariant.prix;
-  };
+  const getOriginalPrice = () => prixBarreVariante(selectedVariant);
 
   // Obtenir le label français pour le type d'attribut
   const getAttributeLabel = (type: string): string => {

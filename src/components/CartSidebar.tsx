@@ -11,6 +11,7 @@ import { useBoutique } from '@/hooks/useBoutique';
 import { getProduitImageUrl } from '@/lib/services/produits';
 import { useState } from 'react';
 
+import { aPromotion } from '@/lib/utils/prix-promo';
 interface CartSidebarProps {
   isOpen: boolean;
   onClose: () => void;
@@ -286,13 +287,13 @@ export default function CartSidebar({ isOpen, onClose, boutiqueName = 'marche_24
 
                             {/* Prix avec promo si applicable */}
                             <div className="mt-1">
-                              {item.variants_selectionnes?.variant?.prix_original ? (
+                              {aPromotion(item.variants_selectionnes?.variant?.prix, item.variants_selectionnes?.variant?.prix_original) ? (
                                 <div className="flex items-center gap-2">
                                   <p className="text-sm font-semibold text-primary">
                                     {formatPrice(getPrixUnitairePanier(item))}
                                   </p>
                                   <p className="text-xs text-gray-500 line-through">
-                                    {formatPrice(item.variants_selectionnes.variant.prix_original)}
+                                    {formatPrice(item.variants_selectionnes?.variant?.prix_original ?? 0)}
                                   </p>
                                 </div>
                               ) : (

@@ -30,6 +30,7 @@ import { CategorySelectionModal, SimplifiedProductModal } from '@/components/adm
 import { legacyProductToAutresEditPayload } from '@/lib/utils/legacy-product-to-autres-edit';
 import { ProductValidationError } from '@/lib/errors/product-validation-error';
 import { ProductCategory } from '@/lib/constants/product-categories';
+import { aPromotion, calculerPrixPourApi } from '@/lib/utils/prix-promo';
 
 // Interface locale pour l'affichage des produits
 interface ProduitAffichage {
@@ -481,44 +482,14 @@ export default function ProductsPage() {
                 stockTotal = parseInt(productData.quantite_stock) || 0;
             }
 
-            // Calculer le prix minimum pour l'affichage
-            let prixPrincipal = 0;
-            let prixOriginal = undefined;
-            
-            if ((productData.category === 'vetements' || productData.category === 'chaussures' || productData.category === 'autres') && productData.variants && Array.isArray(productData.variants)) {
-                const variantsAvecPrix = productData.variants.filter((v: any) => v.prix > 0);
-                if (variantsAvecPrix.length > 0) {
-                    const prixMin = Math.min(...variantsAvecPrix.map((v: any) => v.prix));
-                    const variantAvecPrixMin = variantsAvecPrix.find((v: any) => v.prix === prixMin);
-                    
-                    prixPrincipal = variantAvecPrixMin.prix_promo > 0 ? variantAvecPrixMin.prix_promo : variantAvecPrixMin.prix;
-                    if (variantAvecPrixMin.prix_promo > 0) {
-                        prixOriginal = variantAvecPrixMin.prix;
-                    }
-                }
-            } else if (productData.category === 'evenement' && productData.variants && Array.isArray(productData.variants)) {
-                const ticketsAvecPrix = productData.variants.filter((v: any) => v.prix > 0);
-                if (ticketsAvecPrix.length > 0) {
-                    const prixMin = Math.min(...ticketsAvecPrix.map((v: any) =>
-                        v.prix_promo > 0 ? v.prix_promo : v.prix
-                    ));
-                    const ticket = ticketsAvecPrix.find((v: any) =>
-                        (v.prix_promo > 0 ? v.prix_promo : v.prix) === prixMin
-                    );
-                    prixPrincipal = ticket.prix_promo > 0 ? ticket.prix_promo : ticket.prix;
-                    if (ticket.prix_promo > 0) {
-                        prixOriginal = ticket.prix;
-                    }
-                }
-            } else if (productData.category === 'service') {
-                prixPrincipal = productData.meta?.sur_devis ? 0 : (parseInt(productData.prix) || 0);
-                if (productData.prix_promo > 0) {
-                    prixOriginal = prixPrincipal;
-                    prixPrincipal = productData.prix_promo;
-                }
-            } else {
-                prixPrincipal = parseInt(productData.prix) || 0;
-            }
+            // Prix à envoyer (contrat unique création / modification) : prix normal + prix promo éventuel
+            const { prix: prixNormal, prix_promo: prixPromo } = calculerPrixPourApi({
+                category: productData.category,
+                variants: productData.variants,
+                prix: productData.prix,
+                prix_promo: productData.prix_promo,
+                sur_devis: productData.meta?.sur_devis
+            });
 
             // Les images sont déjà des URLs après l'upload
             const images = productData.images || [];
@@ -526,8 +497,8 @@ export default function ProductsPage() {
 
             console.log('📦 Données formatées pour l\'API:', {
                 nom: productData.nom,
-                prix: prixPrincipal,
-                prix_original: prixOriginal,
+                prix: prixNormal,
+                prix_promo: prixPromo,
                 en_stock: stockTotal,
                 images,
                 image_principale: imagePrincipale,
@@ -542,8 +513,8 @@ export default function ProductsPage() {
                     nom: productData.nom,
                     slug: genererSlugProduit(productData.nom),
                     description: productData.description || '',
-                    prix: prixPrincipal,
-                    prix_promo: prixOriginal ? prixPrincipal : null,
+                    prix: prixNormal,
+                    prix_promo: prixPromo,
                     en_stock: stockTotal,
                     categorie_id: productData.categorie_id,
                     images: images,
@@ -598,8 +569,8 @@ export default function ProductsPage() {
                     nom: productData.nom,
                     slug: genererSlugProduit(productData.nom),
                     description: productData.description || '',
-                    prix: prixPrincipal,
-                    prix_original: prixOriginal,
+                    prix: prixNormal,
+                    prix_promo: prixPromo,
                     en_stock: stockTotal,
                     boutique_id: boutique.id,
                     categorie_id: productData.categorie_id,
@@ -1163,8 +1134,8 @@ export default function ProductsPage() {
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap">
                                                         <div className="text-sm text-gray-900">{formatPrice(product.prix)}</div>
-                                                        {product.prix_original && (
-                                                            <div className="text-sm text-gray-500 line-through">{formatPrice(product.prix_original)}</div>
+                                                        {aPromotion(product.prix, product.prix_original) && (
+                                                            <div className="text-sm text-gray-500 line-through">{formatPrice(product.prix_original!)}</div>
                                                         )}
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap">
@@ -1315,8 +1286,8 @@ export default function ProductsPage() {
                                                             </p>
                                                             <div className="flex items-center mt-1 space-x-2">
                                                                 <span className="text-sm font-semibold text-gray-900">{formatPrice(product.prix)}</span>
-                                                                {product.prix_original && (
-                                                                    <span className="text-xs text-gray-500 line-through">{formatPrice(product.prix_original)}</span>
+                                                                {aPromotion(product.prix, product.prix_original) && (
+                                                                    <span className="text-xs text-gray-500 line-through">{formatPrice(product.prix_original!)}</span>
                                                                 )}
                                                             </div>
                                                         </div>

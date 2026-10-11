@@ -28,6 +28,7 @@ import { ShopCtaButton } from '@/components/storefront/ShopCtaButton';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { getProductSalesKind } from '@/lib/utils/product-sales-kind';
 import type { PersonnalisationEtatFormulaire, PersonnalisationProduitDef } from '@/lib/types/personnalisations';
+import { aPromotion, prixBarreVariante, prixEffectif } from '@/lib/utils/prix-promo';
 import {
   collectPersonnalisationsValidationErrors,
   composePersonnalisationSelectionsPourPanier,
@@ -436,21 +437,11 @@ export default function ProductDetail({
     const selectedVariant = getSelectedVariant();
 
     // Si variant avec prix promo, afficher le prix promo
-    if (selectedVariant && selectedVariant.prix_promo) {
-      return selectedVariant.prix_promo;
+    if (selectedVariant && (selectedVariant.prix_promo || selectedVariant.prix)) {
+      return prixEffectif(selectedVariant);
     }
 
-    // Si variant avec prix normal, afficher le prix normal
-    if (selectedVariant && selectedVariant.prix) {
-      return selectedVariant.prix;
-    }
-
-    // Si produit avec prix promo, afficher le prix promo
-    if (product.prix_original) {
-      return product.prix;
-    }
-
-    // Sinon afficher le prix normal du produit
+    // Produit sans variante : product.prix est déjà le prix payé (promo comprise)
     return product.prix;
   };
 
@@ -459,13 +450,14 @@ export default function ProductDetail({
     const selectedVariant = getSelectedVariant();
 
     // Si variant avec prix promo, afficher le prix normal du variant
-    if (selectedVariant && selectedVariant.prix_promo && selectedVariant.prix) {
-      return selectedVariant.prix;
+    const barreVariante = prixBarreVariante(selectedVariant);
+    if (barreVariante !== null) {
+      return barreVariante;
     }
 
     // Si produit avec prix promo, afficher le prix original
-    if (product.prix_original) {
-      return product.prix_original;
+    if (!selectedVariant && aPromotion(product.prix, product.prix_original)) {
+      return product.prix_original!;
     }
 
     return null;
@@ -629,8 +621,8 @@ export default function ProductDetail({
         cartData.variant = {
           id: selectedVariant.id,
           nom: variantName,
-          prix: selectedVariant.prix_promo || selectedVariant.prix,
-          prix_original: selectedVariant.prix_promo ? selectedVariant.prix : null,
+          prix: prixEffectif(selectedVariant),
+          prix_original: prixBarreVariante(selectedVariant),
           image: selectedVariant.image,
           attributes: selectedVariant.attributes
         };
@@ -929,7 +921,7 @@ export default function ProductDetail({
                     </span>
                     {getOriginalPrice() && (
                       <span className="hidden font-mono text-[13px] text-[#9a9892] line-through lg:inline">
-                        {formatPrice(getOriginalPrice())}
+                        {formatPrice(getOriginalPrice() ?? 0)}
                       </span>
                     )}
                     {promoBadge && (
