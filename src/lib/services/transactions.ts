@@ -30,6 +30,8 @@ interface Transaction {
   date_confirmation?: string | null;
   date_modification?: string;
   notes?: string | null;
+  /** Commande liée (renvoyée par GET /transactions/boutique/:id) — porte le taux de marge figé */
+  commande?: { taux_marge?: number } | null;
 }
 
 interface TransactionResponse {

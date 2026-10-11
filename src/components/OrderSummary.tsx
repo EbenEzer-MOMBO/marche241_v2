@@ -23,6 +23,7 @@ import PaymentCountdown from '@/components/ui/PaymentCountdown';
 import { ToastContainer } from '@/components/ui/Toast';
 import { normalizeMsisdnInput, validateMsisdn, msisdnPlaceholder, type MobileMoneyOperator } from '@/lib/utils/mobileMoneyMsisdn';
 import type { PersonnalisationSelectionPanier } from '@/lib/types/personnalisations';
+import { fraisService, normaliserTauxMarge } from '@/lib/constants/frais-service';
 import { Trash, Check, Minus, Plus, CheckCircle } from '@phosphor-icons/react';
 
 const fieldClass =
@@ -118,6 +119,8 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
   // - les_deux : l'utilisateur peut choisir entre les deux.
   // - acompte_50 : acompte de 50% obligatoire en ligne, solde en espèces à la livraison.
   const paymentRestrictionMode = boutiqueData?.payment_restriction_mode || 'les_deux';
+  // Marge du vendeur (jamais affichée à l'acheteur : seule la mention « Frais de service » l'est)
+  const tauxMarge = normaliserTauxMarge(boutiqueData?.taux_marge);
   const boutiqueAcompte50 = paymentRestrictionMode === 'acompte_50';
   const [payOnDelivery, setPayOnDelivery] = useState(() => {
     if (paymentRestrictionMode === 'livraison_uniquement') return true;
@@ -322,29 +325,27 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
   }, [isEventOnlyCart, paymentRestrictionMode, isAcompte50, deliveryFee, deliveryAddress.city]);
 
   // Calcul de l'acompte (mode acompte_50) : 50% du total (sous-total + livraison), + frais de
-  // service 10% sur cette moitié. Formule identique à verifierMontantTransaction côté serveur
+  // service (marge du vendeur) sur cette moitié. Formule identique à verifierMontantTransaction côté serveur
   // (paiement.controller.ts) — ne pas modifier l'une sans l'autre.
   const ACOMPTE_POURCENTAGE = 0.50;
   const getAcompteMontant = () => Math.round((subtotal + deliveryFee) * ACOMPTE_POURCENTAGE);
-  const getAcompteTransactionFee = () => Math.round(getAcompteMontant() * 0.10);
+  const getAcompteTransactionFee = () => fraisService(getAcompteMontant(), tauxMarge);
   const getAcompteTotalToPay = () => getAcompteMontant() + getAcompteTransactionFee();
   const getAcompteRestant = () => Math.max(0, subtotal + deliveryFee - getAcompteMontant());
 
-  // Calcul des frais de transaction (10%)
+  // Calcul des frais de service (taux de marge du vendeur)
   const getTransactionFee = () => {
     if (isAcompte50) {
       return getAcompteTransactionFee();
     }
 
-    const transactionRate = 0.10; // 10%
-
     if (payOnDelivery) {
-      // Pour paiement à la livraison : 10% seulement sur les frais de livraison
-      return Math.round(deliveryFee * transactionRate);
+      // Pour paiement à la livraison : frais de service seulement sur les frais de livraison
+      return fraisService(deliveryFee, tauxMarge);
     } else {
-      // Pour paiement normal : 10% sur le total (sous-total + livraison)
+      // Pour paiement normal : frais de service sur le total (sous-total + livraison)
       const baseAmount = subtotal + deliveryFee;
-      return Math.round(baseAmount * transactionRate);
+      return fraisService(baseAmount, tauxMarge);
     }
   };
 
@@ -536,6 +537,17 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
       console.log('Données de la commande:', commandeData);
 
       console.log('Réponse complète de la commande:', commande);
+
+      // Le serveur fige la marge du vendeur sur la commande et vérifie le paiement avec ce
+      // taux : s'il a changé depuis le chargement de la page, le montant affiché est faux
+      if (
+        commande.commande.taux_marge !== undefined &&
+        normaliserTauxMarge(commande.commande.taux_marge) !== tauxMarge
+      ) {
+        error('Les frais de service ont été mis à jour. Veuillez recharger la page pour voir le nouveau montant.');
+        setIsSubmitting(false);
+        return;
+      }
 
       const typePaiementTransaction = isEventOnlyCart
         ? 'paiement_complet'
@@ -855,10 +867,9 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
 
   // --- Valeurs dérivées purement pour l'affichage (aucun impact sur la logique de paiement) ---
   const selectedCommune = communes.find((commune) => commune.nom_commune === deliveryAddress.city);
-  const transactionRate = 0.10;
-  const fullTransactionFee = Math.round((subtotal + deliveryFee) * transactionRate);
+  const fullTransactionFee = fraisService(subtotal + deliveryFee, tauxMarge);
   const fullTotal = subtotal + deliveryFee + fullTransactionFee;
-  const deliveryOnlyFee = Math.round(deliveryFee * transactionRate);
+  const deliveryOnlyFee = fraisService(deliveryFee, tauxMarge);
   const deliveryOnlyTotal = deliveryFee + deliveryOnlyFee;
 
   return (

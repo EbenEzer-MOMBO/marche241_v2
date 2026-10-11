@@ -87,6 +87,8 @@ export interface BoutiqueData {
   note_moyenne?: number;
   nombre_avis?: number;
   est_verifiee?: boolean;
+  /** Marge plateforme du vendeur en % (frais de service payés par l'acheteur), fixée par Marché 241 */
+  taux_marge?: number;
 }
 
 export interface BoutiqueResponse {

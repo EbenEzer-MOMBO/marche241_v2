@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { X, ArrowLeft, ArrowRight, Check, Upload, Plus, Trash2, Lock, Ticket } from 'lucide-react';
 import Image from 'next/image';
 import { ProductCategory } from '@/lib/constants/product-categories';
-import { FRAIS_SERVICE_POURCENTAGE, prixAvecFraisService } from '@/lib/constants/frais-service';
+import { prixAvecFraisService } from '@/lib/constants/frais-service';
+import { useTauxMarge } from '@/hooks/useTauxMarge';
 
 const formatFcfa = (montant: number) =>
   `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(montant)} FCFA`;
@@ -80,6 +81,7 @@ export function EventProductForm({
   onBack,
   onSave,
   categories = [],
+  boutiqueId,
   boutiqueSlug,
   productToEdit,
   variant = 'modal',
@@ -101,6 +103,7 @@ export function EventProductForm({
 
   const vendusDuBillet = (ticket: TicketVariant) =>
     ticket.id in stocksInitiaux ? ventesParType[ticket.nom] || 0 : 0;
+  const tauxMarge = useTauxMarge(boutiqueId);
   const [currentSection, setCurrentSection] = useState(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isUploading, setIsUploading] = useState(false);
@@ -579,8 +582,8 @@ export function EventProductForm({
             </div>
             {prixEffectif > 0 && (
               <p className="mt-3 text-xs text-gray-500">
-                Prix affiché : <span className="font-medium text-gray-700">{formatFcfa(prixAvecFraisService(prixEffectif))}</span>{' '}
-                (frais de service {Math.round(FRAIS_SERVICE_POURCENTAGE * 100)} % inclus)
+                Prix affiché : <span className="font-medium text-gray-700">{formatFcfa(prixAvecFraisService(prixEffectif, tauxMarge))}</span>{' '}
+                (frais de service {tauxMarge} % inclus)
               </p>
             )}
           </div>

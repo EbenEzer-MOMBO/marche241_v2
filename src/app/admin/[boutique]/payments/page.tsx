@@ -13,6 +13,7 @@ import { ToastContainer } from '@/components/ui/Toast';
 import { useToast } from '@/hooks/useToast';
 import Sidebar from '@/components/admin/Sidebar';
 import { BoutiqueData } from '@/lib/services/auth';
+import { montantNetVendeur, normaliserTauxMarge } from '@/lib/constants/frais-service';
 import {
   CreditCard,
   Search,
@@ -27,8 +28,16 @@ import {
   DollarSign,
   Calendar,
   Wallet,
-  Download
+  Download,
+  Percent
 } from 'lucide-react';
+
+/** Part vendeur d'une transaction : son montant inclut les frais de service au taux de sa commande */
+const netVendeurTransaction = (transaction: Transaction): number =>
+  montantNetVendeur(transaction.montant, normaliserTauxMarge(transaction.commande?.taux_marge));
+
+const sommeNetVendeur = (transactions: Transaction[]): number =>
+  transactions.reduce((somme, transaction) => somme + netVendeurTransaction(transaction), 0);
 
 export default function PaymentsPage() {
   const router = useRouter();
@@ -178,12 +187,12 @@ export default function PaymentsPage() {
       t.statut.toLowerCase() === 'paye' || t.statut.toLowerCase() === 'confirme'
     );
 
-    // Revenu total (montant TTC - inclut déjà la taxe)
+    // Revenu total (montant brut - inclut déjà les frais de service)
     const totalRevenue = paidTransactions.reduce((sum, t) => sum + t.montant, 0);
     
-    // Calculer le montant HT et la taxe
-    // Le montant de transaction est TTC, donc : Montant HT = TTC / 1.10
-    const totalNetRevenue = Math.round(totalRevenue / 1.10);
+    // Calculer le montant HT et les frais de service, transaction par transaction : chaque
+    // commande porte son propre taux de marge (figé à sa création)
+    const totalNetRevenue = sommeNetVendeur(paidTransactions);
     const totalTax = totalRevenue - totalNetRevenue;
 
     // Revenu mensuel (mois en cours)
@@ -192,7 +201,7 @@ export default function PaymentsPage() {
       return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
     });
     const monthlyRevenue = monthlyTransactions.reduce((sum, t) => sum + t.montant, 0);
-    const monthlyNetRevenue = Math.round(monthlyRevenue / 1.10);
+    const monthlyNetRevenue = sommeNetVendeur(monthlyTransactions);
     const monthlyTax = monthlyRevenue - monthlyNetRevenue;
 
     // Revenu annuel (année en cours)
@@ -201,7 +210,7 @@ export default function PaymentsPage() {
       return date.getFullYear() === currentYear;
     });
     const yearlyRevenue = yearlyTransactions.reduce((sum, t) => sum + t.montant, 0);
-    const yearlyNetRevenue = Math.round(yearlyRevenue / 1.10);
+    const yearlyNetRevenue = sommeNetVendeur(yearlyTransactions);
     const yearlyTax = yearlyRevenue - yearlyNetRevenue;
 
     // Nombre de transactions payées
@@ -441,6 +450,16 @@ export default function PaymentsPage() {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 lg:p-6">
+          {/* Marge plateforme du vendeur */}
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-xs sm:text-sm text-gray-600">
+            <Percent className="h-4 w-4 flex-shrink-0 text-gray-400 mt-0.5" />
+            <p>
+              Frais de service Marché 241 :{' '}
+              <span className="font-semibold text-gray-900">{normaliserTauxMarge(boutique.taux_marge)} %</span>
+              , payés par vos clients en plus de vos prix. Le montant net est ce qui vous revient.
+            </p>
+          </div>
+
           {/* Stats Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
             {/* Revenu Mensuel */}
@@ -674,7 +693,7 @@ export default function PaymentsPage() {
                     Montant
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                    Taxe
+                    Frais de service
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                     Type
@@ -689,9 +708,8 @@ export default function PaymentsPage() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {paginatedTransactions.map((transaction) => {
-                  // Le montant de la transaction est TTC (inclut déjà la taxe de 10%)
-                  // Pour retrouver le montant HT : Montant TTC / 1.10
-                  const netAmount = Math.round(transaction.montant / 1.10);
+                  // Le montant de la transaction inclut les frais de service (taux de la commande)
+                  const netAmount = netVendeurTransaction(transaction);
                   const taxAmount = transaction.montant - netAmount;
                   
                   return (
@@ -763,9 +781,8 @@ export default function PaymentsPage() {
           {/* Transactions Cards - Mobile */}
           <div className="lg:hidden space-y-3">
             {paginatedTransactions.map((transaction) => {
-              // Le montant de la transaction est TTC (inclut déjà la taxe de 10%)
-              // Pour retrouver le montant HT : Montant TTC / 1.10
-              const netAmount = Math.round(transaction.montant / 1.10);
+              // Le montant de la transaction inclut les frais de service (taux de la commande)
+              const netAmount = netVendeurTransaction(transaction);
               const taxAmount = transaction.montant - netAmount;
               
               return (
@@ -808,7 +825,7 @@ export default function PaymentsPage() {
                     <span className="font-bold text-gray-900">{formatPrice(transaction.montant)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Taxe:</span>
+                    <span className="text-gray-600">Frais de service:</span>
                     <span className="font-medium text-red-600">{formatPrice(taxAmount)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
