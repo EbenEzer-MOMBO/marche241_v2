@@ -249,7 +249,7 @@ export default function EvenementDetailPage() {
         slug: payload.slug,
         description: payload.description,
         prix: payload.prix,
-        prix_promo: payload.prix_original ? payload.prix : null,
+        prix_promo: payload.prix_promo,
         en_stock: payload.en_stock,
         categorie_id: payload.categorie_id,
         images: payload.images,

@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import { Edit, Trash2, Eye, EyeOff, Star, TrendingUp } from 'lucide-react';
 
+import { aPromotion } from '@/lib/utils/prix-promo';
 interface ProductCardProps {
   product: {
     id: number;
@@ -118,13 +119,13 @@ export function ProductCard({
 
         {/* Prix */}
         <div className="mb-3">
-          {product.prix_original && product.prix_original > product.prix ? (
+          {aPromotion(product.prix, product.prix_original) ? (
             <div className="flex items-center gap-2">
               <span className="text-lg font-bold text-gray-900">
                 {formatPrice(product.prix)}
               </span>
               <span className="text-sm text-gray-500 line-through">
-                {formatPrice(product.prix_original)}
+                {formatPrice(product.prix_original!)}
               </span>
             </div>
           ) : (

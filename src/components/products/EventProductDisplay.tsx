@@ -5,6 +5,7 @@ import { formatPrice } from '@/lib/utils';
 import { ProduitDetail } from '@/lib/database-types';
 import { ShopCtaButton } from '@/components/storefront/ShopCtaButton';
 
+import { prixBarreVariante, prixEffectif } from '@/lib/utils/prix-promo';
 interface TicketVariant {
   id: string;
   nom: string;
@@ -77,10 +78,7 @@ export function EventProductDisplay({
   };
 
   const maxQty = selectedTicket?.stock || 1;
-  const unitPrice =
-    selectedTicket?.prix_promo && selectedTicket.prix_promo > 0
-      ? selectedTicket.prix_promo
-      : selectedTicket?.prix || product.prix;
+  const unitPrice = selectedTicket ? prixEffectif(selectedTicket) || product.prix : product.prix;
   const soldOut = tickets.every((t) => t.stock <= 0);
 
   return (
@@ -125,10 +123,7 @@ export function EventProductDisplay({
         <h3 className="mb-3 text-sm font-semibold text-[#17181a]">Choisir un billet</h3>
         <div className="space-y-2">
           {tickets.map((ticket) => {
-            const price =
-              ticket.prix_promo && ticket.prix_promo > 0
-                ? ticket.prix_promo
-                : ticket.prix;
+            const price = prixEffectif(ticket);
             const selected = selectedTicket?.id === ticket.id;
             const disabled = ticket.stock <= 0;
             return (
@@ -153,7 +148,7 @@ export function EventProductDisplay({
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-semibold text-[#17181a]">{formatPrice(price)}</p>
-                  {ticket.prix_promo && ticket.prix_promo > 0 && (
+                  {prixBarreVariante(ticket) !== null && (
                     <p className="text-xs text-[#8b8f95] line-through">
                       {formatPrice(ticket.prix)}
                     </p>

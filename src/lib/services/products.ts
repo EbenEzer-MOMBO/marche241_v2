@@ -224,7 +224,7 @@ export async function creerProduit(produitData: {
   slug: string;
   description?: string;
   prix: number;
-  prix_promo?: number;
+  prix_promo?: number | null;
   prix_original?: number;
   en_stock: number;
   boutique_id: number;

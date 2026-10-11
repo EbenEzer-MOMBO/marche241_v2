@@ -1,5 +1,6 @@
 import type { ProduitDB } from '@/lib/database-types';
 import { genererSlugProduit } from '@/lib/services/products';
+import { calculerPrixPourApi } from '@/lib/utils/prix-promo';
 
 export interface EventTicketInput {
   id: string;
@@ -26,7 +27,7 @@ export interface EventFormPayload {
 /**
  * Convertit la saisie du formulaire événement en payload API produit :
  * billets dans `variants.variants`, stock = somme des places,
- * prix affiché = billet le moins cher (promo prioritaire).
+ * prix = billet le moins cher en prix effectif (promo comprise), envoyé avec prix_promo (contrat unique : cf. prix-promo.ts).
  */
 export function buildEventProductApiPayload(data: EventFormPayload) {
   const tickets = Array.isArray(data.variants) ? data.variants : [];
@@ -45,17 +46,7 @@ export function buildEventProductApiPayload(data: EventFormPayload) {
 
   const stock = tickets.reduce((sum, t) => sum + (t.stock || 0), 0);
 
-  const prixEffectif = (t: EventTicketInput) => ((t.prix_promo ?? 0) > 0 ? t.prix_promo! : t.prix);
-  const ticketsAvecPrix = tickets.filter((t) => t.prix > 0);
-  let prix = 0;
-  let prixOriginal: number | undefined;
-  if (ticketsAvecPrix.length > 0) {
-    const moinsCher = ticketsAvecPrix.reduce((min, t) => (prixEffectif(t) < prixEffectif(min) ? t : min));
-    prix = prixEffectif(moinsCher);
-    if ((moinsCher.prix_promo ?? 0) > 0) {
-      prixOriginal = moinsCher.prix;
-    }
-  }
+  const { prix, prix_promo } = calculerPrixPourApi({ category: 'evenement', variants: tickets });
 
   const images = data.images || [];
 
@@ -64,7 +55,7 @@ export function buildEventProductApiPayload(data: EventFormPayload) {
     slug: genererSlugProduit(data.nom),
     description: data.description || '',
     prix,
-    prix_original: prixOriginal,
+    prix_promo,
     en_stock: stock,
     categorie_id: data.categorie_id,
     images,
