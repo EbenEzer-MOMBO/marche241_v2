@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { formatPrice } from '@/lib/utils';
 import FloatingAddToCartButton from './FloatingAddToCartButton';
 import { ProduitDetail, ProduitAffichage, Boutique } from '@/lib/database-types';
+import { AvisProduitSection, NoteProduitCompacte, type AvisInitiaux } from '@/components/avis/AvisProduitSection';
 import { formatApiProduitPourDetail, formatVariantsPourInterface, getProduitImageUrl } from '@/lib/services/produits';
 import { useAjoutPanier } from '@/hooks/usePanier';
 import { useToast } from '@/hooks/useToast';
@@ -42,6 +43,8 @@ interface ProductDetailProps {
   productDisplay: ProduitAffichage;
   boutiqueSlug: string;
   boutiqueData: Boutique;
+  /** Première page des avis (chargée côté serveur) : note compacte sous le titre et section « Avis clients ». */
+  avisInitiaux?: AvisInitiaux | null;
 }
 
 export default function ProductDetail({
@@ -49,7 +52,8 @@ export default function ProductDetail({
   productData,
   productDisplay,
   boutiqueSlug,
-  boutiqueData
+  boutiqueData,
+  avisInitiaux = null
 }: ProductDetailProps) {
   const router = useRouter();
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -912,6 +916,7 @@ export default function ProductDetail({
                 <h1 className="text-[21px] font-semibold leading-[1.25] tracking-[-0.01em] text-[#17181a] sm:text-[27px] sm:leading-[1.2]">
                   {product.nom}
                 </h1>
+                {!isEvent && <NoteProduitCompacte resume={avisInitiaux?.resume} />}
 
                 {/* Prix unique + état du stock */}
                 <div className="mt-2.5">
@@ -1261,6 +1266,11 @@ export default function ProductDetail({
             </div>
           </div>
         </div>
+
+        {/* Avis vérifiés par achat (pas d'avis sur les billets d'événement en v1) */}
+        {!isEvent && (
+          <AvisProduitSection produitId={product.id} boutiqueNom={boutiqueData.nom} initial={avisInitiaux} />
+        )}
 
         {/* Sortie de secours : autres articles de la boutique */}
         <RelatedProducts
