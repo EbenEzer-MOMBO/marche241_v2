@@ -9,7 +9,7 @@ import { ToastContainer } from '@/components/ui/Toast';
 import { useToast } from '@/hooks/useToast';
 import { normalizeMsisdnInput, validateMsisdn, msisdnPlaceholder } from '@/lib/utils/mobileMoneyMsisdn';
 import { markPaiementSkipped } from '@/lib/onboarding/storage';
-import { ecrireStockageLocal } from '@/lib/utils/stockage-local';
+import { ecrireStockageLocal, lireJsonStockageLocal } from '@/lib/utils/stockage-local';
 
 export const PaiementStep = () => {
   const router = useRouter();
@@ -39,10 +39,10 @@ export const PaiementStep = () => {
       });
       if (response.success) {
         const nextNumero = response.vendeur?.numero_paiement || numero;
-        const stored = localStorage.getItem('admin_user');
+        // Profil en mémoire en repli (id compris) : useAuth en a besoin pour restaurer la session.
+        const stored = lireJsonStockageLocal<Record<string, unknown>>('admin_user') ?? (user ? { ...user } : null);
         if (stored) {
-          const parsed = JSON.parse(stored);
-          ecrireStockageLocal('admin_user', JSON.stringify({ ...parsed, numero_paiement: nextNumero }));
+          ecrireStockageLocal('admin_user', JSON.stringify({ ...stored, numero_paiement: nextNumero }));
         }
         updateUser({ numero_paiement: nextNumero });
         success('Numéro enregistré', 'Vous pourrez le modifier plus tard dans les paramètres.');

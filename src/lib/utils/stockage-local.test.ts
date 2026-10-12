@@ -1,10 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ecrireStockageLocal } from './stockage-local';
+import { ecrireStockageLocal, lireJsonStockageLocal } from './stockage-local';
 
 const store = new Map<string, string>();
 let plein = false;
-(globalThis as unknown as { localStorage: Pick<Storage, 'setItem' | 'removeItem'> }).localStorage = {
+(globalThis as unknown as { localStorage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> }).localStorage = {
+  getItem(cle: string) {
+    return store.get(cle) ?? null;
+  },
   setItem(cle: string, valeur: string) {
     if (plein) {
       const erreur = new Error('The quota has been exceeded.');
@@ -39,4 +42,18 @@ test('stockage local : échec → ancienne valeur retirée, sauf conserverAncien
   ecrireStockageLocal('brouillon', '{"nom":"Robe 2"}', { conserverAncienne: true });
   assert.equal(store.has('admin_boutique'), false);
   assert.equal(store.get('brouillon'), '{"nom":"Robe"}');
+});
+
+test('lecture JSON : valeur valide, absente ou corrompue', () => {
+  store.set('admin_user', '{"id":1,"nom":"Awa"}');
+  assert.deepEqual(lireJsonStockageLocal('admin_user'), { id: 1, nom: 'Awa' });
+  assert.equal(lireJsonStockageLocal('cle_absente'), null);
+  store.set('admin_user', '{"id":1,');
+  assert.equal(lireJsonStockageLocal('admin_user'), null);
+  assert.equal(store.has('admin_user'), false);
+  for (const nonObjet of ['"abc"', '42', '[1,2]', 'null']) {
+    store.set('admin_user', nonObjet);
+    assert.equal(lireJsonStockageLocal('admin_user'), null, nonObjet);
+    assert.equal(store.has('admin_user'), false);
+  }
 });
