@@ -131,7 +131,10 @@ export function DesinscriptionRelances() {
         <h1 className="mt-4 text-[20px] font-semibold text-[#17181a]">
           {etat.desinscrit ? 'Rappels coupés' : 'Rappels de boosts'}
         </h1>
-        <p className="mx-auto mt-2 max-w-sm text-[14px] leading-[1.6] text-[#5f6369]">
+        <p
+          className="mx-auto mt-2 max-w-sm text-[14px] leading-[1.6] text-[#5f6369]"
+          aria-live="polite"
+        >
           {etat.desinscrit
             ? `Vous ne recevrez plus de rappels WhatsApp ni d’e-mails${boutique} pour les boosts non finalisés.`
             : `Vous recevez encore des rappels WhatsApp et e-mail${boutique} lorsque des boosts restent à finaliser.`}
