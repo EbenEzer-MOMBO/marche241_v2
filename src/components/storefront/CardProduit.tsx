@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import SafeImage from '@/components/SafeImage';
 import { ShopCtaButton } from '@/components/storefront/ShopCtaButton';
+import { Etoiles } from '@/components/avis/Etoiles';
 import { formatPrix, getProduitImageUrl } from '@/lib/services/produits';
 import {
   formatLowStockLabel,
@@ -20,6 +21,10 @@ export interface CardProduitData {
   est_en_promotion?: boolean;
   est_nouveau?: boolean;
   badge?: string | null;
+  /** Note moyenne des avis vérifiés, affichée seulement au-delà du seuil (`afficher_note`). */
+  note_moyenne?: number | null;
+  nombre_avis?: number | null;
+  afficher_note?: boolean;
 }
 
 interface CardProduitProps {
@@ -104,6 +109,16 @@ export const CardProduit = ({
       >
         {produit.nom}
       </Link>
+
+      {produit.afficher_note && produit.note_moyenne ? (
+        <div className="-mt-1.5 flex items-center gap-1 text-[12px] text-[#5f6369]">
+          <Etoiles note={Number(produit.note_moyenne)} taille={12} />
+          <span className="font-medium text-[#17181a]">
+            {Number(produit.note_moyenne).toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+          </span>
+          <span>({produit.nombre_avis})</span>
+        </div>
+      ) : null}
 
       <div className="flex items-baseline gap-2">
         <span className="text-[15px] font-semibold text-[#17181a]">

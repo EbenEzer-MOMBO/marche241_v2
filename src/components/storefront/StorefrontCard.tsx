@@ -60,6 +60,9 @@ export const StorefrontCard = ({
     quantite_stock: produit.quantite_stock ?? produit.stock ?? undefined,
     est_en_promotion: produit.est_en_promotion,
     est_nouveau: produit.est_nouveau,
+    note_moyenne: produit.note_moyenne,
+    nombre_avis: produit.nombre_avis,
+    afficher_note: produit.afficher_note,
   };
 
   return (
