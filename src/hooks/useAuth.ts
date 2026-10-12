@@ -4,6 +4,7 @@ import { demanderCodeVerification, verifierCode, inscrireVendeur, getBoutiquesVe
 import { clearAuthTokenCookie, persistAuthTokenCookie } from '@/lib/auth-cookie';
 import { clearPendingOnboardingEmail, isOnboardingActive, markOnboardingActive } from '@/lib/onboarding/storage';
 import { useToast } from './useToast';
+import { ecrireStockageLocal } from '@/lib/utils/stockage-local';
 
 interface AuthUser {
   id: string;
@@ -107,9 +108,12 @@ export function useAuth(): UseAuthReturn {
       return false;
     }
 
-    localStorage.setItem('admin_token', response.token);
+    // Sans jeton stocké, aucun appel API authentifié ne fonctionnerait : on refuse la connexion.
+    if (!ecrireStockageLocal('admin_token', response.token)) {
+      throw new Error('Le stockage du navigateur est plein ou bloqué. Libérez de l’espace (ou quittez la navigation privée), puis réessayez.');
+    }
     persistAuthTokenCookie(response.token);
-    localStorage.setItem('admin_user', JSON.stringify(response.vendeur));
+    ecrireStockageLocal('admin_user', JSON.stringify(response.vendeur));
 
     setUser({
       id: response.vendeur.id.toString(),
@@ -125,7 +129,7 @@ export function useAuth(): UseAuthReturn {
     clearPendingOnboardingEmail();
 
     if (response.hasBoutique && response.boutique) {
-      localStorage.setItem('admin_boutique', JSON.stringify(response.boutique));
+      ecrireStockageLocal('admin_boutique', JSON.stringify(response.boutique));
       if (isOnboardingActive(vendeurId)) {
         router.push('/admin/onboarding');
       } else {
@@ -253,7 +257,7 @@ export function useAuth(): UseAuthReturn {
         console.log('✅ Boutiques trouvées:', response.boutiques.length);
         console.log('📋 Première boutique:', response.boutiques[0]);
         // Stocker la boutique dans le localStorage
-        localStorage.setItem('admin_boutique', JSON.stringify(response.boutiques[0]));
+        ecrireStockageLocal('admin_boutique', JSON.stringify(response.boutiques[0]));
         // Retourner la première boutique (pour l'instant on assume qu'un vendeur n'a qu'une boutique)
         return response.boutiques[0];
       }

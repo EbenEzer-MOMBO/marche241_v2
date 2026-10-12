@@ -9,20 +9,19 @@
  * jamais casser le formulaire.
  */
 
+import { ecrireStockageLocal } from './stockage-local';
+
 export const MESSAGE_CHARGER_BROUILLON =
   'Un brouillon a été trouvé. Voulez-vous le charger ?\n\n' +
   'Les photos qui n’avaient pas encore été envoyées devront être ajoutées à nouveau.';
 
-const estDataUrl =(valeur: unknown): boolean =>
+const estDataUrl = (valeur: unknown): boolean =>
   typeof valeur === 'string' && valeur.startsWith('data:');
 
 export function sauvegarderBrouillonProduit<T extends { images: string[] }>(cle: string, formData: T): void {
-  try {
-    const brouillon = { ...formData, images: formData.images.filter((img) => !estDataUrl(img)) };
-    // Retire aussi les data URLs imbriquées (ex. image d'une variante).
-    const json = JSON.stringify(brouillon, (_cle, valeur) => (estDataUrl(valeur) ? undefined : valeur));
-    localStorage.setItem(cle, json);
-  } catch {
-    // Stockage plein ou indisponible : on garde le dernier brouillon enregistré.
-  }
+  const brouillon = { ...formData, images: formData.images.filter((img) => !estDataUrl(img)) };
+  // Retire aussi les data URLs imbriquées (ex. image d'une variante).
+  const json = JSON.stringify(brouillon, (_cle, valeur) => (estDataUrl(valeur) ? undefined : valeur));
+  // En cas d'échec (stockage plein ou indisponible), le dernier brouillon enregistré est conservé.
+  ecrireStockageLocal(cle, json);
 }
