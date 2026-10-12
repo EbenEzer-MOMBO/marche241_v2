@@ -4,6 +4,7 @@
  */
 
 import api, { ApiError } from '@/lib/api';
+import config from '@/lib/config';
 import type {
   Boost,
   BoostInsightJour,
@@ -237,6 +238,46 @@ export async function mettreEnPauseBoost(boostId: number): Promise<Boost> {
 export async function reprendreBoost(boostId: number): Promise<Boost> {
   const r = await api.post<Reponse<{ boost: Boost }>>(`/boosts/${boostId}/reprendre`, {});
   return verifier(r, 'Reprise impossible').boost;
+}
+
+async function requetePubliqueRelances<T>(chemin: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${config.apiBaseUrl}${chemin}`, {
+    ...init,
+    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
+  });
+  const data = (await response.json().catch(() => null)) as (T & { success?: boolean; message?: string }) | null;
+  if (!response.ok) {
+    throw new ApiError(data?.message || `Erreur HTTP ${response.status}`, response.status, data);
+  }
+  return data as T;
+}
+
+export async function getDesinscriptionRelances(jeton: string): Promise<{ desinscrit: boolean; boutique?: string }> {
+  const r = await requetePubliqueRelances<Reponse<{ desinscrit: boolean; boutique?: string }>>(
+    `/boosts/relances/desinscription?jeton=${encodeURIComponent(jeton)}`
+  );
+  const ok = verifier(r, 'Lien de désinscription invalide');
+  return { desinscrit: ok.desinscrit, boutique: ok.boutique };
+}
+
+export async function majDesinscriptionRelances(jeton: string, desinscrit: boolean): Promise<boolean> {
+  const r = await requetePubliqueRelances<Reponse<{ desinscrit: boolean }>>('/boosts/relances/desinscription', {
+    method: 'POST',
+    body: JSON.stringify({ jeton, desinscrit }),
+  });
+  return verifier(r, 'Impossible de mettre à jour la désinscription').desinscrit;
+}
+
+export async function getPreferencesRelances(): Promise<boolean> {
+  const r = await api.get<Reponse<{ preferences: { relances_boost: boolean } }>>('/boosts/relances/preferences');
+  return verifier(r, 'Impossible de lire les préférences').preferences.relances_boost;
+}
+
+export async function majPreferencesRelances(relancesBoost: boolean): Promise<boolean> {
+  const r = await api.put<Reponse<{ preferences: { relances_boost: boolean } }>>('/boosts/relances/preferences', {
+    relances_boost: relancesBoost
+  });
+  return verifier(r, 'Impossible d’enregistrer les préférences').preferences.relances_boost;
 }
 
 export function formaterFcfa(montant: number): string {
