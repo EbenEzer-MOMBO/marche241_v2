@@ -808,7 +808,7 @@ export default function EvenementDetailPage() {
                 onSave={handleSave}
                 isSaving={isSaving}
                 categories={categories}
-                boutiqueId={boutique.id}
+                tauxMarge={boutique.taux_marge}
                 boutiqueSlug={boutique.slug}
                 productToEdit={productToEdit}
                 ventesParType={stats.ventes_par_type}

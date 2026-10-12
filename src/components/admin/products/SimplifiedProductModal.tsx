@@ -18,6 +18,8 @@ interface SimplifiedProductModalProps {
   onSave: (productData: any) => void;
   categories?: any[];
   boutiqueId?: number;
+  /** Marge plateforme du vendeur en % (billets d'événement : prix affiché avec frais de service) */
+  tauxMarge?: number;
   boutiqueSlug?: string;
   productToEdit?: any; // Produit à éditer
 }
@@ -30,6 +32,7 @@ export function SimplifiedProductModal({
   onSave,
   categories = [],
   boutiqueId,
+  tauxMarge,
   boutiqueSlug,
   productToEdit
 }: SimplifiedProductModalProps) {
@@ -101,7 +104,7 @@ export function SimplifiedProductModal({
         onBack={onBack}
         onSave={onSave}
         categories={categories}
-        boutiqueId={boutiqueId}
+        tauxMarge={tauxMarge}
         boutiqueSlug={boutiqueSlug}
         productToEdit={productToEdit}
       />

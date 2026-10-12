@@ -11,6 +11,7 @@ import { BoutiqueConfig } from '@/lib/boutiques';
 import { usePanier } from '@/hooks/usePanier';
 import { useToast } from '@/hooks/useToast';
 import { creerCommande, CreerCommandeData } from '@/lib/services/commandes';
+import { getBoutiqueById } from '@/lib/services/boutiques';
 import { getCommunesActives } from '@/lib/services/communes';
 import { formatDureeLivraison } from '@/lib/utils/delai-livraison';
 import { isEvenementProduct, MESSAGE_MIX_PANIER } from '@/lib/utils/product-sales-kind';
@@ -119,8 +120,12 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
   // - les_deux : l'utilisateur peut choisir entre les deux.
   // - acompte_50 : acompte de 50% obligatoire en ligne, solde en espèces à la livraison.
   const paymentRestrictionMode = boutiqueData?.payment_restriction_mode || 'les_deux';
-  // Marge du vendeur (jamais affichée à l'acheteur : seule la mention « Frais de service » l'est)
-  const tauxMarge = normaliserTauxMarge(boutiqueData?.taux_marge);
+  // Marge du vendeur (jamais affichée à l'acheteur : seule la mention « Frais de service » l'est).
+  // En état : relue avant la création de la commande, car l'admin peut la modifier à tout moment.
+  const [tauxMarge, setTauxMarge] = useState(() => normaliserTauxMarge(boutiqueData?.taux_marge));
+  useEffect(() => {
+    setTauxMarge(normaliserTauxMarge(boutiqueData?.taux_marge));
+  }, [boutiqueData?.taux_marge]);
   const boutiqueAcompte50 = paymentRestrictionMode === 'acompte_50';
   const [payOnDelivery, setPayOnDelivery] = useState(() => {
     if (paymentRestrictionMode === 'livraison_uniquement') return true;
@@ -531,23 +536,39 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
 
 
 
+      // Le serveur fige la marge du vendeur sur la commande et vérifie le paiement avec ce taux.
+      // La relire avant de créer la commande évite une commande orpheline si elle a changé
+      // depuis le chargement de la page : le montant affiché est alors mis à jour et l'achat suspendu.
+      // En cas d'échec de la lecture, on poursuit : le contrôle après création reste en place.
+      const boutiqueActuelle = await getBoutiqueById(boutiqueId).catch(() => null);
+      if (boutiqueActuelle) {
+        const tauxActuel = normaliserTauxMarge(boutiqueActuelle.taux_marge);
+        if (tauxActuel !== tauxMarge) {
+          setTauxMarge(tauxActuel);
+          error('Les frais de service ont été mis à jour. Vérifiez le nouveau montant, puis validez de nouveau.');
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       const commande = await creerCommande(commandeData, turnstileToken || undefined);
-      success('Commande créée avec succès !', 'Succès', 3000);
 
       console.log('Données de la commande:', commandeData);
 
       console.log('Réponse complète de la commande:', commande);
 
-      // Le serveur fige la marge du vendeur sur la commande et vérifie le paiement avec ce
-      // taux : s'il a changé depuis le chargement de la page, le montant affiché est faux
+      // Course résiduelle : le taux a changé entre la relecture et la création
       if (
         commande.commande.taux_marge !== undefined &&
         normaliserTauxMarge(commande.commande.taux_marge) !== tauxMarge
       ) {
-        error('Les frais de service ont été mis à jour. Veuillez recharger la page pour voir le nouveau montant.');
+        setTauxMarge(normaliserTauxMarge(commande.commande.taux_marge));
+        error('Les frais de service ont été mis à jour. Vérifiez le nouveau montant, puis validez de nouveau.');
         setIsSubmitting(false);
         return;
       }
+
+      success('Commande créée avec succès !', 'Succès', 3000);
 
       const typePaiementTransaction = isEventOnlyCart
         ? 'paiement_complet'

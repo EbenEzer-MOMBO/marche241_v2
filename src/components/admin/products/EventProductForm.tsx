@@ -4,8 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { X, ArrowLeft, ArrowRight, Check, Upload, Plus, Trash2, Lock, Ticket } from 'lucide-react';
 import Image from 'next/image';
 import { ProductCategory } from '@/lib/constants/product-categories';
-import { prixAvecFraisService } from '@/lib/constants/frais-service';
-import { useTauxMarge } from '@/hooks/useTauxMarge';
+import { normaliserTauxMarge, prixAvecFraisService } from '@/lib/constants/frais-service';
 
 const formatFcfa = (montant: number) =>
   `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(montant)} FCFA`;
@@ -17,7 +16,8 @@ interface EventProductFormProps {
   onBack: () => void;
   onSave: (productData: any) => void;
   categories?: Array<{ id: number; nom: string; slug: string }>;
-  boutiqueId?: number;
+  /** Marge plateforme du vendeur en % (frais de service), telle que renvoyée par l'API dans boutique.taux_marge */
+  tauxMarge?: number;
   boutiqueSlug?: string;
   productToEdit?: any;
   /** 'inline' : formulaire complet sans modale ni étapes (page détail événement). */
@@ -81,7 +81,7 @@ export function EventProductForm({
   onBack,
   onSave,
   categories = [],
-  boutiqueId,
+  tauxMarge: tauxMargeBoutique,
   boutiqueSlug,
   productToEdit,
   variant = 'modal',
@@ -103,7 +103,7 @@ export function EventProductForm({
 
   const vendusDuBillet = (ticket: TicketVariant) =>
     ticket.id in stocksInitiaux ? ventesParType[ticket.nom] || 0 : 0;
-  const tauxMarge = useTauxMarge(boutiqueId);
+  const tauxMarge = normaliserTauxMarge(tauxMargeBoutique);
   const [currentSection, setCurrentSection] = useState(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isUploading, setIsUploading] = useState(false);
