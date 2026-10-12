@@ -34,15 +34,21 @@ export function ecrireStockageLocal(
 }
 
 /**
- * Lecture JSON tolérante depuis localStorage.
+ * Lecture tolérante d'un objet JSON depuis localStorage.
  *
- * @returns la valeur décodée, ou `null` si la clé est absente, illisible ou
- * corrompue (une valeur corrompue est retirée pour ne pas échouer à nouveau).
+ * @returns l'objet décodé, ou `null` si la clé est absente, illisible ou
+ * corrompue (JSON invalide ou qui n'est pas un objet). Une valeur corrompue est
+ * retirée pour ne pas échouer à nouveau.
  */
-export function lireJsonStockageLocal<T>(cle: string): T | null {
+export function lireJsonStockageLocal<T extends object>(cle: string): T | null {
   try {
     const brut = localStorage.getItem(cle);
-    return brut ? (JSON.parse(brut) as T) : null;
+    if (!brut) return null;
+    const valeur: unknown = JSON.parse(brut);
+    if (valeur === null || typeof valeur !== 'object' || Array.isArray(valeur)) {
+      throw new Error('objet JSON attendu');
+    }
+    return valeur as T;
   } catch (erreur) {
     console.warn(`Valeur illisible dans le stockage local pour « ${cle} »`, erreur);
     try {

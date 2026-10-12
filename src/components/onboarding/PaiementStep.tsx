@@ -39,7 +39,8 @@ export const PaiementStep = () => {
       });
       if (response.success) {
         const nextNumero = response.vendeur?.numero_paiement || numero;
-        const stored = lireJsonStockageLocal<Record<string, unknown>>('admin_user');
+        // Profil en mémoire en repli (id compris) : useAuth en a besoin pour restaurer la session.
+        const stored = lireJsonStockageLocal<Record<string, unknown>>('admin_user') ?? (user ? { ...user } : null);
         if (stored) {
           ecrireStockageLocal('admin_user', JSON.stringify({ ...stored, numero_paiement: nextNumero }));
         }

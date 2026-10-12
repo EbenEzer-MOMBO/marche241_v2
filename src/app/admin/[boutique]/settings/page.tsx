@@ -148,7 +148,8 @@ export default function SettingsPage() {
             : numeroPaiement;
 
         // Mettre à jour le localStorage avec les nouvelles données
-        const currentUser = lireJsonStockageLocal<Record<string, unknown>>('admin_user') ?? {};
+        // Profil en mémoire en repli (id compris) : useAuth en a besoin pour restaurer la session.
+        const currentUser = lireJsonStockageLocal<Record<string, unknown>>('admin_user') ?? { ...user };
         const updatedUserData = {
           ...currentUser,
           nom: response.vendeur.nom,

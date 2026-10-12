@@ -51,4 +51,9 @@ test('lecture JSON : valeur valide, absente ou corrompue', () => {
   store.set('admin_user', '{"id":1,');
   assert.equal(lireJsonStockageLocal('admin_user'), null);
   assert.equal(store.has('admin_user'), false);
+  for (const nonObjet of ['"abc"', '42', '[1,2]', 'null']) {
+    store.set('admin_user', nonObjet);
+    assert.equal(lireJsonStockageLocal('admin_user'), null, nonObjet);
+    assert.equal(store.has('admin_user'), false);
+  }
 });
