@@ -23,5 +23,23 @@ export function sauvegarderBrouillonProduit<T extends { images: string[] }>(cle:
   // Retire aussi les data URLs imbriquées (ex. image d'une variante).
   const json = JSON.stringify(brouillon, (_cle, valeur) => (estDataUrl(valeur) ? undefined : valeur));
   // En cas d'échec (stockage plein ou indisponible), le dernier brouillon enregistré est conservé.
-  ecrireStockageLocal(cle, json);
+  ecrireStockageLocal(cle, json, { conserverAncienne: true });
+}
+
+const CLES_BROUILLON_PRODUIT = ['generic_product_draft', 'clothing_product_draft', 'shoes_product_draft'];
+
+/**
+ * Supprime les brouillons enregistrés avant ce correctif, qui contiennent encore
+ * des images base64 (jusqu'à ~5 Mo) et saturent le quota pour les autres clés.
+ */
+export function purgerBrouillonsProduitBase64(): void {
+  try {
+    for (const cle of CLES_BROUILLON_PRODUIT) {
+      if (localStorage.getItem(cle)?.includes('"data:')) {
+        localStorage.removeItem(cle);
+      }
+    }
+  } catch {
+    // Stockage inaccessible : rien à purger.
+  }
 }

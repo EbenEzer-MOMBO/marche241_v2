@@ -5,6 +5,7 @@ import { clearAuthTokenCookie, persistAuthTokenCookie } from '@/lib/auth-cookie'
 import { clearPendingOnboardingEmail, isOnboardingActive, markOnboardingActive } from '@/lib/onboarding/storage';
 import { useToast } from './useToast';
 import { ecrireStockageLocal } from '@/lib/utils/stockage-local';
+import { purgerBrouillonsProduitBase64 } from '@/lib/utils/product-draft';
 
 interface AuthUser {
   id: string;
@@ -40,6 +41,7 @@ export function useAuth(): UseAuthReturn {
 
   // Vérifier si l'utilisateur est connecté au chargement
   useEffect(() => {
+    purgerBrouillonsProduitBase64();
     const token = localStorage.getItem('admin_token');
     const userData = localStorage.getItem('admin_user');
     
@@ -108,12 +110,16 @@ export function useAuth(): UseAuthReturn {
       return false;
     }
 
-    // Sans jeton stocké, aucun appel API authentifié ne fonctionnerait : on refuse la connexion.
-    if (!ecrireStockageLocal('admin_token', response.token)) {
+    // Jeton et profil sont tous deux nécessaires (appels API + restauration de session au
+    // rechargement) : si l'un des deux ne peut pas être stocké, on refuse la connexion.
+    if (
+      !ecrireStockageLocal('admin_token', response.token) ||
+      !ecrireStockageLocal('admin_user', JSON.stringify(response.vendeur))
+    ) {
+      localStorage.removeItem('admin_token');
       throw new Error('Le stockage du navigateur est plein ou bloqué. Libérez de l’espace (ou quittez la navigation privée), puis réessayez.');
     }
     persistAuthTokenCookie(response.token);
-    ecrireStockageLocal('admin_user', JSON.stringify(response.vendeur));
 
     setUser({
       id: response.vendeur.id.toString(),
