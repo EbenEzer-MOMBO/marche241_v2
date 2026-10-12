@@ -54,6 +54,7 @@ interface Commande {
   total: number;
   montant_paye?: number;
   montant_restant?: number;
+  taux_marge?: number; // Marge plateforme figée sur la commande (% entier)
   articles?: any[];
   transactions?: Transaction[];
 }

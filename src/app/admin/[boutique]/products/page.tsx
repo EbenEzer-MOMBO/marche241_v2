@@ -1497,6 +1497,7 @@ export default function ProductsPage() {
                 onSave={handleSaveSimplifiedProduct}
                 categories={categories}
                 boutiqueId={boutique?.id}
+                tauxMarge={boutique?.taux_marge}
                 boutiqueSlug={boutique?.slug}
                 productToEdit={productToEdit}
             />

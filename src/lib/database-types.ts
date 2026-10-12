@@ -71,6 +71,7 @@ export interface Vendeur {
   ville?: string;
   /** Numéro Mobile Money (Airtel / futur Moov) pour les reversements */
   numero_paiement?: string | null;
+  taux_marge?: number; // Marge plateforme en % entier (10 à 50, 10 par défaut) — modifiable par l'admin uniquement
   verification_telephone: boolean;
   verification_email: boolean;
   derniere_connexion?: Date;
@@ -110,6 +111,7 @@ export interface Boutique {
   note_moyenne: number;
   nombre_avis: number;
   est_verifiee: boolean; // Badge de vérification (attribution manuelle par un admin)
+  taux_marge?: number; // Lecture seule : marge du vendeur (jointure vendeurs.taux_marge), renvoyée par GET /boutiques/:id|:slug
 
   // Relations
   vendeur?: Vendeur;
@@ -195,6 +197,7 @@ export interface Commande {
   taxes: number;
   remise: number;
   total: number;
+  taux_marge?: number; // Marge plateforme figée à la création (% entier, copie de vendeurs.taux_marge)
   
   // Statuts et paiement
   statut: StatutCommande;

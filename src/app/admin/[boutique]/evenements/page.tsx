@@ -298,7 +298,7 @@ function EvenementsContent() {
         category="evenement"
         onSave={handleCreate}
         categories={categories}
-        boutiqueId={boutique.id}
+        tauxMarge={boutique.taux_marge}
         boutiqueSlug={boutique.slug}
       />
     </div>
