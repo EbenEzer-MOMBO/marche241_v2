@@ -18,7 +18,7 @@ import { NotificationPreferencesSection } from '@/components/admin/settings/Noti
 import { User, Store, Bell, Menu, Save, Shield } from 'lucide-react';
 import { BOUTIQUE_DESCRIPTION_MAX_LENGTH } from '@/lib/constants/boutique';
 import { normalizeMsisdnInput, validateMsisdn } from '@/lib/utils/mobileMoneyMsisdn';
-import { ecrireStockageLocal } from '@/lib/utils/stockage-local';
+import { ecrireStockageLocal, lireJsonStockageLocal } from '@/lib/utils/stockage-local';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -148,7 +148,7 @@ export default function SettingsPage() {
             : numeroPaiement;
 
         // Mettre à jour le localStorage avec les nouvelles données
-        const currentUser = JSON.parse(localStorage.getItem('admin_user') || '{}');
+        const currentUser = lireJsonStockageLocal<Record<string, unknown>>('admin_user') ?? {};
         const updatedUserData = {
           ...currentUser,
           nom: response.vendeur.nom,
