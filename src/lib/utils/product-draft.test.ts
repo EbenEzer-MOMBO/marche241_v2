@@ -33,8 +33,8 @@ test('brouillon : les images base64 ne sont pas stockées, les URLs hébergées 
   });
 });
 
-test('brouillon : quota dépassé → pas d’exception, ancien brouillon retiré', () => {
-  store.set('brouillon', '{}');
+test('brouillon : quota dépassé → pas d’exception, dernier brouillon conservé', () => {
+  store.set('brouillon', '{"nom":"Robe"}');
   assert.doesNotThrow(() => sauvegarderBrouillonProduit('brouillon', { nom: 'x'.repeat(QUOTA), images: [] }));
-  assert.equal(store.has('brouillon'), false);
+  assert.equal(store.get('brouillon'), '{"nom":"Robe"}');
 });
