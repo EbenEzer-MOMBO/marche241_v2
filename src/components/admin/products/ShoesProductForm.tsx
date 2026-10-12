@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { X, ArrowLeft, ArrowRight, Check, Upload, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
 import Image from 'next/image';
 import { ProductCategory } from '@/lib/constants/product-categories';
+import { sauvegarderBrouillonProduit } from '@/lib/utils/product-draft';
 
 interface ShoesProductFormProps {
   isOpen: boolean;
@@ -113,7 +114,7 @@ export function ShoesProductForm({
 
   useEffect(() => {
     if (isOpen && isDirty && isFormFilled() && !productToEdit) {
-      localStorage.setItem('shoes_product_draft', JSON.stringify(formData));
+      sauvegarderBrouillonProduit('shoes_product_draft', formData);
     }
   }, [formData, isOpen, isDirty, productToEdit]);
 

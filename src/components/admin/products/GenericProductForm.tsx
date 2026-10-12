@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { X, ArrowLeft, ArrowRight, Check, Upload, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
 import Image from 'next/image';
 import { ProductCategory, getCategoryInfo } from '@/lib/constants/product-categories';
+import { sauvegarderBrouillonProduit } from '@/lib/utils/product-draft';
 
 interface GenericProductFormProps {
   isOpen: boolean;
@@ -443,7 +444,7 @@ export function GenericProductForm({
 
   useEffect(() => {
     if (isOpen && isDirty && isFormFilled() && !productToEdit) {
-      localStorage.setItem('generic_product_draft', JSON.stringify(formData));
+      sauvegarderBrouillonProduit('generic_product_draft', formData);
     }
   }, [formData, isOpen, isDirty, productToEdit]);
 
