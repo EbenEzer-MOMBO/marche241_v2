@@ -12,6 +12,9 @@ import type {
  * avis publiés sur la fiche produit, et gestion côté vendeur (réponse, signalement).
  */
 
+/** Nombre d'avis par page sur la fiche produit (partagé par le rendu serveur et la section client). */
+export const AVIS_PAR_PAGE = 5;
+
 export interface Pagination {
   page: number;
   limite: number;

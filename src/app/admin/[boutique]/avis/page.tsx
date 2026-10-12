@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import Image from 'next/image';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import SafeImage from '@/components/SafeImage';
 import { useParams, useRouter } from 'next/navigation';
 import { Flag, Info, Menu, MessageSquareReply, MessageSquareText, Star } from 'lucide-react';
 import Sidebar from '@/components/admin/Sidebar';
@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import { BoutiqueData } from '@/lib/services/auth';
 import { Etoiles } from '@/components/avis/Etoiles';
+import { getProduitImageUrl } from '@/lib/services/produits';
 import { AvisErreur, getAvisVendeur, repondreAvis, signalerAvis, type FiltresAvisVendeur, type Pagination } from '@/lib/services/avis';
 import type { AvisDetaille, StatutAvis } from '@/lib/database-types';
 
@@ -83,7 +84,7 @@ function CarteAvis({
       <div className="flex items-start gap-3">
         <div className="h-11 w-11 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">
           {avis.produit_image ? (
-            <Image src={avis.produit_image} alt="" width={44} height={44} className="h-full w-full object-cover" />
+            <SafeImage src={getProduitImageUrl(avis.produit_image)} alt="" width={44} height={44} className="h-full w-full object-cover" />
           ) : null}
         </div>
         <div className="min-w-0 flex-1">
@@ -209,6 +210,8 @@ export default function AvisVendeurPage() {
   const [sansReponse, setSansReponse] = useState(0);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState(false);
+  // Numéro de la dernière requête : une réponse plus ancienne (changement d'onglet rapide) est ignorée
+  const requeteRef = useRef(0);
 
   useEffect(() => {
     const timer = setTimeout(async () => {
@@ -239,18 +242,21 @@ export default function AvisVendeurPage() {
   const charger = useCallback(
     async (page = 1) => {
       if (!boutique) return;
+      const numero = ++requeteRef.current;
       setChargement(true);
       setErreur(false);
+      if (page === 1) setAvis([]);
       try {
         const filtres = ONGLETS.find((o) => o.code === onglet)!.filtres;
         const r = await getAvisVendeur({ ...filtres, boutique_id: boutique.id, page });
+        if (numero !== requeteRef.current) return;
         setAvis((prev) => (page === 1 ? r.avis : [...prev, ...r.avis]));
         setPagination(r.pagination);
         setSansReponse(r.sansReponse);
       } catch {
-        setErreur(true);
+        if (numero === requeteRef.current) setErreur(true);
       } finally {
-        setChargement(false);
+        if (numero === requeteRef.current) setChargement(false);
       }
     },
     [boutique, onglet]

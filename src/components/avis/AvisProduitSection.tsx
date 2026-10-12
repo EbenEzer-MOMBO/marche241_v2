@@ -3,10 +3,15 @@
 import { useEffect, useState } from 'react';
 import { BadgeCheck, MessageSquareText } from 'lucide-react';
 import { Etoiles } from './Etoiles';
-import { getAvisProduit, type Pagination } from '@/lib/services/avis';
+import { AVIS_PAR_PAGE, getAvisProduit, type Pagination } from '@/lib/services/avis';
 import type { AvisPublic, ResumeAvisProduit } from '@/lib/database-types';
 
-const PAR_PAGE = 5;
+/** Première page des avis chargée côté serveur (évite une seconde requête dans le navigateur). */
+export interface AvisInitiaux {
+  avis: AvisPublic[];
+  resume: ResumeAvisProduit;
+  pagination: Pagination;
+}
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -16,26 +21,28 @@ const formatNote = (n: number) => n.toLocaleString('fr-FR', { minimumFractionDig
 interface AvisProduitSectionProps {
   produitId: number;
   boutiqueNom: string;
-  resumeInitial?: ResumeAvisProduit | null;
+  initial?: AvisInitiaux | null;
 }
 
 /**
  * Section « Avis clients » de la fiche produit : avis vérifiés par achat et approuvés par l'équipe.
  * La moyenne n'est affichée qu'à partir du seuil fixé par l'équipe (3 avis par défaut).
  */
-export function AvisProduitSection({ produitId, boutiqueNom, resumeInitial = null }: AvisProduitSectionProps) {
-  const [avis, setAvis] = useState<AvisPublic[]>([]);
-  const [resume, setResume] = useState<ResumeAvisProduit | null>(resumeInitial);
-  const [pagination, setPagination] = useState<Pagination | null>(null);
-  const [chargement, setChargement] = useState(true);
+export function AvisProduitSection({ produitId, boutiqueNom, initial = null }: AvisProduitSectionProps) {
+  const [avis, setAvis] = useState<AvisPublic[]>(initial?.avis ?? []);
+  const [resume, setResume] = useState<ResumeAvisProduit | null>(initial?.resume ?? null);
+  const [pagination, setPagination] = useState<Pagination | null>(initial?.pagination ?? null);
+  const [chargement, setChargement] = useState(!initial);
   const [chargementSuite, setChargementSuite] = useState(false);
   const [erreur, setErreur] = useState(false);
+  const [erreurSuite, setErreurSuite] = useState(false);
 
   useEffect(() => {
+    if (initial) return;
     let annule = false;
     setChargement(true);
     setErreur(false);
-    getAvisProduit(produitId, 1, PAR_PAGE)
+    getAvisProduit(produitId, 1, AVIS_PAR_PAGE)
       .then((r) => {
         if (annule) return;
         setAvis(r.avis);
@@ -51,17 +58,18 @@ export function AvisProduitSection({ produitId, boutiqueNom, resumeInitial = nul
     return () => {
       annule = true;
     };
-  }, [produitId]);
+  }, [produitId, initial]);
 
   const voirPlus = async () => {
     if (!pagination) return;
     setChargementSuite(true);
+    setErreurSuite(false);
     try {
-      const r = await getAvisProduit(produitId, pagination.page + 1, PAR_PAGE);
+      const r = await getAvisProduit(produitId, pagination.page + 1, AVIS_PAR_PAGE);
       setAvis((prev) => [...prev, ...r.avis]);
       setPagination(r.pagination);
     } catch {
-      /* le bouton reste disponible pour réessayer */
+      setErreurSuite(true);
     } finally {
       setChargementSuite(false);
     }
@@ -175,6 +183,11 @@ export function AvisProduitSection({ produitId, boutiqueNom, resumeInitial = nul
               >
                 {chargementSuite ? 'Chargement…' : `Voir plus d'avis (${pagination.total - avis.length})`}
               </button>
+            )}
+            {erreurSuite && (
+              <p role="alert" className="mt-2 text-center text-[13px] text-[#b3261e]">
+                Les avis suivants n&apos;ont pas pu être chargés. Réessayez.
+              </p>
             )}
           </>
         )}

@@ -7,8 +7,9 @@ import { getBoutiqueBySlug } from '@/lib/services/boutiques';
 import { getProduitById, formatApiProduitPourDetail, formatProduitPourAffichage } from '@/lib/services/produits';
 import type { ProduitDetail, ProduitAffichage } from '@/lib/database-types';
 import { absoluteUrl, buildProductJsonLd, OG_LOCALE } from '@/lib/seo';
-import { getAvisProduit } from '@/lib/services/avis';
-import type { ResumeAvisProduit } from '@/lib/database-types';
+import { AVIS_PAR_PAGE, getAvisProduit } from '@/lib/services/avis';
+import type { AvisInitiaux } from '@/components/avis/AvisProduitSection';
+import { getProductSalesKind } from '@/lib/utils/product-sales-kind';
 
 interface ProductPageProps {
   params: Promise<{
@@ -77,13 +78,17 @@ export default async function ProductPage({ params }: ProductPageProps) {
     notFound();
   }
 
-  // Résumé des avis vérifiés (non bloquant : la fiche s'affiche même si l'API avis échoue)
-  let resumeAvis: ResumeAvisProduit | null = null;
-  try {
-    resumeAvis = (await getAvisProduit(Number(id), 1, 1)).resume;
-  } catch {
-    resumeAvis = null;
+  // Première page des avis vérifiés (non bloquant : la fiche s'affiche même si l'API avis échoue).
+  // Pas d'avis sur les billets d'événement.
+  let avisInitiaux: AvisInitiaux | null = null;
+  if (getProductSalesKind(productData) !== 'evenement') {
+    try {
+      avisInitiaux = await getAvisProduit(Number(id), 1, AVIS_PAR_PAGE);
+    } catch {
+      avisInitiaux = null;
+    }
   }
+  const resumeAvis = avisInitiaux?.resume ?? null;
 
   const productJsonLd: Record<string, unknown> = buildProductJsonLd(
     productData,
@@ -121,7 +126,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         productDisplay={productDisplay}
         boutiqueSlug={boutique}
         boutiqueData={boutiqueData}
-        resumeAvis={resumeAvis}
+        avisInitiaux={avisInitiaux}
       />
     </div>
   );

@@ -135,7 +135,7 @@ export default function Sidebar({ boutique, isMobileMenuOpen = false, onToggleMo
       name: 'Avis clients',
       href: `/admin/${boutique.slug}/avis`,
       icon: Star,
-      current: pathname.includes('/avis')
+      current: pathname.startsWith(`/admin/${boutique.slug}/avis`)
     },
     {
       name: 'Paiements',

@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Script from 'next/script';
-import Image from 'next/image';
+import SafeImage from '@/components/SafeImage';
 import Link from 'next/link';
-import { BadgeCheck, CheckCircle2, Clock3, LinkIcon, ShieldCheck, WifiOff } from 'lucide-react';
+import { BadgeCheck, CheckCircle2, Clock3, Hourglass, LinkIcon, ShieldCheck, WifiOff } from 'lucide-react';
 import { SelecteurEtoiles } from './Etoiles';
 import { AvisErreur, getInvitationAvis, soumettreAvis, type ResultatSoumissionAvis } from '@/lib/services/avis';
+import { getProduitImageUrl } from '@/lib/services/produits';
 import type { InvitationAvisPublique } from '@/lib/database-types';
 
 type Etat =
@@ -14,6 +15,7 @@ type Etat =
   | { type: 'invalide' }
   | { type: 'desactive' }
   | { type: 'erreur_reseau' }
+  | { type: 'trop_de_tentatives' }
   | { type: 'formulaire'; invitation: InvitationAvisPublique; longueurMax: number }
   | { type: 'merci'; invitation: InvitationAvisPublique; resultat: ResultatSoumissionAvis };
 
@@ -23,6 +25,8 @@ interface Saisie {
 }
 
 const VERT = '#508e27';
+/** Au-delà, on prévient le client que la vérification de sécurité ne s'est pas chargée. */
+const DELAI_ALERTE_TURNSTILE_MS = 12_000;
 
 function Coquille({ children }: { children: React.ReactNode }) {
   return (
@@ -67,6 +71,7 @@ export function AvisInvitationClient({ jeton }: { jeton: string }) {
   const [envoi, setEnvoi] = useState(false);
   const [erreurEnvoi, setErreurEnvoi] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileEnEchec, setTurnstileEnEchec] = useState(false);
   const debutRef = useRef<number>(Date.now());
   const turnstileRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
@@ -81,6 +86,7 @@ export function AvisInvitationClient({ jeton }: { jeton: string }) {
       })
       .catch((err: unknown) => {
         if (err instanceof AvisErreur && err.code === 'AVIS_DESACTIVES') setEtat({ type: 'desactive' });
+        else if (err instanceof AvisErreur && err.status === 429) setEtat({ type: 'trop_de_tentatives' });
         else if (err instanceof AvisErreur && (err.status === 404 || err.status === 400)) setEtat({ type: 'invalide' });
         else setEtat({ type: 'erreur_reseau' });
       });
@@ -99,17 +105,26 @@ export function AvisInvitationClient({ jeton }: { jeton: string }) {
         try {
           widgetIdRef.current = ts.render(turnstileRef.current, {
             sitekey: siteKey,
-            callback: (t: string) => setTurnstileToken(t),
+            callback: (t: string) => {
+              setTurnstileToken(t);
+              setTurnstileEnEchec(false);
+            },
             'expired-callback': () => setTurnstileToken(null),
-            'error-callback': () => setTurnstileToken(null),
+            'error-callback': () => {
+              setTurnstileToken(null);
+              setTurnstileEnEchec(true);
+            },
           });
         } catch {
           /* le bouton reste désactivé sans jeton */
         }
       }
     }, 400);
+    // Script bloqué ou réseau trop lent : le bouton resterait désactivé sans explication
+    const alerte = setTimeout(() => setTurnstileEnEchec((deja) => deja || !widgetIdRef.current), DELAI_ALERTE_TURNSTILE_MS);
     return () => {
       clearInterval(intervalle);
+      clearTimeout(alerte);
       const ts = (window as unknown as { turnstile?: { remove: (id: string) => void } }).turnstile;
       if (widgetIdRef.current && ts) {
         try {
@@ -208,6 +223,21 @@ export function AvisInvitationClient({ jeton }: { jeton: string }) {
     );
   }
 
+  if (etat.type === 'trop_de_tentatives') {
+    return (
+      <Message
+        icone={<Hourglass className="h-6 w-6 text-[#8b8f95]" aria-hidden="true" />}
+        titre="Trop de tentatives"
+        texte="Beaucoup de demandes viennent de cette connexion. Patientez quelques minutes avant de réessayer : votre lien reste valable."
+        action={
+          <button type="button" onClick={charger} className="inline-flex h-11 items-center rounded-xl px-5 text-[14px] font-semibold text-white" style={{ background: VERT }}>
+            Réessayer
+          </button>
+        }
+      />
+    );
+  }
+
   if (etat.type === 'erreur_reseau') {
     return (
       <Message
@@ -265,8 +295,8 @@ export function AvisInvitationClient({ jeton }: { jeton: string }) {
 
       <div className="mt-3 flex items-center gap-3">
         {invitation.boutique.logo ? (
-          <Image
-            src={invitation.boutique.logo}
+          <SafeImage
+            src={getProduitImageUrl(invitation.boutique.logo)}
             alt=""
             width={44}
             height={44}
@@ -293,7 +323,7 @@ export function AvisInvitationClient({ jeton }: { jeton: string }) {
               <div className="flex items-center gap-3">
                 <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-[#f3f2ef]">
                   {p.image ? (
-                    <Image src={p.image} alt="" width={56} height={56} className="h-full w-full object-cover" />
+                    <SafeImage src={getProduitImageUrl(p.image)} alt="" width={56} height={56} className="h-full w-full object-cover" />
                   ) : null}
                 </div>
                 <p className="line-clamp-2 text-[15px] font-medium leading-snug text-[#17181a]">{p.nom_produit}</p>
@@ -339,6 +369,12 @@ export function AvisInvitationClient({ jeton }: { jeton: string }) {
         </div>
 
         {siteKey && <div ref={turnstileRef} className="flex justify-center" />}
+        {siteKey && turnstileEnEchec && !turnstileToken && (
+          <p role="status" className="rounded-xl bg-[#fff7e6] px-4 py-3 text-[13px] leading-[1.5] text-[#8a5a00]">
+            La vérification de sécurité ne s&apos;est pas chargée. Vérifiez votre connexion, désactivez un éventuel
+            bloqueur de contenu, puis rechargez la page.
+          </p>
+        )}
 
         {erreurEnvoi && (
           <p role="alert" className="rounded-xl bg-[#fdecea] px-4 py-3 text-[13.5px] text-[#b3261e]">
