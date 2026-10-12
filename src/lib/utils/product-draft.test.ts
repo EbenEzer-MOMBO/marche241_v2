@@ -1,10 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sauvegarderBrouillonProduit } from './product-draft';
+import { purgerBrouillonsProduitBase64, sauvegarderBrouillonProduit } from './product-draft';
 
 const store = new Map<string, string>();
 const QUOTA = 1000;
-(globalThis as unknown as { localStorage: Pick<Storage, 'setItem' | 'removeItem'> }).localStorage = {
+(globalThis as unknown as { localStorage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> }).localStorage = {
+  getItem(cle: string) {
+    return store.get(cle) ?? null;
+  },
   setItem(cle: string, valeur: string) {
     if (valeur.length > QUOTA) {
       const erreur = new Error('The quota has been exceeded.');
@@ -37,4 +40,12 @@ test('brouillon : quota dépassé → pas d’exception, dernier brouillon conse
   store.set('brouillon', '{"nom":"Robe"}');
   assert.doesNotThrow(() => sauvegarderBrouillonProduit('brouillon', { nom: 'x'.repeat(QUOTA), images: [] }));
   assert.equal(store.get('brouillon'), '{"nom":"Robe"}');
+});
+
+test('purge : seuls les brouillons contenant des images base64 sont supprimés', () => {
+  store.set('generic_product_draft', JSON.stringify({ nom: 'A', images: [base64.slice(0, 50)] }));
+  store.set('shoes_product_draft', JSON.stringify({ nom: 'B', images: ['https://cdn.exemple/b.jpg'] }));
+  purgerBrouillonsProduitBase64();
+  assert.equal(store.has('generic_product_draft'), false);
+  assert.equal(store.has('shoes_product_draft'), true);
 });

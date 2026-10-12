@@ -11,6 +11,7 @@ import PhoneNumberInput from '@/components/ui/PhoneNumberInput';
 import { BOUTIQUE_DESCRIPTION_MAX_LENGTH } from '@/lib/constants/boutique';
 import { markOnboardingActive } from '@/lib/onboarding/storage';
 import { estVilleListe, normaliserVille, VILLES_BOUTIQUE } from '@/lib/villes-gabon';
+import { ecrireStockageLocal } from '@/lib/utils/stockage-local';
 
 export const BoutiqueStep = () => {
   const router = useRouter();
@@ -93,7 +94,7 @@ export const BoutiqueStep = () => {
 
       const response = await creerBoutique(boutiqueData);
       if (response.success && response.boutique) {
-        localStorage.setItem('admin_boutique', JSON.stringify(response.boutique));
+        ecrireStockageLocal('admin_boutique', JSON.stringify(response.boutique));
         success('Boutique créée', 'Passez à la configuration du paiement.');
         router.push('/admin/onboarding/paiement');
       } else {

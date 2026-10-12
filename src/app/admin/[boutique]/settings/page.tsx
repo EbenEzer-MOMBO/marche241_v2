@@ -18,6 +18,7 @@ import { NotificationPreferencesSection } from '@/components/admin/settings/Noti
 import { User, Store, Bell, Menu, Save, Shield } from 'lucide-react';
 import { BOUTIQUE_DESCRIPTION_MAX_LENGTH } from '@/lib/constants/boutique';
 import { normalizeMsisdnInput, validateMsisdn } from '@/lib/utils/mobileMoneyMsisdn';
+import { ecrireStockageLocal } from '@/lib/utils/stockage-local';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -156,7 +157,7 @@ export default function SettingsPage() {
           ville: response.vendeur.ville,
           numero_paiement: numeroFromApi
         };
-        localStorage.setItem('admin_user', JSON.stringify(updatedUserData));
+        ecrireStockageLocal('admin_user', JSON.stringify(updatedUserData));
         
         // Mettre à jour l'état global de l'utilisateur
         updateUser({
