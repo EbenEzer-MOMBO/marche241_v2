@@ -405,7 +405,8 @@ export default function BoostWizard({
       }
       const minimum = minimumJour;
       if (devis && devis.budget_jour_fcfa < minimum) {
-        e.duree_jours = plancherWhatsapp
+        // Plancher WhatsApp : c'est le montant qu'il faut augmenter (même champ que l'API)
+        e[plancherWhatsapp ? 'total_fcfa' : 'duree_jours'] = plancherWhatsapp
           ? `Pour recevoir des messages WhatsApp, Meta demande au moins ${formaterFcfa(minimum)} de publicité par jour${devis.total_minimum_fcfa ? ` : il faut au moins ${formaterFcfa(devis.total_minimum_fcfa)} pour ${form.duree_jours} jours` : ''}. Augmentez le montant, réduisez la durée ou choisissez l’objectif « Visites »`
           : `Budget publicitaire trop faible pour ${form.duree_jours} jours (${formaterFcfa(devis.budget_jour_fcfa)} par jour, minimum ${formaterFcfa(minimum)}) : augmentez le montant ou réduisez la durée`;
       }

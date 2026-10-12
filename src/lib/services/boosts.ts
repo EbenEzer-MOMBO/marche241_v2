@@ -31,7 +31,7 @@ export interface ParametresBoost {
   /** Frais d'encaissement non remboursables (250 = 2,5 % du total payé). */
   frais_encaissement_bps: number;
   budget_jour_min_fcfa: number;
-  /** Plancher par jour de l'objectif WhatsApp (absent si l'API est plus ancienne). */
+  /** Plancher par jour de l'objectif WhatsApp, converti en FCFA par l'API (absent si l'API est plus ancienne). */
   budget_jour_min_whatsapp_fcfa?: number;
   packs: PackBoost[];
   kill_switch: boolean;
