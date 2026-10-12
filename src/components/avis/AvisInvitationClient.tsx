@@ -86,7 +86,7 @@ export function AvisInvitationClient({ jeton }: { jeton: string }) {
       });
   };
 
-  useEffect(charger, [jeton]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(charger, [jeton]);
 
   // Widget Turnstile (même intégration que le checkout)
   const formulaireVisible = etat.type === 'formulaire';
