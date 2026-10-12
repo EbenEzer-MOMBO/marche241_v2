@@ -31,6 +31,8 @@ export interface ParametresBoost {
   /** Frais d'encaissement non remboursables (250 = 2,5 % du total payé). */
   frais_encaissement_bps: number;
   budget_jour_min_fcfa: number;
+  /** Plancher par jour de l'objectif WhatsApp (absent si l'API est plus ancienne). */
+  budget_jour_min_whatsapp_fcfa?: number;
   packs: PackBoost[];
   kill_switch: boolean;
   /** Types de publicité disponibles : la mise en avant plateforme n'est pas encore ouverte. */
@@ -57,6 +59,9 @@ export interface DevisBoost {
   budget_jour_fcfa: number;
   /** Part du total retenue en cas de remboursement (frais eBilling). */
   frais_encaissement_fcfa: number;
+  /** Plancher par jour de l'objectif demandé et total minimum pour la durée (API récente). */
+  budget_jour_min_fcfa?: number;
+  total_minimum_fcfa?: number;
 }
 
 export interface DonneesBrouillonBoost {
@@ -149,8 +154,8 @@ export async function getPrefillBoost(boutiqueId: number, produitId?: number | n
   return verifier(r, 'Pré-remplissage indisponible').prefill;
 }
 
-export async function getDevisBoost(totalFcfa: number, dureeJours: number): Promise<DevisBoost> {
-  const r = await api.post<Reponse<{ devis: DevisBoost }>>('/boosts/devis', { total_fcfa: totalFcfa, duree_jours: dureeJours });
+export async function getDevisBoost(totalFcfa: number, dureeJours: number, objectif?: ObjectifBoost): Promise<DevisBoost> {
+  const r = await api.post<Reponse<{ devis: DevisBoost }>>('/boosts/devis', { total_fcfa: totalFcfa, duree_jours: dureeJours, ...(objectif ? { objectif } : {}) });
   return verifier(r, 'Devis indisponible').devis;
 }
 
@@ -278,6 +283,20 @@ export async function majPreferencesRelances(relancesBoost: boolean): Promise<bo
     relances_boost: relancesBoost
   });
   return verifier(r, 'Impossible d’enregistrer les préférences').preferences.relances_boost;
+}
+
+/** Plancher de budget média par jour selon l'objectif (miroir de budgetJourMinimum côté API). */
+export function budgetJourMinimum(objectif: ObjectifBoost, parametres: ParametresBoost): number {
+  return objectif === 'whatsapp'
+    ? Math.max(parametres.budget_jour_min_fcfa, parametres.budget_jour_min_whatsapp_fcfa ?? 0)
+    : parametres.budget_jour_min_fcfa;
+}
+
+/** Budget média d'un total payé (miroir de devisDepuisTotal côté API, pour signaler les packs insuffisants). */
+export function budgetMediaDepuisTotal(totalFcfa: number, parametres: ParametresBoost): number {
+  const baseHt = Math.round((totalFcfa * 10_000) / (10_000 + parametres.tva_bps));
+  const commission = Math.max(parametres.commission_min_fcfa, Math.round((baseHt * parametres.commission_bps) / (10_000 + parametres.commission_bps)));
+  return Math.max(0, baseHt - commission);
 }
 
 export function formaterFcfa(montant: number): string {
