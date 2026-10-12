@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { X, ArrowLeft, ArrowRight, Check, Upload, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
 import Image from 'next/image';
 import { ProductCategory } from '@/lib/constants/product-categories';
+import { MESSAGE_CHARGER_BROUILLON, sauvegarderBrouillonProduit } from '@/lib/utils/product-draft';
 
 interface ClothingProductFormProps {
   isOpen: boolean;
@@ -154,7 +155,7 @@ export function ClothingProductForm({
   // Sauvegarder automatiquement dans localStorage (seulement en mode création)
   useEffect(() => {
     if (isOpen && isDirty && isFormFilled() && !productToEdit) {
-      localStorage.setItem('clothing_product_draft', JSON.stringify(formData));
+      sauvegarderBrouillonProduit('clothing_product_draft', formData);
     }
   }, [formData, isOpen, isDirty, productToEdit]);
 
@@ -163,7 +164,7 @@ export function ClothingProductForm({
     if (isOpen && !productToEdit) {
       const draft = localStorage.getItem('clothing_product_draft');
       if (draft && !isDirty) {
-        const shouldLoad = confirm('Un brouillon a été trouvé. Voulez-vous le charger ?');
+        const shouldLoad = confirm(MESSAGE_CHARGER_BROUILLON);
         if (shouldLoad) {
           try {
             const draftData = JSON.parse(draft);
