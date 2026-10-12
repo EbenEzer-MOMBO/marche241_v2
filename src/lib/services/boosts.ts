@@ -239,6 +239,31 @@ export async function reprendreBoost(boostId: number): Promise<Boost> {
   return verifier(r, 'Reprise impossible').boost;
 }
 
+export async function getDesinscriptionRelances(jeton: string): Promise<{ desinscrit: boolean; boutique?: string }> {
+  const r = await api.get<Reponse<{ desinscrit: boolean; boutique?: string }>>(
+    `/boosts/relances/desinscription?jeton=${encodeURIComponent(jeton)}`
+  );
+  const ok = verifier(r, 'Lien de désinscription invalide');
+  return { desinscrit: ok.desinscrit, boutique: ok.boutique };
+}
+
+export async function majDesinscriptionRelances(jeton: string, desinscrit: boolean): Promise<boolean> {
+  const r = await api.post<Reponse<{ desinscrit: boolean }>>('/boosts/relances/desinscription', { jeton, desinscrit });
+  return verifier(r, 'Impossible de mettre à jour la désinscription').desinscrit;
+}
+
+export async function getPreferencesRelances(): Promise<boolean> {
+  const r = await api.get<Reponse<{ preferences: { relances_boost: boolean } }>>('/boosts/relances/preferences');
+  return verifier(r, 'Impossible de lire les préférences').preferences.relances_boost;
+}
+
+export async function majPreferencesRelances(relancesBoost: boolean): Promise<boolean> {
+  const r = await api.put<Reponse<{ preferences: { relances_boost: boolean } }>>('/boosts/relances/preferences', {
+    relances_boost: relancesBoost
+  });
+  return verifier(r, 'Impossible d’enregistrer les préférences').preferences.relances_boost;
+}
+
 export function formaterFcfa(montant: number): string {
   return `${new Intl.NumberFormat('fr-FR').format(Math.round(montant))} FCFA`;
 }

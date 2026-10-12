@@ -1,7 +1,9 @@
 'use client';
 
-import { Bell, BellOff, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Bell, BellOff, Loader2, Megaphone } from 'lucide-react';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { getPreferencesRelances, majPreferencesRelances } from '@/lib/services/boosts';
 
 interface NotificationPreferencesSectionProps {
   onSuccess: (message: string, title?: string) => void;
@@ -13,6 +15,44 @@ export const NotificationPreferencesSection: React.FC<NotificationPreferencesSec
   onError
 }) => {
   const { supportStatus, permission, isSubscribed, isLoading, enable, disable } = usePushNotifications();
+  const [relancesActives, setRelancesActives] = useState<boolean | null>(null);
+  const [relancesChargees, setRelancesChargees] = useState(false);
+  const [relancesEnCours, setRelancesEnCours] = useState(false);
+
+  useEffect(() => {
+    let ignore = false;
+    getPreferencesRelances()
+      .then((actif) => {
+        if (!ignore) setRelancesActives(actif);
+      })
+      .catch(() => {
+        if (!ignore) setRelancesActives(null);
+      })
+      .finally(() => {
+        if (!ignore) setRelancesChargees(true);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  const handleRelances = async () => {
+    if (relancesActives === null) return;
+    setRelancesEnCours(true);
+    try {
+      const suivant = await majPreferencesRelances(!relancesActives);
+      setRelancesActives(suivant);
+      onSuccess(
+        suivant
+          ? 'Vous recevrez à nouveau les rappels pour vos boosts non finalisés'
+          : 'Vous ne recevrez plus de rappels pour vos boosts non finalisés'
+      );
+    } catch {
+      onError('Impossible de mettre à jour les rappels de boosts');
+    } finally {
+      setRelancesEnCours(false);
+    }
+  };
 
   const handleToggle = async () => {
     if (isSubscribed) {
@@ -83,6 +123,40 @@ export const NotificationPreferencesSection: React.FC<NotificationPreferencesSec
             </button>
           </div>
         )}
+      </div>
+
+      <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-6">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-gray-900">
+              <Megaphone className="h-4 w-4 inline mr-2" aria-hidden="true" />
+              Rappels pour mes boosts non finalisés (WhatsApp et e-mail)
+            </p>
+            <p className="mt-1 text-sm text-gray-500">
+              Un rappel groupé si un boost reste en brouillon ou en attente de paiement. Vous pouvez le couper à tout moment.
+            </p>
+          </div>
+            {relancesChargees && relancesActives === null ? (
+            <p className="text-sm text-gray-500">Indisponible pour le moment.</p>
+          ) : (
+            <button
+              type="button"
+              onClick={handleRelances}
+              disabled={!relancesChargees || relancesEnCours}
+              aria-pressed={relancesActives === true}
+              className={`flex shrink-0 items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
+                relancesActives
+                  ? 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+                  : 'bg-gray-900 text-white hover:bg-black'
+              }`}
+            >
+              {(relancesEnCours || !relancesChargees) && (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              )}
+              {relancesActives ? 'Désactiver' : 'Activer'}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

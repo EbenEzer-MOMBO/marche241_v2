@@ -75,6 +75,7 @@ export interface Vendeur {
   verification_telephone: boolean;
   verification_email: boolean;
   derniere_connexion?: Date;
+  relances_boost_desinscrit_le?: Date | null;
 }
 
 // Table vendeur_guides (migration 030) : visites guidées de l'espace vendeur terminées ou passées
@@ -891,6 +892,16 @@ export interface BoostParametres {
   cpm_max_fcfa: number;
   budget_jour_min_fcfa: number;
   kill_switch: boolean;
+  relance_active: boolean;
+  relance_whatsapp_active: boolean;
+  relance_email_active: boolean;
+  relance_delai_initial_heures: number;
+  relance_intervalle_heures: number;
+  relance_max: number;
+  relance_heure_envoi: number;
+  relance_age_max_jours: number;
+  relance_email_objet: string;
+  relance_email_message: string;
 }
 
 // Table meta_connexion (ligne unique, migration 028) : connexion Meta Ads découverte et choisie dans
