@@ -7,6 +7,8 @@ import { getBoutiqueBySlug } from '@/lib/services/boutiques';
 import { getProduitById, formatApiProduitPourDetail, formatProduitPourAffichage } from '@/lib/services/produits';
 import type { ProduitDetail, ProduitAffichage } from '@/lib/database-types';
 import { absoluteUrl, buildProductJsonLd, OG_LOCALE } from '@/lib/seo';
+import { getAvisProduit } from '@/lib/services/avis';
+import type { ResumeAvisProduit } from '@/lib/database-types';
 
 interface ProductPageProps {
   params: Promise<{
@@ -75,12 +77,29 @@ export default async function ProductPage({ params }: ProductPageProps) {
     notFound();
   }
 
-  const productJsonLd = buildProductJsonLd(
+  // Résumé des avis vérifiés (non bloquant : la fiche s'affiche même si l'API avis échoue)
+  let resumeAvis: ResumeAvisProduit | null = null;
+  try {
+    resumeAvis = (await getAvisProduit(Number(id), 1, 1)).resume;
+  } catch {
+    resumeAvis = null;
+  }
+
+  const productJsonLd: Record<string, unknown> = buildProductJsonLd(
     productData,
     boutiqueConfig.name,
     boutique,
     id
   );
+  if (resumeAvis?.afficher_note) {
+    productJsonLd.aggregateRating = {
+      '@type': 'AggregateRating',
+      ratingValue: resumeAvis.note_moyenne,
+      reviewCount: resumeAvis.nombre_avis,
+      bestRating: 5,
+      worstRating: 1,
+    };
+  }
 
   return (
     <div 
@@ -102,6 +121,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         productDisplay={productDisplay}
         boutiqueSlug={boutique}
         boutiqueData={boutiqueData}
+        resumeAvis={resumeAvis}
       />
     </div>
   );

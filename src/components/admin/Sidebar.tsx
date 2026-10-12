@@ -28,7 +28,8 @@ import {
   Eye,
   BadgeCheck,
   Ticket,
-  Megaphone
+  Megaphone,
+  Star
 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
 import { useGuide } from '@/hooks/useGuide';
@@ -129,6 +130,12 @@ export default function Sidebar({ boutique, isMobileMenuOpen = false, onToggleMo
       href: `/admin/${boutique.slug}/orders`,
       icon: ShoppingBag,
       current: pathname.includes('/orders')
+    },
+    {
+      name: 'Avis clients',
+      href: `/admin/${boutique.slug}/avis`,
+      icon: Star,
+      current: pathname.includes('/avis')
     },
     {
       name: 'Paiements',
