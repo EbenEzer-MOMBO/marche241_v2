@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import PhoneNumberInput from '@/components/ui/PhoneNumberInput';
 import {
   ChampParticipant,
   LIBELLES_CHAMP_PARTICIPANT,
@@ -93,21 +94,29 @@ export function ParticipantInfosModal({
               <legend className="px-1 text-sm font-medium text-gray-900">{fiche.titre}</legend>
               {fiche.champs.map((champ) => {
                 const erreurCle = `${fiche.cle}.${champ}`;
-                const type = champ === 'email' ? 'email' : champ === 'telephone' ? 'tel' : 'text';
                 return (
                   <div key={champ}>
                     <label className="mb-1 block text-sm text-gray-700" htmlFor={`${fiche.cle}-${champ}`}>
                       {LIBELLES_CHAMP_PARTICIPANT[champ]} *
                     </label>
-                    <input
-                      id={`${fiche.cle}-${champ}`}
-                      type={type}
-                      autoComplete={champ === 'email' ? 'email' : champ === 'nom_complet' ? 'name' : 'off'}
-                      className="h-11 w-full rounded-[9px] border border-[#e0ded9] px-3 text-sm focus:border-[var(--color-shop-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-shop-primary)]"
-                      value={valeurs[fiche.cle]?.[champ] || ''}
-                      onChange={(e) => onChange(fiche.cle, champ, e.target.value)}
-                      aria-invalid={Boolean(erreurs[erreurCle])}
-                    />
+                    {champ === 'telephone' ? (
+                      <PhoneNumberInput
+                        id={`${fiche.cle}-${champ}`}
+                        value={valeurs[fiche.cle]?.telephone || ''}
+                        onChange={(valeur) => onChange(fiche.cle, champ, valeur)}
+                        className="w-full"
+                      />
+                    ) : (
+                      <input
+                        id={`${fiche.cle}-${champ}`}
+                        type={champ === 'email' ? 'email' : 'text'}
+                        autoComplete={champ === 'email' ? 'email' : champ === 'nom_complet' ? 'name' : 'off'}
+                        className="h-11 w-full rounded-[9px] border border-[#e0ded9] px-3 text-sm focus:border-[var(--color-shop-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-shop-primary)]"
+                        value={valeurs[fiche.cle]?.[champ] || ''}
+                        onChange={(e) => onChange(fiche.cle, champ, e.target.value)}
+                        aria-invalid={Boolean(erreurs[erreurCle])}
+                      />
+                    )}
                     {erreurs[erreurCle] && (
                       <p className="mt-1 text-xs text-red-600">{erreurs[erreurCle]}</p>
                     )}

@@ -1,3 +1,5 @@
+import { estNumeroTelephoneValide } from '@/components/ui/PhoneNumberInput';
+
 export const CHAMPS_PARTICIPANT = ['nom_complet', 'telephone', 'profession', 'email'] as const;
 export type ChampParticipant = (typeof CHAMPS_PARTICIPANT)[number];
 
@@ -61,8 +63,11 @@ export function erreursFichesParticipants(
     const saisie = valeurs[fiche.cle] || {};
     for (const champ of fiche.champs) {
       const valeur = (saisie[champ] || '').trim();
-      if (!valeur) {
+      // Le sélecteur de pays pré-remplit l'indicatif : un indicatif seul compte comme vide
+      if (!valeur || (champ === 'telephone' && /^\+\d+$/.test(valeur) && valeur.length <= 4)) {
         erreurs[`${fiche.cle}.${champ}`] = `${LIBELLES_CHAMP_PARTICIPANT[champ]} requis`;
+      } else if (champ === 'telephone' && !estNumeroTelephoneValide(valeur)) {
+        erreurs[`${fiche.cle}.${champ}`] = 'Numéro de téléphone invalide';
       } else if (champ === 'email' && !EMAIL_PARTICIPANT.test(valeur)) {
         erreurs[`${fiche.cle}.${champ}`] = 'Adresse email invalide';
       }
