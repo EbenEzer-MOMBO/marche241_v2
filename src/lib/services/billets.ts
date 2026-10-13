@@ -14,6 +14,10 @@ export interface ParticipantBillet {
   client_telephone: string;
   statut_paiement: string;
   date_commande: string;
+  participant_nom: string | null;
+  participant_telephone: string | null;
+  participant_profession: string | null;
+  participant_email: string | null;
 }
 
 export interface StatsEvenement {

@@ -11,6 +11,12 @@ interface ArticleCommande {
   nom_produit: string;
   description: string;
   variants_selectionnes?: { [key: string]: any } | null;
+  participants?: Array<{
+    nom_complet?: string;
+    telephone?: string;
+    profession?: string;
+    email?: string;
+  }>;
 }
 
 interface CreerCommandeData {

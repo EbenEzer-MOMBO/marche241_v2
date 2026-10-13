@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Script from 'next/script';
@@ -15,6 +15,12 @@ import { getBoutiqueById } from '@/lib/services/boutiques';
 import { getCommunesActives } from '@/lib/services/communes';
 import { formatDureeLivraison } from '@/lib/utils/delai-livraison';
 import { isEvenementProduct, MESSAGE_MIX_PANIER } from '@/lib/utils/product-sales-kind';
+import {
+  infosParticipantsDepuisProduit,
+  LIBELLES_CHAMP_PARTICIPANT,
+  ParticipantBilletSaisie,
+} from '@/lib/utils/infos-participants';
+import { FicheParticipantASaisir, ParticipantInfosModal } from '@/components/tickets/ParticipantInfosModal';
 import { initierPaiementMobile, initierPaiementVisa, verifierPaiementEnBoucle, type PaiementMobileData } from '@/lib/services/paiements';
 import { creerTransaction, type CreerTransactionData } from '@/lib/services/transactions';
 import { checkWhatsAppNumber } from '@/lib/services/whatsapp';
@@ -98,6 +104,30 @@ const formatVariantsString = (variants_selectionnes: any): string | undefined =>
   return entries.length > 0 ? entries.join(', ') : undefined;
 };
 
+function fichesDepuisPanier(panier: Array<{
+  id: number;
+  produit_id: number;
+  quantite: number;
+  variants_selectionnes: { variant?: { nom?: string } } | null;
+  produit: { nom?: string; variants?: unknown };
+}>): FicheParticipantASaisir[] {
+  const fiches: FicheParticipantASaisir[] = [];
+  for (const item of panier) {
+    const config = infosParticipantsDepuisProduit(item.produit);
+    if (!config.actif) continue;
+    const typeBillet = item.variants_selectionnes?.variant?.nom || 'Billet';
+    for (let i = 0; i < item.quantite; i += 1) {
+      fiches.push({
+        cle: `${item.id}-${i}`,
+        produitId: item.produit_id,
+        titre: `Billet ${fiches.length + 1} — ${typeBillet}`,
+        champs: config.champs,
+      });
+    }
+  }
+  return fiches;
+}
+
 
 export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, boutiqueData }: OrderSummaryProps) {
   const params = useParams();
@@ -168,6 +198,15 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
   };
   const [itemsToDelete, setItemsToDelete] = useState<Set<number>>(new Set());
   const [showDeliveryNotes, setShowDeliveryNotes] = useState(false);
+  const [showParticipantsModal, setShowParticipantsModal] = useState(false);
+  const [participantsValides, setParticipantsValides] = useState(false);
+  const [fichesParticipants, setFichesParticipants] = useState<Record<string, ParticipantBilletSaisie>>({});
+  const [erreursParticipants, setErreursParticipants] = useState<Record<string, string>>({});
+  const listeFichesParticipants = useMemo(() => fichesDepuisPanier(panier), [panier]);
+
+  useEffect(() => {
+    setParticipantsValides(false);
+  }, [panier.map((item) => `${item.id}:${item.quantite}`).join('|')]);
 
   const handleDeleteClick = (itemId: number) => {
     if (itemsToDelete.has(itemId)) {
@@ -482,7 +521,35 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
     }
   };
 
-  const handleSubmitOrder = async () => {
+  const validerFichesParticipants = (): boolean => {
+    const next: Record<string, string> = {};
+    for (const fiche of listeFichesParticipants) {
+      const valeurs = fichesParticipants[fiche.cle] || {};
+      for (const champ of fiche.champs) {
+        const valeur = (valeurs[champ] || '').trim();
+        if (!valeur) {
+          next[`${fiche.cle}.${champ}`] = `${LIBELLES_CHAMP_PARTICIPANT[champ]} requis`;
+          continue;
+        }
+        if (champ === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valeur)) {
+          next[`${fiche.cle}.${champ}`] = 'Adresse email invalide';
+        }
+      }
+    }
+    setErreursParticipants(next);
+    return Object.keys(next).length === 0;
+  };
+
+  const handleConfirmParticipants = () => {
+    if (!validerFichesParticipants()) {
+      return;
+    }
+    setParticipantsValides(true);
+    setShowParticipantsModal(false);
+    void handleSubmitOrder(true);
+  };
+
+  const handleSubmitOrder = async (participantsOk = false) => {
     // Double vérification de sécurité (normalement le bouton est déjà désactivé)
     if (!isFormValid()) {
       error('Veuillez compléter toutes les informations requises');
@@ -505,6 +572,24 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
       return;
     }
 
+    const fiches = fichesDepuisPanier(panier);
+    if (fiches.length > 0 && !participantsOk && !participantsValides) {
+      setFichesParticipants((prev) => {
+        const next = { ...prev };
+        const premiere = fiches[0];
+        if (premiere && !next[premiere.cle]) {
+          next[premiere.cle] = {
+            nom_complet: deliveryAddress.fullName,
+            telephone: deliveryAddress.phone,
+            email: deliveryAddress.email,
+          };
+        }
+        return next;
+      });
+      setShowParticipantsModal(true);
+      return;
+    }
+
     setIsSubmitting(true);
 
     // Réinitialiser le signal d'annulation
@@ -524,14 +609,23 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
         frais_livraison: isEventOnlyCart ? 0 : deliveryFee,
         taxes: getTransactionFee(),
         remise: 0,
-        articles: panier.map(item => ({
+        articles: panier.map(item => {
+          const config = infosParticipantsDepuisProduit(item.produit);
+          const participants = config.actif
+            ? Array.from({ length: item.quantite }, (_, i) => fichesParticipants[`${item.id}-${i}`] || {})
+            : undefined;
+          return {
           produit_id: item.produit_id,
           quantite: item.quantite,
           prix_unitaire: getPrixUnitairePanier(item),
           nom_produit: item.produit.nom,
           description: item.produit.description_courte || item.produit.nom,
-          variants_selectionnes: item.variants_selectionnes
-        }))
+          variants_selectionnes: participants
+            ? { ...(item.variants_selectionnes || {}), participants }
+            : item.variants_selectionnes,
+          participants,
+          };
+        })
       };
 
 
@@ -1405,7 +1499,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
 
             <button
               type="button"
-              onClick={handleSubmitOrder}
+              onClick={() => void handleSubmitOrder()}
               disabled={!isFormValid() || isSubmitting}
               className="mt-4 hidden h-12 w-full items-center justify-center rounded-[9px] text-sm font-semibold transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 lg:flex"
               style={{ backgroundColor: 'var(--color-shop-primary)', color: 'var(--shop-cta-fg, #fff)' }}
@@ -1456,7 +1550,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
           </div>
           <button
             type="button"
-            onClick={handleSubmitOrder}
+            onClick={() => void handleSubmitOrder()}
             disabled={!isFormValid() || isSubmitting}
             className="h-12 max-w-[200px] flex-1 rounded-[9px] text-sm font-semibold transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
             style={{ backgroundColor: 'var(--color-shop-primary)', color: 'var(--shop-cta-fg, #fff)' }}
@@ -1465,6 +1559,22 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
           </button>
         </div>
       </div>
+      {showParticipantsModal && (
+        <ParticipantInfosModal
+          fiches={listeFichesParticipants}
+          valeurs={fichesParticipants}
+          erreurs={erreursParticipants}
+          onChange={(cle, champ, valeur) => {
+            setParticipantsValides(false);
+            setFichesParticipants((prev) => ({
+              ...prev,
+              [cle]: { ...prev[cle], [champ]: valeur },
+            }));
+          }}
+          onConfirm={handleConfirmParticipants}
+          onClose={() => setShowParticipantsModal(false)}
+        />
+      )}
     </div>
   );
 }

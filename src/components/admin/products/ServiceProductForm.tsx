@@ -288,20 +288,6 @@ export function ServiceProductForm({
                   onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
                 />
               </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">Catégorie *</label>
-                <select
-                  className={inputClass}
-                  value={formData.categorie_id || ''}
-                  onChange={(e) => setFormData((p) => ({ ...p, categorie_id: Number(e.target.value) }))}
-                >
-                  <option value="">Sélectionner</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.nom}</option>
-                  ))}
-                </select>
-                {errors.categorie_id && <p className="mt-1 text-xs text-red-600">{errors.categorie_id}</p>}
-              </div>
               <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"

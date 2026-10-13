@@ -528,29 +528,7 @@ function Section1BasicInfo({ formData, setFormData, errors, categories }: any) {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Catégorie <span className="text-red-500">*</span>
-          </label>
-          <select
-            value={formData.categorie_id}
-            onChange={(e) => handleChange('categorie_id', parseInt(e.target.value))}
-            className={`w-full px-4 py-2 border rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black ${
-              errors.categorie_id ? 'border-red-500' : 'border-gray-300'
-            }`}
-          >
-            <option value={0}>Sélectionnez une catégorie</option>
-            {categories.map((cat: any) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.nom}
-              </option>
-            ))}
-          </select>
-          {errors.categorie_id && <p className="text-red-500 text-sm mt-1">{errors.categorie_id}</p>}
-        </div>
-
-        <div>
+      <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Statut <span className="text-red-500">*</span>
           </label>
@@ -563,7 +541,6 @@ function Section1BasicInfo({ formData, setFormData, errors, categories }: any) {
             <option value="inactif">Inactif</option>
           </select>
         </div>
-      </div>
     </div>
   );
 }
