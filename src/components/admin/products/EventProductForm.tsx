@@ -332,7 +332,7 @@ export function EventProductForm({
           actif: formData.infos_participants_actif,
           champs: formData.infos_participants_actif
             ? Array.from(new Set<ChampParticipant>(['nom_complet', ...formData.champs_participants]))
-            : formData.champs_participants,
+            : [],
         },
       },
       variants: formData.tickets,
