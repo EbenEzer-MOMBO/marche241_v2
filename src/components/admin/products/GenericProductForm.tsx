@@ -900,6 +900,7 @@ export function GenericProductForm({
           <option value="inactif">Inactif</option>
         </select>
       </div>
+      {errors.categorie_id && <p className="text-sm text-red-600">La catégorie est introuvable : rechargez la page ou contactez le support.</p>}
     </div>
   );
 

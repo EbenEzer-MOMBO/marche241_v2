@@ -288,6 +288,7 @@ export function ServiceProductForm({
                   onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
                 />
               </div>
+              {errors.categorie_id && <p className="text-xs text-red-600">La catégorie est introuvable : rechargez la page ou contactez le support.</p>}
               <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"

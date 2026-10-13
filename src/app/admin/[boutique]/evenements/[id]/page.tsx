@@ -85,7 +85,11 @@ const LIBELLES_PAIEMENT: Record<string, string> = {
 };
 
 function echapperCsv(valeur: string | number | null | undefined): string {
-  const texte = valeur === null || valeur === undefined ? '' : String(valeur);
+  let texte = valeur === null || valeur === undefined ? '' : String(valeur);
+  // Neutralise les formules (Excel/Sheets) dans les valeurs saisies par les acheteurs
+  if (typeof valeur === 'string' && /^[=+\-@\t\r]/.test(texte)) {
+    texte = `'${texte}`;
+  }
   return /[";\n]/.test(texte) ? `"${texte.replace(/"/g, '""')}"` : texte;
 }
 

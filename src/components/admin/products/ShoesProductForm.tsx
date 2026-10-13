@@ -520,18 +520,19 @@ export function ShoesProductForm({
       </div>
 
       <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Statut <span className="text-red-500">*</span>
-          </label>
-          <select
-            value={formData.statut}
-            onChange={(e) => handleInputChange('statut', e.target.value as 'actif' | 'inactif' | 'brouillon')}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
-          >
-            <option value="actif">Actif</option>
-            <option value="inactif">Inactif</option>
-          </select>
-        </div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Statut <span className="text-red-500">*</span>
+        </label>
+        <select
+          value={formData.statut}
+          onChange={(e) => handleInputChange('statut', e.target.value as 'actif' | 'inactif' | 'brouillon')}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
+        >
+          <option value="actif">Actif</option>
+          <option value="inactif">Inactif</option>
+        </select>
+      </div>
+      {errors.categorie_id && <p className="text-sm text-red-600">La catégorie est introuvable : rechargez la page ou contactez le support.</p>}
     </div>
   );
 

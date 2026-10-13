@@ -199,14 +199,9 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
   const [itemsToDelete, setItemsToDelete] = useState<Set<number>>(new Set());
   const [showDeliveryNotes, setShowDeliveryNotes] = useState(false);
   const [showParticipantsModal, setShowParticipantsModal] = useState(false);
-  const [participantsValides, setParticipantsValides] = useState(false);
   const [fichesParticipants, setFichesParticipants] = useState<Record<string, ParticipantBilletSaisie>>({});
   const [erreursParticipants, setErreursParticipants] = useState<Record<string, string>>({});
   const listeFichesParticipants = useMemo(() => fichesDepuisPanier(panier), [panier]);
-
-  useEffect(() => {
-    setParticipantsValides(false);
-  }, [panier.map((item) => `${item.id}:${item.quantite}`).join('|')]);
 
   const handleDeleteClick = (itemId: number) => {
     if (itemsToDelete.has(itemId)) {
@@ -521,7 +516,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
     }
   };
 
-  const validerFichesParticipants = (): boolean => {
+  const erreursFichesParticipants = (): Record<string, string> => {
     const next: Record<string, string> = {};
     for (const fiche of listeFichesParticipants) {
       const valeurs = fichesParticipants[fiche.cle] || {};
@@ -536,15 +531,15 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
         }
       }
     }
-    setErreursParticipants(next);
-    return Object.keys(next).length === 0;
+    return next;
   };
 
   const handleConfirmParticipants = () => {
-    if (!validerFichesParticipants()) {
+    const erreurs = erreursFichesParticipants();
+    setErreursParticipants(erreurs);
+    if (Object.keys(erreurs).length > 0) {
       return;
     }
-    setParticipantsValides(true);
     setShowParticipantsModal(false);
     void handleSubmitOrder(true);
   };
@@ -572,11 +567,10 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
       return;
     }
 
-    const fiches = fichesDepuisPanier(panier);
-    if (fiches.length > 0 && !participantsOk && !participantsValides) {
+    if (listeFichesParticipants.length > 0 && !participantsOk) {
       setFichesParticipants((prev) => {
         const next = { ...prev };
-        const premiere = fiches[0];
+        const premiere = listeFichesParticipants[0];
         if (premiere && !next[premiere.cle]) {
           next[premiere.cle] = {
             nom_complet: deliveryAddress.fullName,
@@ -620,9 +614,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
           prix_unitaire: getPrixUnitairePanier(item),
           nom_produit: item.produit.nom,
           description: item.produit.description_courte || item.produit.nom,
-          variants_selectionnes: participants
-            ? { ...(item.variants_selectionnes || {}), participants }
-            : item.variants_selectionnes,
+          variants_selectionnes: item.variants_selectionnes,
           participants,
           };
         })
@@ -1565,7 +1557,6 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
           valeurs={fichesParticipants}
           erreurs={erreursParticipants}
           onChange={(cle, champ, valeur) => {
-            setParticipantsValides(false);
             setFichesParticipants((prev) => ({
               ...prev,
               [cle]: { ...prev[cle], [champ]: valeur },
