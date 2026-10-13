@@ -85,7 +85,11 @@ const LIBELLES_PAIEMENT: Record<string, string> = {
 };
 
 function echapperCsv(valeur: string | number | null | undefined): string {
-  const texte = valeur === null || valeur === undefined ? '' : String(valeur);
+  let texte = valeur === null || valeur === undefined ? '' : String(valeur);
+  // Neutralise les formules (Excel/Sheets) dans les valeurs saisies par les acheteurs
+  if (typeof valeur === 'string' && /^[=+\-@\t\r]/.test(texte)) {
+    texte = `'${texte}`;
+  }
   return /[";\n]/.test(texte) ? `"${texte.replace(/"/g, '""')}"` : texte;
 }
 
@@ -361,8 +365,19 @@ export default function EvenementDetailPage() {
     const correspond = (valeurs: Array<string | null | undefined>) =>
       valeurs.some((v) => !!v && v.toLowerCase().includes(terme));
     return groupes.flatMap((g): Resultat[] => {
-      if (correspond([g.nom, g.email, g.telephone])) return [{ groupe: g, billetsVisibles: null }];
-      const billets = g.billets.filter((b) => correspond([b.numero_commande, `#${b.numero}`, b.type_billet]));
+      if (
+        correspond([
+          g.nom,
+          g.email,
+          g.telephone,
+          ...g.billets.flatMap((b) => [b.participant_nom, b.participant_email, b.participant_profession]),
+        ])
+      ) {
+        return [{ groupe: g, billetsVisibles: null }];
+      }
+      const billets = g.billets.filter((b) =>
+        correspond([b.numero_commande, `#${b.numero}`, b.type_billet, b.participant_nom, b.participant_email, b.participant_profession])
+      );
       return billets.length > 0 ? [{ groupe: g, billetsVisibles: new Set(billets.map((b) => b.id)) }] : [];
     });
   }, [groupes, recherche]);
@@ -374,9 +389,13 @@ export default function EvenementDetailPage() {
     const entetes = [
       'N° billet',
       'Type de billet',
+      'Participant',
+      'Tél. participant',
+      'Profession',
+      'Email participant',
       'Acheteur',
-      'Email',
-      'Téléphone',
+      'Email acheteur',
+      'Téléphone acheteur',
       'Commande',
       'Paiement',
       'Scanné le',
@@ -387,6 +406,10 @@ export default function EvenementDetailPage() {
       [
         p.numero,
         p.type_billet,
+        p.participant_nom || '',
+        p.participant_telephone || '',
+        p.participant_profession || '',
+        p.participant_email || '',
         p.client_nom,
         p.client_email,
         p.client_telephone,
@@ -572,6 +595,12 @@ export default function EvenementDetailPage() {
                           <span className="font-medium">#{b.numero}</span>{' '}
                           <span className="text-gray-500">· {b.type_billet}</span>
                         </p>
+                        {b.participant_nom ? (
+                          <p className="text-sm text-gray-700">
+                            {b.participant_nom}
+                            {b.participant_profession ? ` · ${b.participant_profession}` : ''}
+                          </p>
+                        ) : null}
                         <p
                           className={`inline-flex items-center gap-1 text-xs ${
                             b.scanne_le ? 'text-green-700' : 'text-gray-500'

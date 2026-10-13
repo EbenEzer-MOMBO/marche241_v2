@@ -8,7 +8,7 @@ import { TicketCard, type TicketCardEvenement } from '@/components/tickets/Ticke
 
 interface BilletsPayload {
   evenement: TicketCardEvenement;
-  billets: Array<{ type_billet: string; numero: number }>;
+  billets: Array<{ type_billet: string; numero: number; participant_nom?: string | null }>;
   jeton: string;
 }
 
@@ -96,6 +96,7 @@ export default function BilletsPage() {
                   typeBillet={billet.type_billet}
                   numero={billet.numero}
                   jeton={payload.jeton}
+                  participantNom={billet.participant_nom}
                 />
               </div>
             ))}

@@ -5,6 +5,11 @@ import { X, ArrowLeft, ArrowRight, Check, Upload, Plus, Trash2, Lock, Ticket } f
 import Image from 'next/image';
 import { ProductCategory } from '@/lib/constants/product-categories';
 import { normaliserTauxMarge, prixAvecFraisService } from '@/lib/constants/frais-service';
+import {
+  ChampParticipant,
+  LIBELLES_CHAMP_PARTICIPANT,
+  normaliserInfosParticipants,
+} from '@/lib/utils/infos-participants';
 
 const formatFcfa = (montant: number) =>
   `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(montant)} FCFA`;
@@ -50,6 +55,8 @@ interface EventFormData {
   adresse: string;
   ouverture_portes: string;
   non_remboursable: boolean;
+  infos_participants_actif: boolean;
+  champs_participants: Array<'nom_complet' | 'telephone' | 'profession' | 'email'>;
   tickets: TicketVariant[];
 }
 
@@ -120,6 +127,8 @@ export function EventProductForm({
     adresse: '',
     ouverture_portes: '',
     non_remboursable: true,
+    infos_participants_actif: false,
+    champs_participants: ['nom_complet'],
     tickets: [newTicket()],
   });
 
@@ -145,6 +154,11 @@ export function EventProductForm({
         adresse: meta.adresse || '',
         ouverture_portes: meta.ouverture_portes || '',
         non_remboursable: meta.non_remboursable !== false,
+        infos_participants_actif: normaliserInfosParticipants(meta.infos_participants).actif,
+        champs_participants: (() => {
+          const cfg = normaliserInfosParticipants(meta.infos_participants);
+          return cfg.champs.length ? cfg.champs : ['nom_complet'];
+        })(),
         tickets: Array.isArray(tickets) && tickets.length > 0
           ? tickets.map((t: any) => ({
               id: t.id || newTicket().id,
@@ -181,6 +195,8 @@ export function EventProductForm({
       adresse: '',
       ouverture_portes: '',
       non_remboursable: true,
+      infos_participants_actif: false,
+      champs_participants: ['nom_complet'],
       tickets: [newTicket()],
     });
   }, [isOpen, categories, productToEdit]);
@@ -312,6 +328,12 @@ export function EventProductForm({
         adresse: formData.adresse.trim() || undefined,
         ouverture_portes: formData.ouverture_portes.trim() || undefined,
         non_remboursable: formData.non_remboursable,
+        infos_participants: {
+          actif: formData.infos_participants_actif,
+          champs: formData.infos_participants_actif
+            ? Array.from(new Set<ChampParticipant>(['nom_complet', ...formData.champs_participants]))
+            : [],
+        },
       },
       variants: formData.tickets,
     });
@@ -467,6 +489,56 @@ export function EventProductForm({
         Billet non remboursable
         {estVerrouille && <Lock className="h-3.5 w-3.5 text-gray-400" aria-label="Non modifiable" />}
       </label>
+      <div className="rounded-xl border border-gray-200 p-4 space-y-3">
+        <label className={`flex items-center gap-2 text-sm ${estVerrouille ? 'text-gray-500' : ''}`}>
+          <input
+            type="checkbox"
+            disabled={estVerrouille}
+            checked={formData.infos_participants_actif}
+            onChange={(e) =>
+              setFormData((p) => ({
+                ...p,
+                infos_participants_actif: e.target.checked,
+                champs_participants: e.target.checked
+                  ? Array.from(new Set<ChampParticipant>(['nom_complet', ...p.champs_participants]))
+                  : p.champs_participants,
+              }))
+            }
+          />
+          Collecter les informations des participants
+          {estVerrouille && <Lock className="h-3.5 w-3.5 text-gray-400" aria-label="Non modifiable" />}
+        </label>
+        {formData.infos_participants_actif && (
+          <div className="space-y-2 pl-6">
+            <p className="text-xs text-gray-500">
+              L’acheteur renseignera une fiche par billet. Le nom complet est obligatoire.
+            </p>
+            {(Object.keys(LIBELLES_CHAMP_PARTICIPANT) as ChampParticipant[]).map((champ) => {
+              const obligatoire = champ === 'nom_complet';
+              const coche = formData.champs_participants.includes(champ);
+              return (
+                <label key={champ} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    disabled={estVerrouille || obligatoire}
+                    checked={coche || obligatoire}
+                    onChange={(e) =>
+                      setFormData((p) => ({
+                        ...p,
+                        champs_participants: e.target.checked
+                          ? Array.from(new Set<ChampParticipant>([...p.champs_participants, champ]))
+                          : p.champs_participants.filter((c) => c !== champ),
+                      }))
+                    }
+                  />
+                  {LIBELLES_CHAMP_PARTICIPANT[champ]}
+                  {obligatoire && <span className="text-xs text-gray-400">requis</span>}
+                </label>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 

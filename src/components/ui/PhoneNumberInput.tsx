@@ -17,6 +17,7 @@ interface PhoneNumberInputProps {
   placeholder?: string;
   required?: boolean;
   className?: string;
+  id?: string;
   onValidationChange?: (isValid: boolean) => void;
 }
 
@@ -29,12 +30,20 @@ const countries: Country[] = [
   { code: 'MA', name: 'Maroc', dialCode: '+212', flag: '🇲🇦', phoneLength: 9, phonePattern: /^[0-9]{9}$/ },
 ];
 
+/** Numéro complet (indicatif + numéro) conforme à l'un des pays proposés par le sélecteur. */
+export function estNumeroTelephoneValide(valeur: string): boolean {
+  return countries.some(
+    (country) => valeur.startsWith(country.dialCode) && country.phonePattern.test(valeur.slice(country.dialCode.length))
+  );
+}
+
 export default function PhoneNumberInput({ 
   value, 
   onChange, 
   placeholder = "6XXXXXXX", 
   required = false,
   className = "",
+  id,
   onValidationChange
 }: PhoneNumberInputProps) {
   const [selectedCountry, setSelectedCountry] = useState<Country>(countries[0]); // Gabon par défaut
@@ -143,6 +152,7 @@ export default function PhoneNumberInput({
 
         {/* Champ de saisie du numéro */}
         <input
+          id={id}
           type="tel"
           value={phoneNumber}
           onChange={handlePhoneChange}

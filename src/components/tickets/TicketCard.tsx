@@ -17,9 +17,10 @@ interface TicketCardProps {
   typeBillet: string;
   numero: number;
   jeton: string;
+  participantNom?: string | null;
 }
 
-export const TicketCard = ({ evenement, typeBillet, numero, jeton }: TicketCardProps) => {
+export const TicketCard = ({ evenement, typeBillet, numero, jeton, participantNom }: TicketCardProps) => {
   const lieu = [evenement.adresse, evenement.lieu].filter(Boolean).join(', ');
   const poster = evenement.image ? getProduitImageUrl(evenement.image) : '';
   const displayNumero = formatTicketNumero(numero);
@@ -70,8 +71,11 @@ export const TicketCard = ({ evenement, typeBillet, numero, jeton }: TicketCardP
           <p className="bg-[linear-gradient(90deg,#508e27,#74adaf)] bg-clip-text font-mono text-[28px] leading-none font-semibold text-transparent">
             {displayNumero}
           </p>
+          {participantNom ? (
+            <p className="mt-1 text-[12px] font-semibold leading-snug text-[#111827]">{participantNom}</p>
+          ) : null}
           <p className="mt-1 text-[10px] leading-snug text-[#6b7280]">
-            Scannez à l’entrée.
+            {participantNom ? 'Billet nominatif. Scannez à l’entrée.' : 'Scannez à l’entrée.'}
           </p>
         </div>
       </div>
