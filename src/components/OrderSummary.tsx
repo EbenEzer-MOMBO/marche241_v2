@@ -16,9 +16,10 @@ import { getCommunesActives } from '@/lib/services/communes';
 import { formatDureeLivraison } from '@/lib/utils/delai-livraison';
 import { isEvenementProduct, MESSAGE_MIX_PANIER } from '@/lib/utils/product-sales-kind';
 import {
+  erreursFichesParticipants,
   infosParticipantsDepuisProduit,
-  LIBELLES_CHAMP_PARTICIPANT,
   ParticipantBilletSaisie,
+  participantsDepuisVariants,
 } from '@/lib/utils/infos-participants';
 import { FicheParticipantASaisir, ParticipantInfosModal } from '@/components/tickets/ParticipantInfosModal';
 import { initierPaiementMobile, initierPaiementVisa, verifierPaiementEnBoucle, type PaiementMobileData } from '@/lib/services/paiements';
@@ -103,6 +104,14 @@ const formatVariantsString = (variants_selectionnes: any): string | undefined =>
   
   return entries.length > 0 ? entries.join(', ') : undefined;
 };
+
+// Les fiches voyagent dans `participants` ; la copie gardée dans le panier n'est pas renvoyée
+function variantsSansParticipants<T>(variants: T): T {
+  if (!variants || typeof variants !== 'object' || !('participants' in variants)) return variants;
+  const reste: Record<string, unknown> = { ...(variants as Record<string, unknown>) };
+  delete reste.participants;
+  return reste as T;
+}
 
 function fichesDepuisPanier(panier: Array<{
   id: number;
@@ -202,6 +211,16 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
   const [fichesParticipants, setFichesParticipants] = useState<Record<string, ParticipantBilletSaisie>>({});
   const [erreursParticipants, setErreursParticipants] = useState<Record<string, string>>({});
   const listeFichesParticipants = useMemo(() => fichesDepuisPanier(panier), [panier]);
+  // Fiches saisies sur la page produit (stockées dans le panier), complétées par les modifications au checkout
+  const valeursFichesParticipants = useMemo(() => {
+    const depuisPanier: Record<string, ParticipantBilletSaisie> = {};
+    for (const item of panier) {
+      participantsDepuisVariants(item.variants_selectionnes).forEach((fiche, i) => {
+        depuisPanier[`${item.id}-${i}`] = fiche;
+      });
+    }
+    return { ...depuisPanier, ...fichesParticipants };
+  }, [panier, fichesParticipants]);
 
   const handleDeleteClick = (itemId: number) => {
     if (itemsToDelete.has(itemId)) {
@@ -516,26 +535,8 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
     }
   };
 
-  const erreursFichesParticipants = (): Record<string, string> => {
-    const next: Record<string, string> = {};
-    for (const fiche of listeFichesParticipants) {
-      const valeurs = fichesParticipants[fiche.cle] || {};
-      for (const champ of fiche.champs) {
-        const valeur = (valeurs[champ] || '').trim();
-        if (!valeur) {
-          next[`${fiche.cle}.${champ}`] = `${LIBELLES_CHAMP_PARTICIPANT[champ]} requis`;
-          continue;
-        }
-        if (champ === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valeur)) {
-          next[`${fiche.cle}.${champ}`] = 'Adresse email invalide';
-        }
-      }
-    }
-    return next;
-  };
-
   const handleConfirmParticipants = () => {
-    const erreurs = erreursFichesParticipants();
+    const erreurs = erreursFichesParticipants(listeFichesParticipants, valeursFichesParticipants);
     setErreursParticipants(erreurs);
     if (Object.keys(erreurs).length > 0) {
       return;
@@ -567,11 +568,13 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
       return;
     }
 
-    if (listeFichesParticipants.length > 0 && !participantsOk) {
+    const fichesIncompletes =
+      Object.keys(erreursFichesParticipants(listeFichesParticipants, valeursFichesParticipants)).length > 0;
+    if (listeFichesParticipants.length > 0 && !participantsOk && fichesIncompletes) {
       setFichesParticipants((prev) => {
         const next = { ...prev };
         const premiere = listeFichesParticipants[0];
-        if (premiere && !next[premiere.cle]) {
+        if (premiere && !valeursFichesParticipants[premiere.cle]) {
           next[premiere.cle] = {
             nom_complet: deliveryAddress.fullName,
             telephone: deliveryAddress.phone,
@@ -606,7 +609,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
         articles: panier.map(item => {
           const config = infosParticipantsDepuisProduit(item.produit);
           const participants = config.actif
-            ? Array.from({ length: item.quantite }, (_, i) => fichesParticipants[`${item.id}-${i}`] || {})
+            ? Array.from({ length: item.quantite }, (_, i) => valeursFichesParticipants[`${item.id}-${i}`] || {})
             : undefined;
           return {
           produit_id: item.produit_id,
@@ -614,7 +617,7 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
           prix_unitaire: getPrixUnitairePanier(item),
           nom_produit: item.produit.nom,
           description: item.produit.description_courte || item.produit.nom,
-          variants_selectionnes: item.variants_selectionnes,
+          variants_selectionnes: variantsSansParticipants(item.variants_selectionnes),
           participants,
           };
         })
@@ -1554,12 +1557,12 @@ export function OrderSummary({ boutiqueConfig, boutiqueId, boutiqueTelephone, bo
       {showParticipantsModal && (
         <ParticipantInfosModal
           fiches={listeFichesParticipants}
-          valeurs={fichesParticipants}
+          valeurs={valeursFichesParticipants}
           erreurs={erreursParticipants}
           onChange={(cle, champ, valeur) => {
             setFichesParticipants((prev) => ({
               ...prev,
-              [cle]: { ...prev[cle], [champ]: valeur },
+              [cle]: { ...valeursFichesParticipants[cle], [champ]: valeur },
             }));
           }}
           onConfirm={handleConfirmParticipants}

@@ -32,6 +32,11 @@ export function ParticipantInfosModal({
   onClose,
 }: ParticipantInfosModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  // onClose change à chaque rendu du parent : le lire via une ref évite de relancer l'effet (et de voler le focus)
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     const precedent = document.activeElement as HTMLElement | null;
@@ -41,7 +46,7 @@ export function ParticipantInfosModal({
 
     const surTouche = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (e.key !== 'Tab' || !dialogRef.current) return;
@@ -63,7 +68,7 @@ export function ParticipantInfosModal({
       document.body.style.overflow = overflowInitial;
       precedent?.focus();
     };
-  }, [onClose]);
+  }, []);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4">

@@ -48,3 +48,39 @@ export function infosParticipantsDepuisProduit(produit: { variants?: unknown } |
   const meta = (variants as { meta?: { infos_participants?: unknown } }).meta;
   return normaliserInfosParticipants(meta?.infos_participants);
 }
+
+const EMAIL_PARTICIPANT = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Erreurs de saisie des fiches participants, indexées par `${cle}.${champ}`. */
+export function erreursFichesParticipants(
+  fiches: Array<{ cle: string; champs: ChampParticipant[] }>,
+  valeurs: Record<string, ParticipantBilletSaisie>
+): Record<string, string> {
+  const erreurs: Record<string, string> = {};
+  for (const fiche of fiches) {
+    const saisie = valeurs[fiche.cle] || {};
+    for (const champ of fiche.champs) {
+      const valeur = (saisie[champ] || '').trim();
+      if (!valeur) {
+        erreurs[`${fiche.cle}.${champ}`] = `${LIBELLES_CHAMP_PARTICIPANT[champ]} requis`;
+      } else if (champ === 'email' && !EMAIL_PARTICIPANT.test(valeur)) {
+        erreurs[`${fiche.cle}.${champ}`] = 'Adresse email invalide';
+      }
+    }
+  }
+  return erreurs;
+}
+
+/** Fiches participants déjà saisies sur la page produit et stockées dans le panier. */
+export function participantsDepuisVariants(variants: unknown): ParticipantBilletSaisie[] {
+  const participants = (variants as { participants?: unknown } | null | undefined)?.participants;
+  if (!Array.isArray(participants)) return [];
+  return participants.map((p) => {
+    const source = p && typeof p === 'object' ? (p as Record<string, unknown>) : {};
+    const fiche: ParticipantBilletSaisie = {};
+    for (const champ of CHAMPS_PARTICIPANT) {
+      if (typeof source[champ] === 'string') fiche[champ] = source[champ] as string;
+    }
+    return fiche;
+  });
+}

@@ -361,7 +361,7 @@ const OrderDetailsSidebar = ({ commandeId, isOpen, onClose, onStatusUpdate }: Or
                         )}
                         {article.variants_selectionnes && (
                           <div className="mt-2 flex flex-wrap gap-2">
-                            {Object.entries(article.variants_selectionnes).map(([key, value]) => {
+                            {Object.entries(article.variants_selectionnes).filter(([key]) => key !== 'participants').map(([key, value]) => {
                               // Si value est un objet avec un nom, afficher le nom
                               const displayValue = typeof value === 'object' && value !== null
                                 ? (value.nom || JSON.stringify(value))

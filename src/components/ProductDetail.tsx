@@ -28,6 +28,12 @@ import { formatPromoBadge } from '@/lib/utils/shop-theme';
 import { ShopCtaButton } from '@/components/storefront/ShopCtaButton';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { getProductSalesKind } from '@/lib/utils/product-sales-kind';
+import {
+  erreursFichesParticipants,
+  infosParticipantsDepuisProduit,
+  type ParticipantBilletSaisie,
+} from '@/lib/utils/infos-participants';
+import { type FicheParticipantASaisir, ParticipantInfosModal } from '@/components/tickets/ParticipantInfosModal';
 import type { PersonnalisationEtatFormulaire, PersonnalisationProduitDef } from '@/lib/types/personnalisations';
 import { aPromotion, prixBarreVariante, prixEffectif } from '@/lib/utils/prix-promo';
 import {
@@ -64,6 +70,10 @@ export default function ProductDetail({
   const [loading, setLoading] = useState(!productData);
   const [error, setError] = useState<string | null>(null);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  // Billets nominatifs : fiches saisies avant l'ajout au panier (null = modale fermée)
+  const [participantsAction, setParticipantsAction] = useState<{ buyNow: boolean } | null>(null);
+  const [fichesParticipants, setFichesParticipants] = useState<Record<string, ParticipantBilletSaisie>>({});
+  const [erreursParticipants, setErreursParticipants] = useState<Record<string, string>>({});
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
   const [fullscreenImageIndex, setFullscreenImageIndex] = useState(0);
   const [isCopied, setIsCopied] = useState(false);
@@ -109,6 +119,7 @@ export default function ProductDetail({
   };
 
   const productType = getProductType();
+  const infosParticipants = useMemo(() => infosParticipantsDepuisProduit(product), [product]);
 
   // Charger les données du produit si elles ne sont pas pré-chargées
   useEffect(() => {
@@ -578,7 +589,7 @@ export default function ProductDetail({
     return quantity < getMaxQuantity();
   };
 
-  const handleAddToCart = async (options?: { buyNow?: boolean }) => {
+  const handleAddToCart = async (options?: { buyNow?: boolean; participants?: ParticipantBilletSaisie[] }) => {
     if (!product) return;
     const buyNow = options?.buyNow === true;
 
@@ -613,6 +624,14 @@ export default function ProductDetail({
 
       setPersonnalisationFieldErrors(undefined);
 
+      // Billets nominatifs : une fiche par billet, saisie avant l'ajout au panier
+      if (infosParticipants.actif && !options?.participants) {
+        setErreursParticipants({});
+        setParticipantsAction({ buyNow });
+        setIsAddingToCart(false);
+        return;
+      }
+
       // Obtenir le variant sélectionné avec toutes ses données
       const selectedVariant = getSelectedVariant();
 
@@ -630,6 +649,10 @@ export default function ProductDetail({
           image: selectedVariant.image,
           attributes: selectedVariant.attributes
         };
+      }
+
+      if (options?.participants) {
+        cartData.participants = options.participants;
       }
 
       // Ajouter les options si présentes
@@ -670,6 +693,7 @@ export default function ProductDetail({
         setSelectedOptions({});
         setPersonnalisationsEtat(createInitialPersonnalisationsEtat(personnalisationDefinitions));
         setPersonnalisationFieldErrors(undefined);
+        setFichesParticipants({});
       }
     } catch (error) {
       console.error('Erreur lors de l\'ajout au panier:', error);
@@ -680,6 +704,30 @@ export default function ProductDetail({
 
   const handleBuyNow = () => {
     void handleAddToCart({ buyNow: true });
+  };
+
+  const typeBilletSelectionne = getSelectedVariant()?.nom || 'Billet';
+  const fichesAvantPanier: FicheParticipantASaisir[] = Array.from({ length: quantity }, (_, i) => ({
+    cle: `billet-${i}`,
+    produitId: product?.id ?? 0,
+    titre: `Billet ${i + 1} — ${typeBilletSelectionne}`,
+    champs: infosParticipants.champs,
+  }));
+
+  const handleConfirmParticipants = () => {
+    if (!participantsAction) return;
+    const erreurs = erreursFichesParticipants(fichesAvantPanier, fichesParticipants);
+    setErreursParticipants(erreurs);
+    if (Object.keys(erreurs).length > 0) return;
+    const participants = fichesAvantPanier.map((fiche) => {
+      const saisie = fichesParticipants[fiche.cle] || {};
+      return Object.fromEntries(
+        fiche.champs.map((champ) => [champ, (saisie[champ] || '').trim()])
+      ) as ParticipantBilletSaisie;
+    });
+    const { buyNow } = participantsAction;
+    setParticipantsAction(null);
+    void handleAddToCart({ buyNow, participants });
   };
 
   // Afficher les erreurs du panier via toast
@@ -824,6 +872,18 @@ export default function ProductDetail({
     <>
       {/* Container des toasts */}
       <ToastContainer toasts={toasts} onClose={removeToast} />
+      {participantsAction && (
+        <ParticipantInfosModal
+          fiches={fichesAvantPanier}
+          valeurs={fichesParticipants}
+          erreurs={erreursParticipants}
+          onChange={(cle, champ, valeur) =>
+            setFichesParticipants((prev) => ({ ...prev, [cle]: { ...prev[cle], [champ]: valeur } }))
+          }
+          onConfirm={handleConfirmParticipants}
+          onClose={() => setParticipantsAction(null)}
+        />
+      )}
 
       <FloatingAddToCartButton
           productName={product.nom}
