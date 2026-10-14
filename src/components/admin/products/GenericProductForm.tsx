@@ -889,6 +889,25 @@ export function GenericProductForm({
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
+          Catégorie *
+        </label>
+        <select
+          value={formData.categorie_id}
+          onChange={(e) => handleInputChange('categorie_id', parseInt(e.target.value))}
+          className={`w-full px-4 py-2 border rounded-lg focus:border-black focus:outline-none focus:ring-1 focus:ring-black ${
+            errors.categorie_id ? 'border-red-500' : 'border-gray-300'
+          }`}
+        >
+          <option value={0}>Sélectionner une catégorie</option>
+          {categories.map(cat => (
+            <option key={cat.id} value={cat.id}>{cat.nom}</option>
+          ))}
+        </select>
+        {errors.categorie_id && <p className="mt-1 text-sm text-red-600">{errors.categorie_id}</p>}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
           Statut
         </label>
         <select
@@ -900,7 +919,6 @@ export function GenericProductForm({
           <option value="inactif">Inactif</option>
         </select>
       </div>
-      {errors.categorie_id && <p className="text-sm text-red-600">La catégorie est introuvable : rechargez la page ou contactez le support.</p>}
     </div>
   );
 
