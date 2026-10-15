@@ -112,6 +112,8 @@ export interface Boutique {
   note_moyenne: number;
   nombre_avis: number;
   est_verifiee: boolean; // Badge de vérification (attribution manuelle par un admin)
+  meta_page_id: string | null; // Page Facebook du compte publicitaire (migration 042). Null = page Marché 241
+  meta_page_nom: string | null;
   taux_marge?: number; // Lecture seule : marge du vendeur (jointure vendeurs.taux_marge), renvoyée par GET /boutiques/:id|:slug
 
   // Relations
@@ -828,6 +830,10 @@ export interface Boost {
   meta_campaign_id: string | null;
   meta_adset_id: string | null;
   meta_ad_id: string | null;
+  meta_page_id: string | null; // snapshot de la Page publiée (migration 042)
+  meta_page_nom: string | null;
+  meta_instagram_id: string | null;
+  meta_instagram_nom: string | null;
   meta_statut_effectif: string | null;
   meta_derniere_erreur: string | null;
   dry_run: boolean;
@@ -845,7 +851,7 @@ export interface Boost {
   date_modification: Date;
 
   // Relations
-  boutique?: Pick<Boutique, 'id' | 'nom' | 'slug' | 'logo'>;
+  boutique?: Pick<Boutique, 'id' | 'nom' | 'slug' | 'logo' | 'meta_page_id' | 'meta_page_nom'>;
 }
 
 // Table boost_insights_jour
