@@ -24,6 +24,7 @@ const LIBELLES_EVENEMENTS: Record<string, string> = {
   soumission: 'Publicité finalisée',
   paiement_confirme: 'Paiement reçu',
   publie: 'Validée et publiée sur Facebook & Instagram',
+  en_ligne: 'Acceptée par Meta et en ligne',
   refuse: 'Refusée par l’équipe Marché 241',
   rejete_meta: 'Refusée par Meta',
   pause: 'Mise en pause',
