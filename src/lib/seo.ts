@@ -1,3 +1,4 @@
+import { assetMarque } from '@/lib/assets-marque-defaut';
 import type { Boutique, ProduitDB, ProduitDetail } from '@/lib/database-types';
 
 export const SITE_URL = 'https://marche241.ga';
@@ -37,7 +38,7 @@ export function absoluteUrl(path = ''): string {
   return `${base}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
-export function absoluteAssetUrl(url?: string | null, fallbackPath = '/default-shop.png'): string {
+export function absoluteAssetUrl(url?: string | null, fallbackPath = assetMarque('image_boutique_defaut')): string {
   if (url && url.trim() !== '') {
     try {
       new URL(url);
@@ -46,7 +47,7 @@ export function absoluteAssetUrl(url?: string | null, fallbackPath = '/default-s
       return absoluteUrl(url.startsWith('/') ? url : `/${url}`);
     }
   }
-  return absoluteUrl(fallbackPath);
+  return /^https?:\/\//.test(fallbackPath) ? fallbackPath : absoluteUrl(fallbackPath);
 }
 
 export function buildStoreJsonLd(boutique: Boutique, boutiqueSlug: string) {

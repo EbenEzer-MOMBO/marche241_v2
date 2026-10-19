@@ -1,3 +1,4 @@
+import { assetMarque } from '@/lib/assets-marque-defaut';
 /**
  * Service pour la gestion des produits
  */
@@ -200,7 +201,7 @@ export function getProduitImageUrl(imageUrl?: string | null): string {
       console.warn('URL d\'image de produit invalide:', imageUrl);
     }
   }
-  return '/default-product.png';
+  return assetMarque('image_produit_defaut');
 }
 
 /**

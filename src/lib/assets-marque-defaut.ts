@@ -1,11 +1,17 @@
-export const ASSETS_MARQUE_DEFAUT = {
+import type { CleAssetMarque } from '@/lib/database-types';
+
+export type { CleAssetMarque };
+export type CarteAssetsMarque = Record<CleAssetMarque, string>;
+
+/** Fichiers statiques utilisés quand un emplacement est vide ou que l'API ne répond pas. */
+export const ASSETS_MARQUE_DEFAUT: CarteAssetsMarque = {
   logo_icone: '/marche241_Web_without_text-01-01.svg',
   logo_texte: '/Logo_vector_text-02.svg',
   logo_complet: '/marche241_Web_with_text-01.svg',
   logo_email: '/images/site-logo-mail.png',
-  favicon: '/favicon.ico',
+  favicon: '/favicon-defaut.ico',
   icone_app: '/site-logo.png',
-  image_partage: '/marche241_Web-01.svg',
+  image_partage: '/partage-defaut.png',
   hero_home: '/home1.jpg',
   illustration_1: '/home1.png',
   illustration_2: '/home2.png',
@@ -13,7 +19,32 @@ export const ASSETS_MARQUE_DEFAUT = {
   fond_billetterie: '/images/billetterie/concert-fond.jpg',
   image_boutique_defaut: '/default-shop.png',
   image_produit_defaut: '/default-product.png',
-} as const;
+};
 
-export type CleAssetMarque = keyof typeof ASSETS_MARQUE_DEFAUT;
-export type CarteAssetsMarque = Record<CleAssetMarque, string>;
+let carteCourante: CarteAssetsMarque = ASSETS_MARQUE_DEFAUT;
+
+/**
+ * Mémorise la carte chargée (layout racine côté serveur, provider côté client) pour les utilitaires
+ * qui ne sont pas des composants (`getProduitImageUrl`, `absoluteAssetUrl`). La carte est commune
+ * à tous les visiteurs, la partager au niveau du module est sans risque.
+ */
+export function definirAssetsMarque(carte: CarteAssetsMarque): void {
+  carteCourante = carte;
+}
+
+export function assetMarque(cle: CleAssetMarque): string {
+  return carteCourante[cle] || ASSETS_MARQUE_DEFAUT[cle];
+}
+
+/** Logo d'une boutique, ou l'image « boutique par défaut » si l'URL est absente ou invalide. */
+export function logoBoutiqueOuDefaut(logoUrl: string | null | undefined, defaut: string): string {
+  if (logoUrl && logoUrl.trim() !== '') {
+    try {
+      new URL(logoUrl);
+      return logoUrl;
+    } catch {
+      return defaut;
+    }
+  }
+  return defaut;
+}

@@ -8,7 +8,7 @@ import { useBoutique } from '@/hooks/useBoutique';
 import { usePanier } from '@/hooks/usePanier';
 import { HeaderSkeleton } from './LoadingStates';
 import SafeImage from './SafeImage';
-import { useAssetMarque } from '@/components/AssetsMarqueProvider';
+import { useLogoBoutique } from '@/components/AssetsMarqueProvider';
 
 interface HeaderProps {
   onCartClick?: () => void;
@@ -21,18 +21,7 @@ export default function Header({
   boutiqueName,
   hideCartButton = false,
 }: HeaderProps) {
-  const imageBoutiqueDefaut = useAssetMarque('image_boutique_defaut');
-  const getBoutiqueLogo = (logoUrl?: string | null): string => {
-    if (logoUrl && logoUrl.trim() !== '') {
-      try {
-        new URL(logoUrl);
-        return logoUrl;
-      } catch {
-        return imageBoutiqueDefaut;
-      }
-    }
-    return imageBoutiqueDefaut;
-  };
+  const getBoutiqueLogo = useLogoBoutique();
   const scrollY = useScrollPosition();
   const { boutique, config, loading, error } = useBoutique(boutiqueName);
   const { totalItems, rafraichir } = usePanier(boutique?.id);
