@@ -30,6 +30,14 @@ export function getSiteBaseUrl(): string {
   return SITE_URL;
 }
 
+/** Textes de partage du site, repris par le layout racine et par l'accueil (un `openGraph` de page remplace celui du layout). */
+export const PARTAGE_SITE = {
+  siteName: 'Marché241',
+  title: 'Marché241 - Créez votre boutique en ligne au Gabon',
+  description: 'Plateforme de commerce en ligne pour les commerçants gabonais. Créez, gérez et développez votre boutique facilement.',
+  imageAlt: 'Marché241 - Boutique en ligne',
+} as const;
+
 export function absoluteUrl(path = ''): string {
   const base = getSiteBaseUrl();
   if (!path || path === '/') {

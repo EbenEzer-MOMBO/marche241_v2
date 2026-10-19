@@ -36,12 +36,12 @@ export function assetMarque(cle: CleAssetMarque): string {
   return carteCourante[cle] || ASSETS_MARQUE_DEFAUT[cle];
 }
 
-/** Logo d'une boutique, ou l'image « boutique par défaut » si l'URL est absente ou invalide. */
-export function logoBoutiqueOuDefaut(logoUrl: string | null | undefined, defaut: string): string {
-  if (logoUrl && logoUrl.trim() !== '') {
+/** URL absolue d'une image (logo de boutique, image de produit), ou l'image par défaut si elle est absente ou invalide. */
+export function urlImageOuDefaut(url: string | null | undefined, defaut: string): string {
+  if (url && url.trim() !== '') {
     try {
-      new URL(logoUrl);
-      return logoUrl;
+      new URL(url);
+      return url;
     } catch {
       return defaut;
     }

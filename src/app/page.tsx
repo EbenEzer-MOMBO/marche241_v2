@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { absoluteUrl, OG_LOCALE, SITE_URL } from '@/lib/seo';
+import { absoluteUrl, OG_LOCALE, PARTAGE_SITE, SITE_URL } from '@/lib/seo';
 import { getAssetsMarque } from '@/lib/services/assets-marque';
 import LandingHomeClient from '@/components/landing/LandingHomeClient';
 
@@ -14,10 +14,10 @@ export async function generateMetadata(): Promise<Metadata> {
       type: 'website',
       url: absoluteUrl('/'),
       locale: OG_LOCALE,
-      siteName: 'Marché241',
-      title: 'Marché241 - Créez votre boutique en ligne au Gabon',
-      description: 'Plateforme de commerce en ligne pour les commerçants gabonais. Créez, gérez et développez votre boutique facilement.',
-      images: [{ url: assets.image_partage, width: 1200, height: 630, alt: 'Marché241 - Boutique en ligne' }],
+      siteName: PARTAGE_SITE.siteName,
+      title: PARTAGE_SITE.title,
+      description: PARTAGE_SITE.description,
+      images: [{ url: assets.image_partage, width: 1200, height: 630, alt: PARTAGE_SITE.imageAlt }],
     },
   };
 }

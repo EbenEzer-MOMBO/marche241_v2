@@ -5,6 +5,7 @@ import StructuredData from "@/components/StructuredData";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import { AssetsMarqueProvider } from "@/components/AssetsMarqueProvider";
 import { getAssetsMarque } from "@/lib/services/assets-marque";
+import { PARTAGE_SITE } from "@/lib/seo";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -69,22 +70,22 @@ export async function generateMetadata(): Promise<Metadata> {
     type: "website",
     locale: "fr_GA",
     url: "https://marche241.ga",
-    siteName: "Marché241",
-    title: "Marché241 - Créez votre boutique en ligne au Gabon",
-    description: "Plateforme de commerce en ligne pour les commerçants gabonais. Créez, gérez et développez votre boutique facilement.",
+    siteName: PARTAGE_SITE.siteName,
+    title: PARTAGE_SITE.title,
+    description: PARTAGE_SITE.description,
     images: [
       {
         url: assets.image_partage,
         width: 1200,
         height: 630,
-        alt: "Marché241 - Boutique en ligne",
+        alt: PARTAGE_SITE.imageAlt,
       }
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Marché241 - Créez votre boutique en ligne au Gabon",
-    description: "Plateforme de commerce en ligne pour les commerçants gabonais. Créez, gérez et développez votre boutique facilement.",
+    title: PARTAGE_SITE.title,
+    description: PARTAGE_SITE.description,
     images: [assets.image_partage],
     creator: "@marche241",
   },

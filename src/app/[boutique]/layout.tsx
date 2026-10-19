@@ -8,6 +8,7 @@ import {
   OG_LOCALE,
 } from "@/lib/seo";
 import { getCtaTextColor } from "@/lib/utils/shop-theme";
+import { getAssetsMarque } from "@/lib/services/assets-marque";
 
 // Force le mode dynamique pour éviter les erreurs de génération statique
 export const dynamic = 'force-dynamic';
@@ -53,6 +54,8 @@ export async function generateMetadata({
           : boutiqueData.description)
       : `Découvrez ${boutiqueConfig.name} - Boutique en ligne`;
     
+    // Charge les assets avant absoluteAssetUrl (image boutique par défaut)
+    await getAssetsMarque();
     const logoUrl = absoluteAssetUrl(boutiqueData.logo);
     const boutiqueUrl = absoluteUrl(`/${boutique}`);
     
@@ -117,6 +120,7 @@ export default async function BoutiqueLayout({
     notFound();
   }
 
+  await getAssetsMarque();
   const storeJsonLd = buildStoreJsonLd(boutiqueData, boutique);
 
   const primary = boutiqueConfig.theme.primary;

@@ -4,7 +4,7 @@ import { createContext, useContext } from 'react';
 import {
   ASSETS_MARQUE_DEFAUT,
   definirAssetsMarque,
-  logoBoutiqueOuDefaut,
+  urlImageOuDefaut,
   type CarteAssetsMarque,
   type CleAssetMarque,
 } from '@/lib/assets-marque-defaut';
@@ -29,5 +29,5 @@ export function useAssetMarque(cle: CleAssetMarque): string {
 /** Retourne une fonction qui donne le logo d'une boutique, avec l'image par défaut courante en repli. */
 export function useLogoBoutique(): (logoUrl?: string | null) => string {
   const defaut = useAssetMarque('image_boutique_defaut');
-  return (logoUrl) => logoBoutiqueOuDefaut(logoUrl, defaut);
+  return (logoUrl) => urlImageOuDefaut(logoUrl, defaut);
 }
