@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { useAssetMarque } from '@/components/AssetsMarqueProvider';
 import Link from 'next/link';
 import { ArrowRight, CalendarDays } from 'lucide-react';
 import { EvenementAffiche, EvenementDateBlock } from '@/components/evenements/EvenementVisuels';
@@ -91,6 +92,7 @@ const AucunEvenement = () => (
  * ou un état d'attente s'il n'y en a aucun.
  */
 export const BilletterieSection: React.FC = () => {
+  const fond = useAssetMarque('fond_billetterie');
   const { evenements, isLoading } = useEvenementsAVenir();
 
   const total = evenements.length;
@@ -103,7 +105,7 @@ export const BilletterieSection: React.FC = () => {
     >
       <div className="absolute inset-0 z-0">
         <Image
-          src="/images/billetterie/concert-fond.jpg"
+          src={fond}
           alt=""
           fill
           sizes="100vw"

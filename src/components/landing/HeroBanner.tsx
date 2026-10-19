@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, Check } from 'lucide-react';
 import { Boutique } from '@/lib/database-types';
+import { useAssetMarque } from '@/components/AssetsMarqueProvider';
 
 interface HeroBannerProps {
   boutiqueCount?: number;
@@ -21,8 +22,10 @@ const benefits = [
 export const HeroBanner: React.FC<HeroBannerProps> = ({
   boutiqueCount = 0,
   featuredBoutiques = [],
-  imageSrc = '/home1.jpg',
+  imageSrc,
 }) => {
+  const heroDefaut = useAssetMarque('hero_home');
+  const heroSrc = imageSrc || heroDefaut;
   const [isVisible, setIsVisible] = useState(false);
   const previewBoutique = featuredBoutiques[0];
   const avatarBoutiques = featuredBoutiques.slice(0, 3);
@@ -37,7 +40,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
     <section className="relative overflow-hidden bg-black">
       <div className="absolute inset-0 z-0">
         <Image
-          src={imageSrc}
+          src={heroSrc}
           alt="Commerçante gabonaise — Marché241"
           fill
           className="object-cover"

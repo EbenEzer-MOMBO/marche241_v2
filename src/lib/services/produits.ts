@@ -200,7 +200,7 @@ export function getProduitImageUrl(imageUrl?: string | null): string {
       console.warn('URL d\'image de produit invalide:', imageUrl);
     }
   }
-  return '/default-product.png'; // Image par défaut pour les produits
+  return '/default-product.png';
 }
 
 /**

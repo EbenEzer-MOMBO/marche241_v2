@@ -3,36 +3,19 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-
-const screenshots = [
-  {
-    title: "Tableau de bord",
-    description: "Vue d'ensemble de votre activité",
-    image: "/home1.png"
-  },
-  {
-    title: "Gestion des produits",
-    description: "Ajoutez et modifiez vos produits facilement",
-    image: "/home2.png"
-  },
-  {
-    title: "Commandes",
-    description: "Suivez toutes vos commandes en temps réel",
-    image: "/home3.jpg"
-  },
-  {
-    title: "Statistiques",
-    description: "Analysez vos performances",
-    image: "/home1.png"
-  },
-  {
-    title: "Vue boutique",
-    description: "L'expérience de vos clients",
-    image: "/home2.png"
-  }
-];
+import { useAssetMarque } from '@/components/AssetsMarqueProvider';
 
 export const ScreenshotsSection: React.FC = () => {
+  const illustration1 = useAssetMarque('illustration_1');
+  const illustration2 = useAssetMarque('illustration_2');
+  const illustration3 = useAssetMarque('illustration_3');
+  const screenshots = [
+    { title: 'Tableau de bord', description: "Vue d'ensemble de votre activité", image: illustration1 },
+    { title: 'Gestion des produits', description: 'Ajoutez et modifiez vos produits facilement', image: illustration2 },
+    { title: 'Commandes', description: 'Suivez toutes vos commandes en temps réel', image: illustration3 },
+    { title: 'Statistiques', description: 'Analysez vos performances', image: illustration1 },
+    { title: 'Vue boutique', description: "L'expérience de vos clients", image: illustration2 },
+  ];
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const handlePrevious = () => {

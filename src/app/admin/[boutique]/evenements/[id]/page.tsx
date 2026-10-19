@@ -370,13 +370,26 @@ export default function EvenementDetailPage() {
           g.nom,
           g.email,
           g.telephone,
-          ...g.billets.flatMap((b) => [b.participant_nom, b.participant_email, b.participant_profession]),
+          ...g.billets.flatMap((b) => [
+            b.participant_nom,
+            b.participant_telephone,
+            b.participant_email,
+            b.participant_profession,
+          ]),
         ])
       ) {
         return [{ groupe: g, billetsVisibles: null }];
       }
       const billets = g.billets.filter((b) =>
-        correspond([b.numero_commande, `#${b.numero}`, b.type_billet, b.participant_nom, b.participant_email, b.participant_profession])
+        correspond([
+          b.numero_commande,
+          `#${b.numero}`,
+          b.type_billet,
+          b.participant_nom,
+          b.participant_telephone,
+          b.participant_email,
+          b.participant_profession,
+        ])
       );
       return billets.length > 0 ? [{ groupe: g, billetsVisibles: new Set(billets.map((b) => b.id)) }] : [];
     });
@@ -595,10 +608,13 @@ export default function EvenementDetailPage() {
                           <span className="font-medium">#{b.numero}</span>{' '}
                           <span className="text-gray-500">· {b.type_billet}</span>
                         </p>
-                        {b.participant_nom ? (
+                        {[b.participant_nom, b.participant_telephone, b.participant_profession, b.participant_email].some(
+                          Boolean,
+                        ) ? (
                           <p className="text-sm text-gray-700">
-                            {b.participant_nom}
-                            {b.participant_profession ? ` · ${b.participant_profession}` : ''}
+                            {[b.participant_nom, b.participant_telephone, b.participant_profession, b.participant_email]
+                              .filter(Boolean)
+                              .join(' · ')}
                           </p>
                         ) : null}
                         <p

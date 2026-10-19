@@ -5,6 +5,7 @@ import { BadgeCheck } from 'lucide-react';
 import { useBoutique } from '@/hooks/useBoutique';
 import { HeroSkeleton, ErrorState } from './LoadingStates';
 import SafeImage from './SafeImage';
+import { useAssetMarque } from '@/components/AssetsMarqueProvider';
 import { BoutiqueTrustSignals } from './storefront/BoutiqueTrustSignals';
 import { getCommunesActives } from '@/lib/services/communes';
 import { formatDelaiLivraison } from '@/lib/utils/delai-livraison';
@@ -13,21 +14,21 @@ interface HeroSectionProps {
   boutiqueName: string;
 }
 
-const getBoutiqueLogo = (logoUrl?: string | null): string => {
-  if (logoUrl && logoUrl.trim() !== '') {
-    try {
-      new URL(logoUrl);
-      return logoUrl;
-    } catch {
-      return '/default-shop.png';
-    }
-  }
-  return '/default-shop.png';
-};
-
 const DESCRIPTION_PREVIEW_MAX = 160;
 
 export default function HeroSection({ boutiqueName }: HeroSectionProps) {
+  const imageBoutiqueDefaut = useAssetMarque('image_boutique_defaut');
+  const getBoutiqueLogo = (logoUrl?: string | null): string => {
+    if (logoUrl && logoUrl.trim() !== '') {
+      try {
+        new URL(logoUrl);
+        return logoUrl;
+      } catch {
+        return imageBoutiqueDefaut;
+      }
+    }
+    return imageBoutiqueDefaut;
+  };
   const { boutique, config, loading, error, refetch } = useBoutique(boutiqueName);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [delaiLivraisonLabel, setDelaiLivraisonLabel] = useState<string | null>(null);

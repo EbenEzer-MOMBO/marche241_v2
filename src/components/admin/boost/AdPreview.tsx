@@ -1,5 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
+'use client';
 import { Globe, ImageIcon, MessageCircle, MoreHorizontal, Share2, ThumbsUp } from 'lucide-react';
+import { useAssetMarque } from '@/components/AssetsMarqueProvider';
 import type { ObjectifBoost } from '@/lib/database-types';
 
 const LIBELLES_CTA: Record<ObjectifBoost, string> = {
@@ -24,10 +26,11 @@ export default function AdPreview({
   objectif: ObjectifBoost;
   domaine?: string;
 }) {
+  const icone = useAssetMarque('icone_app');
   return (
     <div className="w-full max-w-sm overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
       <div className="flex items-center gap-2.5 px-3 pt-3">
-        <img src="/site-logo.png" alt="" className="h-9 w-9 rounded-full border border-gray-100 object-cover" />
+        <img src={icone} alt="" className="h-9 w-9 rounded-full border border-gray-100 object-cover" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold leading-tight text-gray-900">Marché 241</p>
           <p className="flex items-center gap-1 text-xs text-gray-500">
