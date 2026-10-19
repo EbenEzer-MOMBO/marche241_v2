@@ -6,7 +6,10 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export const metadata: Metadata = {
+export async function generateMetadata(): Promise<Metadata> {
+  const { getAssetsMarque } = await import('@/lib/services/assets-marque');
+  const assets = await getAssetsMarque();
+  return {
   manifest: '/admin/manifest.json',
   title: 'Ma Boutique',
   description: 'Gérez votre boutique en ligne',
@@ -21,10 +24,11 @@ export const metadata: Metadata = {
   },
   icons: {
     apple: [
-      { url: '/site-logo.png', sizes: '180x180', type: 'image/png' },
+      { url: assets.icone_app, sizes: '180x180', type: 'image/png' },
     ],
   },
-};
+  };
+}
 
 export default function AdminBoutiqueLayout({
   children,

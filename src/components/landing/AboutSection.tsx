@@ -2,8 +2,11 @@
 
 import { Check, Zap, HeadphonesIcon } from 'lucide-react';
 import Image from 'next/image';
+import { useAssetMarque } from '@/components/AssetsMarqueProvider';
 
 export const AboutSection: React.FC = () => {
+  const illustration2 = useAssetMarque('illustration_2');
+  const illustration3 = useAssetMarque('illustration_3');
   return (
     <section id="about" className="py-20 lg:py-28 bg-gray-50">
       <div className="container mx-auto px-4">
@@ -13,7 +16,7 @@ export const AboutSection: React.FC = () => {
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-[#508e27] to-[#74adaf] rounded-2xl blur-2xl opacity-20"></div>
               <Image
-                src="/home2.png"
+                src={illustration2}
                 alt="Interface Marché241"
                 width={500}
                 height={400}
@@ -71,7 +74,7 @@ export const AboutSection: React.FC = () => {
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-purple-400 to-pink-500 rounded-2xl blur-2xl opacity-20"></div>
               <Image
-                src="/home3.jpg"
+                src={illustration3}
                 alt="Dashboard Analytics"
                 width={500}
                 height={400}

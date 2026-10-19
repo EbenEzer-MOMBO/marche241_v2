@@ -1,6 +1,7 @@
 import { SITE_URL, SOCIAL_PROFILES } from '@/lib/seo';
 
-export default function StructuredData() {
+export default function StructuredData({ logo }: { logo: string }) {
+  const logoUrl = logo.startsWith('http') ? logo : `${SITE_URL}${logo}`;
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
@@ -17,7 +18,7 @@ export default function StructuredData() {
       name: 'Marché241',
       logo: {
         '@type': 'ImageObject',
-        url: `${SITE_URL}/marche241_Web_without_text-01-01.svg`,
+        url: logoUrl,
       },
     },
   };
@@ -28,7 +29,7 @@ export default function StructuredData() {
     name: 'Marché241',
     description: 'Plateforme de commerce en ligne pour les commerçants gabonais',
     url: SITE_URL,
-    logo: `${SITE_URL}/marche241_Web_without_text-01-01.svg`,
+    logo: logoUrl,
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'Customer Service',

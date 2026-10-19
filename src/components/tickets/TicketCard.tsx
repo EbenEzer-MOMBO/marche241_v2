@@ -3,6 +3,7 @@
 import { getProduitImageUrl } from '@/lib/services/produits';
 import { formatTicketNumero, ticketQrPayload } from '@/lib/qr-payload';
 import { TicketQr } from './TicketQr';
+import { useAssetMarque } from '@/components/AssetsMarqueProvider';
 
 export interface TicketCardEvenement {
   nom: string;
@@ -21,6 +22,7 @@ interface TicketCardProps {
 }
 
 export const TicketCard = ({ evenement, typeBillet, numero, jeton, participantNom }: TicketCardProps) => {
+  const logoTexte = useAssetMarque('logo_texte');
   const lieu = [evenement.adresse, evenement.lieu].filter(Boolean).join(', ');
   const poster = evenement.image ? getProduitImageUrl(evenement.image) : '';
   const displayNumero = formatTicketNumero(numero);
@@ -44,7 +46,7 @@ export const TicketCard = ({ evenement, typeBillet, numero, jeton, participantNo
       <div className="relative flex items-center justify-between px-3 pt-3">
         <div className="flex items-center rounded-full bg-white px-2 py-1">
           <img
-            src="/Logo_vector_text-02.svg"
+            src={logoTexte}
             alt="Marché241"
             className="h-[16px] w-auto"
           />

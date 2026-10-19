@@ -1,6 +1,9 @@
 import { MetadataRoute } from 'next';
+import { getAssetsMarque } from '@/lib/services/assets-marque';
 
-export default function manifest(): MetadataRoute.Manifest {
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const assets = await getAssetsMarque();
+  const iconeSvg = assets.logo_icone.endsWith('.svg');
   return {
     name: 'Marché241 - Boutique en ligne au Gabon',
     short_name: 'Marché241',
@@ -11,8 +14,13 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#10b981',
     icons: [
       {
-        src: '/marche241_Web_without_text-01-01.svg',
+        src: assets.logo_icone,
         sizes: 'any',
+        type: iconeSvg ? 'image/svg+xml' : 'image/png',
+      },
+      {
+        src: assets.icone_app,
+        sizes: '512x512',
         type: 'image/png',
       },
     ],
@@ -21,4 +29,3 @@ export default function manifest(): MetadataRoute.Manifest {
     dir: 'ltr',
   };
 }
-

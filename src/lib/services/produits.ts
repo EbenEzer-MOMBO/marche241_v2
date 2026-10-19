@@ -1,3 +1,4 @@
+import { assetMarque, urlImageOuDefaut } from '@/lib/assets-marque-defaut';
 /**
  * Service pour la gestion des produits
  */
@@ -192,15 +193,7 @@ export function formatProduitPourAffichage(produit: ProduitDB): ProduitAffichage
  * @returns string - URL de l'image ou image par défaut
  */
 export function getProduitImageUrl(imageUrl?: string | null): string {
-  if (imageUrl && imageUrl.trim() !== '') {
-    try {
-      new URL(imageUrl);
-      return imageUrl;
-    } catch {
-      console.warn('URL d\'image de produit invalide:', imageUrl);
-    }
-  }
-  return '/default-product.png'; // Image par défaut pour les produits
+  return urlImageOuDefaut(imageUrl, assetMarque('image_produit_defaut'));
 }
 
 /**

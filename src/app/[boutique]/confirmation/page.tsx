@@ -9,22 +9,12 @@ import SafeImage from '@/components/SafeImage';
 import { verifierPaiementEnBoucle } from '@/lib/services/paiements';
 import { getCommunesActives } from '@/lib/services/communes';
 import { formatDureeLivraison } from '@/lib/utils/delai-livraison';
-
-const getBoutiqueLogo = (logoUrl?: string | null): string => {
-  if (logoUrl && logoUrl.trim() !== '') {
-    try {
-      new URL(logoUrl);
-      return logoUrl;
-    } catch {
-      return '/default-shop.png';
-    }
-  }
-  return '/default-shop.png';
-};
+import { useLogoBoutique } from '@/components/AssetsMarqueProvider';
 
 type VisaVerificationState = 'idle' | 'verifying' | 'success' | 'failed';
 
 export default function ConfirmationPage() {
+  const getBoutiqueLogo = useLogoBoutique();
   const searchParams = useSearchParams();
   const params = useParams();
   const boutiqueSlug = params.boutique as string;

@@ -1,8 +1,12 @@
 'use client';
 
 import Image from 'next/image';
+import { useAssetMarque } from '@/components/AssetsMarqueProvider';
 
 export default function PromotionalPosterDark() {
+  const illustration1 = useAssetMarque('illustration_1');
+  const illustration2 = useAssetMarque('illustration_2');
+  const logoIcone = useAssetMarque('logo_icone');
   return (
     <div className="relative w-[1080px] h-[1920px] bg-gray-900 overflow-hidden">
       {/* Background avec effets superposés */}
@@ -22,7 +26,7 @@ export default function PromotionalPosterDark() {
         {/* Images de produits en arrière-plan avec overlay */}
         <div className="absolute top-[200px] left-[50px] w-[300px] h-[300px] opacity-5 rotate-12">
           <Image
-            src="/home1.png"
+            src={illustration1}
             alt=""
             fill
             className="object-cover rounded-3xl"
@@ -30,7 +34,7 @@ export default function PromotionalPosterDark() {
         </div>
         <div className="absolute top-[600px] right-[50px] w-[350px] h-[350px] opacity-5 -rotate-12">
           <Image
-            src="/home2.png"
+            src={illustration2}
             alt=""
             fill
             className="object-cover rounded-3xl"
@@ -46,7 +50,8 @@ export default function PromotionalPosterDark() {
             <div className="bg-gray-900 rounded-3xl p-6">
               <div className="flex items-center space-x-4">
                 <Image
-                  src="/marche241_Web_without_text-01-01.svg"
+                  src={logoIcone}
+                  unoptimized
                   alt="Marché241"
                   width={80}
                   height={80}

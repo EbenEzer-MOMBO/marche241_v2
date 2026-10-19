@@ -6,6 +6,7 @@
 
 import Image from 'next/image';
 import { useState } from 'react';
+import { useAssetMarque } from '@/components/AssetsMarqueProvider';
 
 interface SafeImageProps {
   src: string;
@@ -25,16 +26,18 @@ export default function SafeImage({
   height, 
   fill,
   className = '', 
-  fallbackSrc = '/default-shop.png',
+  fallbackSrc,
   priority = false 
 }: SafeImageProps) {
+  const imageBoutiqueDefaut = useAssetMarque('image_boutique_defaut');
+  const repli = fallbackSrc ?? imageBoutiqueDefaut;
   const [imgSrc, setImgSrc] = useState(src);
   const [isError, setIsError] = useState(false);
 
   const handleError = () => {
-    if (!isError && imgSrc !== fallbackSrc) {
+    if (!isError && imgSrc !== repli) {
       console.warn('Échec de chargement de l\'image:', imgSrc);
-      setImgSrc(fallbackSrc);
+      setImgSrc(repli);
       setIsError(true);
     }
   };

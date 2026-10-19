@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useAssetMarque } from '@/components/AssetsMarqueProvider';
 
 interface Marche241LogoProps {
   href?: string;
@@ -18,6 +19,8 @@ export const Marche241Logo: React.FC<Marche241LogoProps> = ({
   textHeight = 28,
   priority = false,
 }) => {
+  const logoIcone = useAssetMarque('logo_icone');
+  const logoTexte = useAssetMarque('logo_texte');
   const iconWidth = Math.round(iconHeight * (469.31 / 374.31));
   const textWidth = Math.round(textHeight * (220 / 43.07));
 
@@ -27,7 +30,7 @@ export const Marche241Logo: React.FC<Marche241LogoProps> = ({
       aria-label="Marché241"
     >
       <Image
-        src="/marche241_Web_without_text-01-01.svg"
+        src={logoIcone}
         alt=""
         width={iconWidth}
         height={iconHeight}
@@ -38,7 +41,7 @@ export const Marche241Logo: React.FC<Marche241LogoProps> = ({
         aria-hidden
       />
       <Image
-        src="/Logo_vector_text-02.svg"
+        src={logoTexte}
         alt="Marché241"
         width={textWidth}
         height={textHeight}

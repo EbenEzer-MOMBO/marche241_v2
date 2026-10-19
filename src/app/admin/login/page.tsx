@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { ToastContainer } from '@/components/ui/Toast';
 import PhoneNumberInput from '@/components/ui/PhoneNumberInput';
 import { checkWhatsAppNumber } from '@/lib/services/whatsapp';
+import { useAssetMarque } from '@/components/AssetsMarqueProvider';
 
 type LoginMethod = 'email' | 'whatsapp';
 
@@ -14,6 +15,7 @@ type LoginMethod = 'email' | 'whatsapp';
 const WHATSAPP_LOGIN_ENABLED = false;
 
 function LoginContent() {
+  const logoComplet = useAssetMarque('logo_complet');
   const [loginMethod, setLoginMethod] = useState<LoginMethod>('email');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -115,7 +117,8 @@ function LoginContent() {
         <div className="text-center">
           <div className="mx-auto h-16 w-16 bg-white rounded-0 flex items-center justify-center mb-4 overflow-hidden p-0">
             <Image
-              src="/marche241_Web_with_text-01.svg"
+              src={logoComplet}
+              unoptimized
               alt="Marché 241"
               width={52}
               height={52}

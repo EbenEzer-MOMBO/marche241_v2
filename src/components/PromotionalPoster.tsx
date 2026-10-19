@@ -1,8 +1,13 @@
 'use client';
 
 import Image from 'next/image';
+import { useAssetMarque } from '@/components/AssetsMarqueProvider';
 
 export default function PromotionalPoster() {
+  const illustration1 = useAssetMarque('illustration_1');
+  const illustration2 = useAssetMarque('illustration_2');
+  const illustration3 = useAssetMarque('illustration_3');
+  const logoIcone = useAssetMarque('logo_icone');
   return (
     <div className="relative w-[1080px] h-[1920px] bg-white overflow-hidden">
       {/* Background avec effets superposés */}
@@ -24,7 +29,7 @@ export default function PromotionalPoster() {
         {/* Images de produits en arrière-plan avec overlay */}
         <div className="absolute top-[200px] left-[50px] w-[300px] h-[300px] opacity-10 rotate-12">
           <Image
-            src="/home1.png"
+            src={illustration1}
             alt=""
             fill
             className="object-cover rounded-3xl"
@@ -32,7 +37,7 @@ export default function PromotionalPoster() {
         </div>
         <div className="absolute top-[600px] right-[50px] w-[350px] h-[350px] opacity-10 -rotate-12">
           <Image
-            src="/home2.png"
+            src={illustration2}
             alt=""
             fill
             className="object-cover rounded-3xl"
@@ -40,7 +45,7 @@ export default function PromotionalPoster() {
         </div>
         <div className="absolute bottom-[300px] left-[80px] w-[320px] h-[320px] opacity-10 rotate-6">
           <Image
-            src="/home3.jpg"
+            src={illustration3}
             alt=""
             fill
             className="object-cover rounded-3xl"
@@ -55,7 +60,8 @@ export default function PromotionalPoster() {
           <div className="bg-white rounded-3xl p-6 shadow-2xl">
             <div className="flex items-center space-x-4">
               <Image
-                src="/marche241_Web_without_text-01-01.svg"
+                src={logoIcone}
+                unoptimized
                 alt="Marché241"
                 width={80}
                 height={80}

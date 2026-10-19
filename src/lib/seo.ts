@@ -1,3 +1,4 @@
+import { assetMarque } from '@/lib/assets-marque-defaut';
 import type { Boutique, ProduitDB, ProduitDetail } from '@/lib/database-types';
 
 export const SITE_URL = 'https://marche241.ga';
@@ -29,6 +30,14 @@ export function getSiteBaseUrl(): string {
   return SITE_URL;
 }
 
+/** Textes de partage du site, repris par le layout racine et par l'accueil (un `openGraph` de page remplace celui du layout). */
+export const PARTAGE_SITE = {
+  siteName: 'Marché241',
+  title: 'Marché241 - Créez votre boutique en ligne au Gabon',
+  description: 'Plateforme de commerce en ligne pour les commerçants gabonais. Créez, gérez et développez votre boutique facilement.',
+  imageAlt: 'Marché241 - Boutique en ligne',
+} as const;
+
 export function absoluteUrl(path = ''): string {
   const base = getSiteBaseUrl();
   if (!path || path === '/') {
@@ -37,7 +46,7 @@ export function absoluteUrl(path = ''): string {
   return `${base}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
-export function absoluteAssetUrl(url?: string | null, fallbackPath = '/default-shop.png'): string {
+export function absoluteAssetUrl(url?: string | null, fallbackPath = assetMarque('image_boutique_defaut')): string {
   if (url && url.trim() !== '') {
     try {
       new URL(url);
@@ -46,7 +55,7 @@ export function absoluteAssetUrl(url?: string | null, fallbackPath = '/default-s
       return absoluteUrl(url.startsWith('/') ? url : `/${url}`);
     }
   }
-  return absoluteUrl(fallbackPath);
+  return /^https?:\/\//.test(fallbackPath) ? fallbackPath : absoluteUrl(fallbackPath);
 }
 
 export function buildStoreJsonLd(boutique: Boutique, boutiqueSlug: string) {

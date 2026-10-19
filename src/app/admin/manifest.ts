@@ -1,6 +1,8 @@
 import { MetadataRoute } from 'next';
+import { getAssetsMarque } from '@/lib/services/assets-marque';
 
-export default function manifest(): MetadataRoute.Manifest {
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const assets = await getAssetsMarque();
   return {
     name: 'Marché241 - Administration',
     short_name: 'Marché241 Admin',
@@ -12,19 +14,13 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#ffffff',
     icons: [
       {
-        src: '/marche241_Web_without_text-01-01.svg',
-        sizes: 'any',
-        type: 'image/svg+xml',
-        purpose: 'any',
-      },
-      {
-        src: '/site-logo.png',
+        src: assets.icone_app,
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any',
       },
       {
-        src: '/site-logo.png',
+        src: assets.icone_app,
         sizes: '192x192',
         type: 'image/png',
         purpose: 'maskable',
