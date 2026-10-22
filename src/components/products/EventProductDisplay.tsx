@@ -26,6 +26,17 @@ interface EventProductDisplayProps {
   description?: string;
 }
 
+/** Fin de l'événement : l'heure seule si elle tombe le même jour que le début. */
+function formatFinLine(debut: string, fin: string): string {
+  const d = new Date(debut);
+  const f = new Date(fin);
+  if (Number.isNaN(f.getTime())) return fin;
+  if (!Number.isNaN(d.getTime()) && d.toDateString() === f.toDateString()) {
+    return f.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  }
+  return formatDateLine(fin);
+}
+
 function formatDateLine(iso?: string): string {
   if (!iso) return '';
   const d = new Date(iso);
@@ -88,6 +99,12 @@ export function EventProductDisplay({
           <p className="text-sm text-[#17181a]">
             <span className="font-medium">Date · </span>
             {formatDateLine(meta.date_debut)}
+          </p>
+        )}
+        {typeof meta.date_debut === 'string' && typeof meta.date_fin === 'string' && meta.date_fin && (
+          <p className="text-sm text-[#3c4045]">
+            <span className="font-medium">Fin · </span>
+            {formatFinLine(meta.date_debut, meta.date_fin)}
           </p>
         )}
         {typeof meta.lieu === 'string' && (
