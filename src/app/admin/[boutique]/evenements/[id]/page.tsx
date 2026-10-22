@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   ChevronDown,
   Clock,
+  ExternalLink,
   Download,
   Eye,
   Loader2,
@@ -30,6 +31,7 @@ import ConfirmationModal from '@/components/ui/ConfirmationModal';
 import Sidebar from '@/components/admin/Sidebar';
 import { EventProductForm } from '@/components/admin/products/EventProductForm';
 import { EvenementShareBar } from '@/components/admin/EvenementShareBar';
+import config from '@/lib/config';
 import { BoutiqueData } from '@/lib/services/auth';
 import { getProduitById, modifierProduit } from '@/lib/services/products';
 import { getCategoriesParBoutique } from '@/lib/services/categories';
@@ -635,7 +637,12 @@ export default function EvenementDetailPage() {
     { label: 'Visites sur la page', valeur: String(vues), icon: Eye },
   ];
 
-  const meta = (productToEdit?.meta || {}) as { date_debut?: string; lieu?: string };
+  const meta = (productToEdit?.meta || {}) as { date_debut?: string; date_fin?: string; lieu?: string };
+  // Même règle que l'API : une fin absente ou antérieure au début est remplacée par début + 12 h
+  const finValide =
+    !!meta.date_fin &&
+    !!meta.date_debut &&
+    new Date(meta.date_fin).getTime() > new Date(meta.date_debut).getTime();
 
   return (
     <div className="h-screen bg-gray-50 flex overflow-hidden max-w-[100vw]">
@@ -796,6 +803,27 @@ export default function EvenementDetailPage() {
                 </div>
               </div>
             ))}
+          </div>
+
+          <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center">
+            <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-black text-white">
+              <ScanLine className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-gray-900">Contrôle des entrées</p>
+              <p className="text-xs text-gray-500">
+                Scannez les billets avec votre téléphone, même sans réseau. Le scan ouvre 1 h avant le début et ferme à la
+                fin de l’événement{finValide ? '' : ' (12 h après le début : la fin n’est pas renseignée ou est antérieure au début)'}.
+              </p>
+            </div>
+            <a
+              href={`${config.scanUrl}/evenement?id=${produit.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-black px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-800"
+            >
+              Ouvrir le scanner <ExternalLink className="h-4 w-4" />
+            </a>
           </div>
 
           <EvenementShareBar
