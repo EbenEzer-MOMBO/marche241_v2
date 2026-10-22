@@ -8,6 +8,7 @@ import { ToastContainer } from '@/components/ui/Toast';
 import PhoneNumberInput from '@/components/ui/PhoneNumberInput';
 import { checkWhatsAppNumber } from '@/lib/services/whatsapp';
 import { useAssetMarque } from '@/components/AssetsMarqueProvider';
+import { Fingerprint } from 'lucide-react';
 
 type LoginMethod = 'email' | 'whatsapp';
 
@@ -280,9 +281,10 @@ function LoginContent() {
                 type="button"
                 onClick={handlePasskeyLogin}
                 disabled={isLoading}
-                className="w-full flex justify-center items-center py-3 px-4 border border-gray-300 rounded-lg text-sm font-medium text-gray-800 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-gray-300 rounded-lg text-sm font-medium text-gray-800 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 aria-label="Se connecter avec une clé d'accès"
               >
+                <Fingerprint className="h-4 w-4" aria-hidden />
                 Se connecter avec une clé d'accès
               </button>
 
