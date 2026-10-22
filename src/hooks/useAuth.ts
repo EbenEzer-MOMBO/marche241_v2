@@ -23,7 +23,7 @@ interface UseAuthReturn {
   error: string | null;
   demanderCode: (data: DemanderCodeData) => Promise<boolean>;
   verifier: (data: VerifierCodeData) => Promise<boolean>;
-  connecterPasskey: (email: string) => Promise<boolean>;
+  connecterPasskey: (email?: string, options?: { autofill?: boolean }) => Promise<boolean>;
   inscrire: (data: InscriptionData, captchaToken?: string) => Promise<{ success: boolean; email?: string }>;
   verifierBoutique: () => Promise<BoutiqueData | null>;
   updateUser: (userData: Partial<AuthUser>) => void;
@@ -184,12 +184,13 @@ export function useAuth(): UseAuthReturn {
     }
   };
 
-  const connecterPasskey = async (email: string): Promise<boolean> => {
-    setIsLoading(true);
+  const connecterPasskey = async (email?: string, { autofill = false }: { autofill?: boolean } = {}): Promise<boolean> => {
+    // Autoremplissage : la cérémonie attend en arrière-plan, pas d'indicateur de chargement
+    if (!autofill) setIsLoading(true);
     setError(null);
 
     try {
-      const response = await loginWithPasskey(email);
+      const response = await loginWithPasskey(email, { autofill });
       if (applyVendeurSession(response)) {
         return true;
       }
@@ -197,6 +198,12 @@ export function useAuth(): UseAuthReturn {
       showError(response.message, 'Clé d\'accès');
       return false;
     } catch (error) {
+      // Cérémonie annulée (autre connexion lancée, départ de la page), ou proposition automatique
+      // indisponible avant tout choix de l'utilisateur : rien à signaler. Un refus après le choix
+      // d'une clé (vérification) s'affiche normalement.
+      if (error instanceof Error && (error.name === 'AbortError' || error.name === 'AutofillIndisponible')) {
+        return false;
+      }
       const errorMessage = error instanceof Error ? error.message : 'Connexion par clé d\'accès impossible';
       setError(errorMessage);
       showError(errorMessage, 'Clé d\'accès');
