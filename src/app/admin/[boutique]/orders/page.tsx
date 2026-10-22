@@ -45,6 +45,7 @@ export default function OrdersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [showArchived, setShowArchived] = useState(false);
+  const [showCancelled, setShowCancelled] = useState(false);
   const [pendingArchiveOrder, setPendingArchiveOrder] = useState<Commande | null>(null);
 
   // États pour le sidebar de détails
@@ -164,7 +165,10 @@ export default function OrdersPage() {
       order.client_nom.toLowerCase().includes(searchLower) ||
       order.client_telephone.toLowerCase().includes(searchLower);
     
-    return matchStatus && matchSearch;
+    // Les commandes annulées sont masquées sauf si la case est cochée
+    const matchCancelled = showCancelled || order.statut.toLowerCase() !== 'annulee';
+
+    return matchStatus && matchSearch && matchCancelled;
   });
 
   // Calcul de la pagination
@@ -552,6 +556,19 @@ export default function OrdersPage() {
                 </div>
               )}
             </div>
+
+            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer w-fit">
+              <input
+                type="checkbox"
+                checked={showCancelled}
+                onChange={(e) => {
+                  setShowCancelled(e.target.checked);
+                  setCurrentPage(1);
+                }}
+                className="rounded border-gray-300 text-black focus:ring-black"
+              />
+              Afficher les commandes annulées
+            </label>
 
             <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer w-fit">
               <input
