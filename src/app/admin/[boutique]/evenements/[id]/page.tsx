@@ -638,6 +638,11 @@ export default function EvenementDetailPage() {
   ];
 
   const meta = (productToEdit?.meta || {}) as { date_debut?: string; date_fin?: string; lieu?: string };
+  // Même règle que l'API : une fin absente ou antérieure au début est remplacée par début + 12 h
+  const finValide =
+    !!meta.date_fin &&
+    !!meta.date_debut &&
+    new Date(meta.date_fin).getTime() > new Date(meta.date_debut).getTime();
 
   return (
     <div className="h-screen bg-gray-50 flex overflow-hidden max-w-[100vw]">
@@ -808,7 +813,7 @@ export default function EvenementDetailPage() {
               <p className="text-sm font-semibold text-gray-900">Contrôle des entrées</p>
               <p className="text-xs text-gray-500">
                 Scannez les billets avec votre téléphone, même sans réseau. Le scan ouvre 1 h avant le début et ferme à la
-                fin de l’événement{meta.date_fin ? '' : ' (12 h après le début si la fin n’est pas renseignée)'}.
+                fin de l’événement{finValide ? '' : ' (12 h après le début : la fin n’est pas renseignée ou est antérieure au début)'}.
               </p>
             </div>
             <a
