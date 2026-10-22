@@ -477,12 +477,42 @@ export async function revokeVendeurPasskey(id: number): Promise<void> {
   await api.delete(`/vendeurs/me/passkeys/${id}`);
 }
 
-export async function loginWithPasskey(email: string): Promise<VerifierCodeResponse> {
+/**
+ * Connexion par clé d'accès. Sans email, le navigateur propose les clés du site ;
+ * avec `autofill`, il les propose dans l'autoremplissage du champ email (WebAuthn « conditional UI »).
+ */
+export async function loginWithPasskey(
+  email?: string,
+  { autofill = false }: { autofill?: boolean } = {}
+): Promise<VerifierCodeResponse> {
   const { startAuthentication } = await import('@simplewebauthn/browser');
-  const optionsResponse = await api.post<{ success: boolean; options: any }>(
-    '/vendeurs/passkeys/login/options',
-    { email }
-  );
-  const response = await startAuthentication({ optionsJSON: optionsResponse.options });
+  let optionsResponse: { success: boolean; options: any };
+  try {
+    optionsResponse = await api.post<{ success: boolean; options: any }>(
+      '/vendeurs/passkeys/login/options',
+      email ? { email } : {}
+    );
+  } catch (error) {
+    // Proposition automatique : l'échec survient avant tout choix de l'utilisateur, il reste silencieux
+    if (autofill) {
+      const silencieuse = new Error('Proposition de clé d’accès indisponible');
+      silencieuse.name = 'AutofillIndisponible';
+      throw silencieuse;
+    }
+    throw error;
+  }
+  let response: Awaited<ReturnType<typeof startAuthentication>>;
+  try {
+    response = await startAuthentication({ optionsJSON: optionsResponse.options, useBrowserAutofill: autofill });
+  } catch (error) {
+    // En autoremplissage, la cérémonie ne rejette qu'avant tout choix (annulation, domaine non
+    // autorisé sur une préversion, navigateur incompatible) : échec silencieux
+    if (autofill) {
+      const silencieuse = new Error('Proposition de clé d’accès indisponible');
+      silencieuse.name = 'AutofillIndisponible';
+      throw silencieuse;
+    }
+    throw error;
+  }
   return api.post<VerifierCodeResponse>('/vendeurs/passkeys/login/verify', { response });
 }

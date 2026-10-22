@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
@@ -49,13 +49,38 @@ function LoginContent() {
     }
   };
 
+  // Sans email, le navigateur propose les clés d'accès enregistrées pour le site
   const handlePasskeyLogin = async () => {
     setSessionExpiredMessage(null);
-    if (!email.trim()) {
-      return;
-    }
-    await connecterPasskey(email.trim());
+    const connecte = await connecterPasskey(email.trim() || undefined);
+    if (connecte !== true) setAutofillArme((n) => n + 1);
   };
+
+  // Proposition automatique : les clés d'accès apparaissent dans l'autoremplissage du champ email
+  // (WebAuthn « conditional UI »). Réarmée toutes les 4 min, le défi expirant après 5 min côté API.
+  const [autofillArme, setAutofillArme] = useState(0);
+  const connecterPasskeyRef = useRef(connecterPasskey);
+  useEffect(() => {
+    connecterPasskeyRef.current = connecterPasskey;
+  });
+  useEffect(() => {
+    if (loginMethod !== 'email') return;
+    let actif = true;
+    const relance = window.setTimeout(() => setAutofillArme((n) => n + 1), 4 * 60 * 1000);
+    void (async () => {
+      const { browserSupportsWebAuthnAutofill } = await import('@simplewebauthn/browser');
+      if (!actif || !(await browserSupportsWebAuthnAutofill())) return;
+      // Clé choisie puis refusée : la proposition est réarmée tout de suite (un échec silencieux
+      // attend le réarmement périodique, pour ne pas boucler si l'API est indisponible)
+      const resultat = await connecterPasskeyRef.current(undefined, { autofill: true });
+      if (actif && resultat === false) setAutofillArme((n) => n + 1);
+    })();
+    return () => {
+      actif = false;
+      window.clearTimeout(relance);
+      void import('@simplewebauthn/browser').then(({ WebAuthnAbortService }) => WebAuthnAbortService.cancelCeremony());
+    };
+  }, [loginMethod, autofillArme]);
 
   // Vérifier le numéro WhatsApp quand il est valide
   useEffect(() => {
@@ -134,7 +159,8 @@ function LoginContent() {
           </p>
         </div>
 
-        {/* Sélecteur de méthode de connexion */}
+        {/* Sélecteur de méthode de connexion : seulement si plusieurs méthodes sont disponibles */}
+        {WHATSAPP_LOGIN_ENABLED && (
         <div className="flex border border-gray-300 rounded-lg overflow-hidden">
           <button
             type="button"
@@ -171,6 +197,7 @@ function LoginContent() {
             </button>
           )}
         </div>
+        )}
 
         {/* Formulaires de connexion */}
         <div className="bg-white border border-gray-200 rounded-xl shadow-lg p-8">
@@ -205,6 +232,7 @@ function LoginContent() {
                     id="email"
                     type="email"
                     required
+                    autoComplete="username webauthn"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="votre@email.com"
@@ -251,7 +279,7 @@ function LoginContent() {
               <button
                 type="button"
                 onClick={handlePasskeyLogin}
-                disabled={isLoading || !email.trim()}
+                disabled={isLoading}
                 className="w-full flex justify-center items-center py-3 px-4 border border-gray-300 rounded-lg text-sm font-medium text-gray-800 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 aria-label="Se connecter avec une clé d'accès"
               >
@@ -260,7 +288,7 @@ function LoginContent() {
 
               <div className="mt-6 text-center">
                 <p className="text-xs text-gray-500">
-                  Un code de vérification à 6 chiffres sera envoyé par email. La clé d'accès fonctionne après l'avoir ajoutée dans les paramètres.
+                  Un code de vérification à 6 chiffres sera envoyé par email. Si vous avez ajouté une clé d'accès dans les paramètres, votre appareil la propose directement.
                 </p>
               </div>
             </form>
