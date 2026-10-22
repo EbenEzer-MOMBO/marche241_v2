@@ -53,7 +53,7 @@ function LoginContent() {
   const handlePasskeyLogin = async () => {
     setSessionExpiredMessage(null);
     const connecte = await connecterPasskey(email.trim() || undefined);
-    if (!connecte) setAutofillArme((n) => n + 1);
+    if (connecte !== true) setAutofillArme((n) => n + 1);
   };
 
   // Proposition automatique : les clés d'accès apparaissent dans l'autoremplissage du champ email
@@ -70,7 +70,10 @@ function LoginContent() {
     void (async () => {
       const { browserSupportsWebAuthnAutofill } = await import('@simplewebauthn/browser');
       if (!actif || !(await browserSupportsWebAuthnAutofill())) return;
-      await connecterPasskeyRef.current(undefined, { autofill: true });
+      // Clé choisie puis refusée : la proposition est réarmée tout de suite (un échec silencieux
+      // attend le réarmement périodique, pour ne pas boucler si l'API est indisponible)
+      const resultat = await connecterPasskeyRef.current(undefined, { autofill: true });
+      if (actif && resultat === false) setAutofillArme((n) => n + 1);
     })();
     return () => {
       actif = false;

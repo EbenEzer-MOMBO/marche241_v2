@@ -501,6 +501,18 @@ export async function loginWithPasskey(
     }
     throw error;
   }
-  const response = await startAuthentication({ optionsJSON: optionsResponse.options, useBrowserAutofill: autofill });
+  let response: Awaited<ReturnType<typeof startAuthentication>>;
+  try {
+    response = await startAuthentication({ optionsJSON: optionsResponse.options, useBrowserAutofill: autofill });
+  } catch (error) {
+    // En autoremplissage, la cérémonie ne rejette qu'avant tout choix (annulation, domaine non
+    // autorisé sur une préversion, navigateur incompatible) : échec silencieux
+    if (autofill) {
+      const silencieuse = new Error('Proposition de clé d’accès indisponible');
+      silencieuse.name = 'AutofillIndisponible';
+      throw silencieuse;
+    }
+    throw error;
+  }
   return api.post<VerifierCodeResponse>('/vendeurs/passkeys/login/verify', { response });
 }
