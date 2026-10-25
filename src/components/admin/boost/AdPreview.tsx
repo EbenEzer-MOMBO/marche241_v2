@@ -16,6 +16,7 @@ export default function AdPreview({
   texte,
   description,
   imageUrl,
+  videoUrl,
   objectif,
   domaine = 'marche241.ga'
 }: {
@@ -23,6 +24,7 @@ export default function AdPreview({
   texte: string;
   description?: string | null;
   imageUrl: string | null;
+  videoUrl?: string | null;
   objectif: ObjectifBoost;
   domaine?: string;
 }) {
@@ -44,7 +46,16 @@ export default function AdPreview({
         {texte || 'Le texte de votre publicité apparaîtra ici.'}
       </p>
 
-      {imageUrl ? (
+      {videoUrl ? (
+        <video
+          src={videoUrl}
+          poster={imageUrl ?? undefined}
+          controls
+          muted
+          playsInline
+          className="aspect-[9/16] max-h-80 w-full bg-black object-contain"
+        />
+      ) : imageUrl ? (
         <img src={imageUrl} alt="Visuel de la publicité" className="aspect-[1.91/1] w-full bg-gray-100 object-cover" />
       ) : (
         <div className="flex aspect-[1.91/1] w-full flex-col items-center justify-center bg-gray-100 text-gray-400">

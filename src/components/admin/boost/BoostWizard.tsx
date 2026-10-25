@@ -10,6 +10,7 @@ import {
   Globe,
   ImagePlus,
   Loader2,
+  Video,
   MessageCircle,
   MousePointerClick,
   Save,
@@ -24,6 +25,7 @@ import {
   budgetJourMinimum,
   budgetMediaDepuisTotal,
   creerBrouillonBoost,
+  demanderUrlVideo,
   DevisBoost,
   DonneesBrouillonBoost,
   enregistrerBrouillonBoost,
@@ -34,13 +36,15 @@ import {
   EstimationImpressions,
   formaterFcfa,
   formaterNombre,
+  fraisVideoPour,
   getDevisBoost,
   getPrefillBoost,
   messageErreur,
   ParametresBoost,
   payerBoost,
   soumettreBoost,
-  supprimerBrouillonBoost
+  supprimerBrouillonBoost,
+  televerserVideo
 } from '@/lib/services/boosts';
 import { getProduitsParBoutique } from '@/lib/services/products';
 import { uploadImage } from '@/lib/services/upload';
@@ -59,7 +63,7 @@ const ETAPES = [
 ] as const;
 
 const CHAMPS_PAR_ETAPE: Record<number, string[]> = {
-  1: ['titre', 'texte_principal', 'image_url', 'produit_id', 'description', 'nom'],
+  1: ['titre', 'texte_principal', 'image_url', 'video_url', 'media_type', 'produit_id', 'description', 'nom'],
   2: ['whatsapp_e164', 'url_destination', 'objectif', 'ciblage'],
   3: ['total_fcfa', 'duree_jours']
 };
@@ -74,6 +78,7 @@ const OBJECTIFS: Array<{ id: ObjectifBoost; titre: string; texte: string; icone:
 const CHAMPS_AFFICHES = new Set([
   'produit_id',
   'image_url',
+  'video_url',
   'titre',
   'texte_principal',
   'description',
@@ -86,6 +91,74 @@ const CHAMPS_AFFICHES = new Set([
 
 const LIEN_EXEMPLE = 'ex. https://marche241.ga/ma-boutique';
 const WHATSAPP_E164 = /^\+[1-9]\d{7,14}$/;
+const TAILLE_MAX_VIDEO = 50 * 1024 * 1024;
+const TYPES_VIDEO = new Set(['video/mp4', 'video/quicktime']);
+const RATIOS_VIDEO = [4 / 5, 1, 9 / 16];
+
+const lireMetadonneesVideo = (fichier: File): Promise<{ duree: number; largeur: number; hauteur: number }> =>
+  new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(fichier);
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.muted = true;
+    video.playsInline = true;
+    video.src = url;
+    video.onloadedmetadata = () => {
+      const info = { duree: video.duration, largeur: video.videoWidth, hauteur: video.videoHeight };
+      URL.revokeObjectURL(url);
+      resolve(info);
+    };
+    video.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Impossible de lire la vidéo'));
+    };
+  });
+
+const capturerMiniature = (fichier: File): Promise<File> =>
+  new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(fichier);
+    const video = document.createElement('video');
+    video.muted = true;
+    video.playsInline = true;
+    video.src = url;
+    video.onloadeddata = () => {
+      video.currentTime = Math.min(0.4, Number.isFinite(video.duration) ? video.duration / 4 : 0.4);
+    };
+    video.onseeked = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 1080;
+      canvas.height = video.videoHeight || 1080;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        URL.revokeObjectURL(url);
+        reject(new Error('Miniature impossible'));
+        return;
+      }
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(
+        (blob) => {
+          URL.revokeObjectURL(url);
+          if (!blob) {
+            reject(new Error('Miniature impossible'));
+            return;
+          }
+          resolve(new File([blob], 'miniature-boost.jpg', { type: 'image/jpeg' }));
+        },
+        'image/jpeg',
+        0.85
+      );
+    };
+    video.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Impossible de lire la vidéo'));
+    };
+  });
+
+const ratioVideoAccepte = (largeur: number, hauteur: number): boolean => {
+  if (!largeur || !hauteur) return false;
+  const r = largeur / hauteur;
+  return RATIOS_VIDEO.some((cible) => Math.abs(r - cible) <= 0.06);
+};
 
 /** Adresse web complète en http(s) avec un nom de domaine (même règle que l'API). */
 function estLienWeb(valeur: string): boolean {
@@ -108,6 +181,9 @@ interface Formulaire {
   texte_principal: string;
   description: string;
   image_url: string;
+  media_type: 'image' | 'video';
+  video_url: string;
+  video_duree_sec: number | null;
   url_destination: string;
   whatsapp_e164: string;
   total_fcfa: number;
@@ -125,6 +201,9 @@ function depuisBoost(b: Boost): Formulaire {
     texte_principal: b.texte_principal ?? '',
     description: b.description ?? '',
     image_url: b.image_url ?? '',
+    media_type: b.media_type ?? 'image',
+    video_url: b.video_url ?? '',
+    video_duree_sec: b.video_duree_sec ?? null,
     url_destination: b.url_destination ?? '',
     whatsapp_e164: b.whatsapp_e164 ?? '',
     total_fcfa: b.total_fcfa,
@@ -143,6 +222,9 @@ function versApi(f: Formulaire, etape: number): DonneesBrouillonBoost {
     texte_principal: f.texte_principal || null,
     description: f.description || null,
     image_url: f.image_url || null,
+    media_type: f.media_type,
+    video_url: f.media_type === 'video' ? f.video_url || null : null,
+    video_duree_sec: f.media_type === 'video' ? f.video_duree_sec : null,
     // Saisie en cours (« https: », « +241… ») : non envoyée, sinon l'API rejetterait tout le brouillon
     url_destination: estLienWeb(f.url_destination) ? f.url_destination.trim() : null,
     whatsapp_e164: WHATSAPP_E164.test(f.whatsapp_e164.replace(/\s/g, '')) ? f.whatsapp_e164.replace(/\s/g, '') : null,
@@ -207,6 +289,9 @@ export default function BoostWizard({
           texte_principal: '',
           description: '',
           image_url: '',
+          media_type: 'image',
+          video_url: '',
+          video_duree_sec: null,
           url_destination: '',
           whatsapp_e164: '',
           total_fcfa: premierPack?.total_fcfa ?? parametres.total_min_fcfa,
@@ -218,6 +303,7 @@ export default function BoostWizard({
   const [produits, setProduits] = useState<ProduitDB[]>([]);
   const [enregistrement, setEnregistrement] = useState<'idle' | 'en_cours' | 'ok' | 'erreur'>('idle');
   const [upload, setUpload] = useState(false);
+  const [progressionVideo, setProgressionVideo] = useState(0);
   const [devis, setDevis] = useState<DevisBoost | null>(null);
   const [audience, setAudience] = useState<{ min: number | null; max: number | null; disponible: boolean } | null>(null);
   const [impressions, setImpressions] = useState<EstimationImpressions[] | null>(null);
@@ -295,7 +381,7 @@ export default function BoostWizard({
     [form, boutique.id, boutique.slug]
   );
 
-  const aDuContenu = Boolean(form.titre || form.texte_principal || form.image_url);
+  const aDuContenu = Boolean(form.titre || form.texte_principal || form.image_url || form.video_url);
   useEffect(() => {
     if (etape === 0 || verrouille || !modifie.current || (!boostRef.current && !aDuContenu)) return;
     const timer = setTimeout(() => void enregistrer(etape), 1500);
@@ -320,7 +406,7 @@ export default function BoostWizard({
     let annule = false;
     const timer = setTimeout(async () => {
       try {
-        const d = await getDevisBoost(form.total_fcfa, form.duree_jours, form.objectif);
+        const d = await getDevisBoost(form.total_fcfa, form.duree_jours, form.objectif, form.media_type);
         if (!annule) {
           setDevis(d);
           setErreurs((e) => {
@@ -337,7 +423,7 @@ export default function BoostWizard({
       }
       try {
         const montants = Array.from(new Set([...parametres.packs.map((p) => p.total_fcfa), form.total_fcfa]));
-        const est = await estimerImpressionsBoost(montants, form.duree_jours);
+        const est = await estimerImpressionsBoost(montants, form.duree_jours, form.media_type);
         if (!annule) setImpressions(est);
       } catch {
         if (!annule) setImpressions(null);
@@ -347,7 +433,7 @@ export default function BoostWizard({
       annule = true;
       clearTimeout(timer);
     };
-  }, [etape, form.total_fcfa, form.duree_jours, form.objectif, parametres.packs]);
+  }, [etape, form.total_fcfa, form.duree_jours, form.objectif, form.media_type, parametres.packs]);
 
   useEffect(() => {
     if (etape !== 2) return;
@@ -376,8 +462,11 @@ export default function BoostWizard({
   const minimumJour = devis?.budget_jour_min_fcfa ?? budgetJourMinimum(form.objectif, parametres);
   const plancherWhatsapp = form.objectif === 'whatsapp' && minimumJour > parametres.budget_jour_min_fcfa;
   const budgetWhatsappInsuffisant = plancherWhatsapp && !!devis && devis.budget_jour_fcfa < minimumJour;
+  // Une vidéo ajoute un frais fixe : certains packs ne laissent plus assez de budget média par jour
+  const fraisVideo = fraisVideoPour(form.media_type, parametres);
   const packTropFaible = (p: { total_fcfa: number; duree_jours: number }) =>
-    plancherWhatsapp && budgetMediaDepuisTotal(p.total_fcfa, parametres) / p.duree_jours < minimumJour;
+    (plancherWhatsapp || fraisVideo > 0) && budgetMediaDepuisTotal(p.total_fcfa, parametres, fraisVideo) / p.duree_jours < minimumJour;
+  const budgetVideoInsuffisant = fraisVideo > 0 && !plancherWhatsapp && !!devis && devis.budget_jour_fcfa < minimumJour;
 
   const validerEtape = (n: number): boolean => {
     const e: Record<string, string> = {};
@@ -385,7 +474,12 @@ export default function BoostWizard({
       if (form.type_cible === 'produit' && !form.produit_id) e.produit_id = 'Choisissez le produit à mettre en avant';
       if (form.titre.trim().length < 3) e.titre = 'Le titre doit contenir au moins 3 caractères';
       if (form.texte_principal.trim().length < 5) e.texte_principal = 'Le texte doit contenir au moins 5 caractères';
-      if (!form.image_url) e.image_url = 'Ajoutez un visuel pour votre publicité';
+      if (form.media_type === 'video') {
+        if (!form.video_url) e.video_url = 'Ajoutez une vidéo pour votre publicité';
+        if (!form.image_url) e.image_url = 'La miniature de la vidéo est requise';
+      } else if (!form.image_url) {
+        e.image_url = 'Ajoutez un visuel pour votre publicité';
+      }
     }
     if (n === 2) {
       if (form.objectif === 'whatsapp' && !WHATSAPP_E164.test(form.whatsapp_e164.replace(/\s/g, ''))) {
@@ -408,7 +502,7 @@ export default function BoostWizard({
         // Plancher WhatsApp : c'est le montant qu'il faut augmenter (même champ que l'API)
         e[plancherWhatsapp ? 'total_fcfa' : 'duree_jours'] = plancherWhatsapp
           ? `Pour recevoir des messages WhatsApp, Meta demande au moins ${formaterFcfa(minimum)} de publicité par jour${devis.total_minimum_fcfa ? ` : il faut au moins ${formaterFcfa(devis.total_minimum_fcfa)} pour ${form.duree_jours} jours` : ''}. Augmentez le montant, réduisez la durée ou choisissez l’objectif « Visites »`
-          : `Budget publicitaire trop faible pour ${form.duree_jours} jours (${formaterFcfa(devis.budget_jour_fcfa)} par jour, minimum ${formaterFcfa(minimum)}) : augmentez le montant ou réduisez la durée`;
+          : `Budget publicitaire trop faible pour ${form.duree_jours} jours (${formaterFcfa(devis.budget_jour_fcfa)} par jour, minimum ${formaterFcfa(minimum)})${fraisVideo > 0 ? ` (dont ${formaterFcfa(fraisVideo)} de frais vidéo)` : ''} : augmentez le montant ou réduisez la durée`;
       }
     }
     setErreurs(e);
@@ -484,11 +578,52 @@ export default function BoostWizard({
     setUpload(true);
     try {
       const r = await uploadImage(fichier, boutique.slug, 'boosts');
-      majForm({ image_url: r.url });
+      majForm({ image_url: r.url, media_type: 'image', video_url: '', video_duree_sec: null });
     } catch (err) {
       setErreurs((e) => ({ ...e, image_url: messageErreur(err, "Échec de l'envoi de l'image") }));
     } finally {
       setUpload(false);
+    }
+  };
+
+  const choisirVideo = async (fichier: File | undefined) => {
+    if (!fichier) return;
+    if (!TYPES_VIDEO.has(fichier.type)) {
+      setErreurs((e) => ({ ...e, video_url: 'Seuls les fichiers MP4 et MOV sont acceptés' }));
+      return;
+    }
+    if (fichier.size > TAILLE_MAX_VIDEO) {
+      setErreurs((e) => ({ ...e, video_url: 'La vidéo ne doit pas dépasser 50 Mo' }));
+      return;
+    }
+    setUpload(true);
+    setProgressionVideo(0);
+    try {
+      const meta = await lireMetadonneesVideo(fichier);
+      const duree = Math.round(meta.duree);
+      if (!Number.isFinite(duree) || duree < 1 || duree > 60) {
+        setErreurs((e) => ({ ...e, video_url: 'La vidéo doit durer entre 1 et 60 secondes' }));
+        return;
+      }
+      if (!ratioVideoAccepte(meta.largeur, meta.hauteur)) {
+        setErreurs((e) => ({ ...e, video_url: 'Le format doit être 4:5, 1:1 ou 9:16' }));
+        return;
+      }
+      const presigne = await demanderUrlVideo(boutique.id, fichier.type, fichier.size);
+      await televerserVideo(presigne.upload_url, fichier, setProgressionVideo);
+      const miniature = await capturerMiniature(fichier);
+      const image = await uploadImage(miniature, boutique.slug, 'boosts');
+      majForm({
+        media_type: 'video',
+        video_url: presigne.url,
+        video_duree_sec: duree,
+        image_url: image.url
+      });
+    } catch (err) {
+      setErreurs((e) => ({ ...e, video_url: messageErreur(err, "Échec de l'envoi de la vidéo") }));
+    } finally {
+      setUpload(false);
+      setProgressionVideo(0);
     }
   };
 
@@ -665,19 +800,73 @@ export default function BoostWizard({
                 </Champ>
               )}
 
-              <Champ label="Visuel" erreur={erreurs.image_url} aide="Image nette, peu de texte. Format paysage recommandé (1200 × 628).">
-                <div className="flex items-center gap-3">
-                  {form.image_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={form.image_url} alt="" className="h-16 w-28 rounded-lg border border-gray-200 object-cover" />
-                  )}
-                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                    {upload ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
-                    {form.image_url ? 'Changer le visuel' : 'Ajouter un visuel'}
-                    <input type="file" accept="image/*" className="sr-only" disabled={upload} onChange={(e) => void choisirVisuel(e.target.files?.[0])} />
-                  </label>
+              <div>
+                <p className="mb-2 text-sm font-medium text-gray-900">Visuel</p>
+                <div className="mb-3 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => majForm({ media_type: 'image', video_url: '', video_duree_sec: null })}
+                    className={`rounded-lg border px-3 py-1.5 text-sm ${form.media_type === 'image' ? 'border-black ring-1 ring-black' : 'border-gray-200'}`}
+                  >
+                    Image
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => majForm({ media_type: 'video' })}
+                    className={`rounded-lg border px-3 py-1.5 text-sm ${form.media_type === 'video' ? 'border-black ring-1 ring-black' : 'border-gray-200'}`}
+                  >
+                    Vidéo
+                  </button>
                 </div>
-              </Champ>
+                {form.media_type === 'video' ? (
+                  <Champ
+                    label="Vidéo"
+                    erreur={erreurs.video_url || erreurs.image_url}
+                    aide="MP4 ou MOV, 60 s max, 50 Mo, format 4:5, 1:1 ou 9:16. La miniature est capturée automatiquement."
+                  >
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-3">
+                        {form.video_url ? (
+                          <video src={form.video_url} poster={form.image_url || undefined} muted className="h-16 w-12 rounded-lg border border-gray-200 object-cover" />
+                        ) : form.image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={form.image_url} alt="" className="h-16 w-12 rounded-lg border border-gray-200 object-cover" />
+                        ) : null}
+                        <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                          {upload ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />}
+                          {form.video_url ? 'Changer la vidéo' : 'Ajouter une vidéo'}
+                          <input
+                            type="file"
+                            accept="video/mp4,video/quicktime"
+                            className="sr-only"
+                            disabled={upload}
+                            onChange={(e) => void choisirVideo(e.target.files?.[0])}
+                          />
+                        </label>
+                      </div>
+                      {upload && progressionVideo > 0 && (
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200" role="progressbar" aria-valuenow={progressionVideo} aria-valuemin={0} aria-valuemax={100}>
+                          <div className="h-full bg-black" style={{ width: `${progressionVideo}%` }} />
+                        </div>
+                      )}
+                    </div>
+                  </Champ>
+                ) : (
+                  <Champ label="Image" erreur={erreurs.image_url} aide="Image nette, peu de texte. Format paysage recommandé (1200 × 628).">
+                    <div className="flex items-center gap-3">
+                      {form.image_url && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={form.image_url} alt="" className="h-16 w-28 rounded-lg border border-gray-200 object-cover" />
+                      )}
+                      <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                        {upload ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+                        {form.image_url ? 'Changer le visuel' : 'Ajouter un visuel'}
+                        <input type="file" accept="image/*" className="sr-only" disabled={upload} onChange={(e) => void choisirVisuel(e.target.files?.[0])} />
+                      </label>
+                    </div>
+                  </Champ>
+                )}
+              </div>
 
               <Champ label="Titre" erreur={erreurs.titre} aide={`${form.titre.length}/80`}>
                 <input value={form.titre} maxLength={80} onChange={(e) => majForm({ titre: e.target.value })} className={classeInput(erreurs.titre)} />
@@ -759,14 +948,14 @@ export default function BoostWizard({
                         key={p.code}
                         type="button"
                         disabled={tropFaible}
-                        title={tropFaible ? 'Budget trop faible pour recevoir des messages WhatsApp' : undefined}
+                        title={tropFaible ? (plancherWhatsapp ? 'Budget trop faible pour recevoir des messages WhatsApp' : 'Budget trop faible pour une vidéo : les frais vidéo sont inclus') : undefined}
                         onClick={() => majForm({ total_fcfa: p.total_fcfa, duree_jours: p.duree_jours })}
                         className={`rounded-xl border p-3 text-left transition disabled:cursor-not-allowed disabled:bg-gray-50 disabled:opacity-60 ${actif ? 'border-black ring-1 ring-black' : 'border-gray-200 hover:border-gray-300'}`}
                       >
                         <p className="text-xs font-medium uppercase text-gray-500">{p.nom}</p>
                         <p className="mt-1 text-base font-bold text-gray-900">{formaterFcfa(p.total_fcfa)}</p>
                         <p className="text-xs text-gray-500">{p.duree_jours} jours conseillés</p>
-                        {tropFaible && <p className="mt-1 text-xs font-medium text-amber-700">Trop faible pour WhatsApp</p>}
+                        {tropFaible && <p className="mt-1 text-xs font-medium text-amber-700">{plancherWhatsapp ? 'Trop faible pour WhatsApp' : 'Trop faible pour une vidéo'}</p>}
                         {/* min/max = impressions par jour pour la durée actuellement choisie (API) */}
                         {est?.min ? (
                           <p className="mt-1 text-xs text-gray-600">
@@ -834,11 +1023,30 @@ export default function BoostWizard({
                 </div>
               )}
 
+              {budgetVideoInsuffisant && devis && (
+                <div className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between">
+                  <p>
+                    Une publicité vidéo inclut <strong>{formaterFcfa(fraisVideo)}</strong> de frais vidéo : il reste {formaterFcfa(devis.budget_jour_fcfa)} de publicité par jour, pour un minimum de {formaterFcfa(minimumJour)}.
+                    {devis.total_minimum_fcfa ? <> Pour {form.duree_jours} jours, il faut au moins <strong>{formaterFcfa(devis.total_minimum_fcfa)}</strong>.</> : null}
+                  </p>
+                  {devis.total_minimum_fcfa && devis.total_minimum_fcfa <= parametres.total_max_fcfa ? (
+                    <button
+                      type="button"
+                      onClick={() => majForm({ total_fcfa: devis.total_minimum_fcfa! })}
+                      className="shrink-0 rounded-lg bg-black px-3 py-2 text-xs font-medium text-white hover:bg-gray-800"
+                    >
+                      Passer à {formaterFcfa(devis.total_minimum_fcfa)}
+                    </button>
+                  ) : null}
+                </div>
+              )}
+
               <div className="rounded-xl bg-gray-50 p-4 text-sm">
                 {devis ? (
                   <dl className="space-y-1.5">
                     <div className="flex justify-between"><dt className="text-gray-600">Budget publicitaire (Meta)</dt><dd className="font-medium">{formaterFcfa(devis.budget_media_fcfa)}</dd></div>
                     <div className="flex justify-between"><dt className="text-gray-600">Frais de gestion Marché 241</dt><dd className="font-medium">{formaterFcfa(devis.commission_fcfa)}</dd></div>
+                    {(devis.frais_video_fcfa ?? 0) > 0 && <div className="flex justify-between"><dt className="text-gray-600">Frais vidéo</dt><dd className="font-medium">{formaterFcfa(devis.frais_video_fcfa!)}</dd></div>}
                     {devis.tva_fcfa > 0 && <div className="flex justify-between"><dt className="text-gray-600">TVA</dt><dd className="font-medium">{formaterFcfa(devis.tva_fcfa)}</dd></div>}
                     <div className="flex justify-between border-t border-gray-200 pt-1.5 text-base"><dt className="font-semibold">Total</dt><dd className="font-bold">{formaterFcfa(devis.total_fcfa)}</dd></div>
                     <p className="pt-1 text-xs text-gray-500">
@@ -866,12 +1074,14 @@ export default function BoostWizard({
                 <dl className="space-y-1.5">
                   <div className="flex justify-between"><dt className="text-gray-600">Budget publicitaire (Meta)</dt><dd className="font-medium">{formaterFcfa(boost.budget_media_fcfa)}</dd></div>
                   <div className="flex justify-between"><dt className="text-gray-600">Frais de gestion Marché 241</dt><dd className="font-medium">{formaterFcfa(boost.commission_fcfa)}</dd></div>
+                  {(boost.frais_video_fcfa ?? 0) > 0 && <div className="flex justify-between"><dt className="text-gray-600">Frais vidéo</dt><dd className="font-medium">{formaterFcfa(boost.frais_video_fcfa)}</dd></div>}
                   {boost.tva_fcfa > 0 && <div className="flex justify-between"><dt className="text-gray-600">TVA</dt><dd className="font-medium">{formaterFcfa(boost.tva_fcfa)}</dd></div>}
                   <div className="flex justify-between border-t border-gray-200 pt-1.5 text-base"><dt className="font-semibold">À payer</dt><dd className="font-bold">{formaterFcfa(boost.total_fcfa)}</dd></div>
                 </dl>
                 <p className="mt-2 text-xs text-gray-500">
                   Diffusion de {boost.duree_jours} jours après validation par l’équipe Marché 241. En cas de refus, ou si le budget n’est pas entièrement dépensé, la différence vous est remboursée
                   {boost.frais_encaissement_fcfa > 0 ? <>, hors frais d’encaissement de {formaterFcfa(boost.frais_encaissement_fcfa)} (non remboursables)</> : null}.
+                  {(boost.frais_video_fcfa ?? 0) > 0 ? <> Les frais vidéo ne sont conservés que si votre publicité a été diffusée.</> : null}
                 </p>
               </div>
 
@@ -962,7 +1172,14 @@ export default function BoostWizard({
 
         <aside className="lg:sticky lg:top-0 lg:self-start">
           <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">Aperçu Facebook</p>
-          <AdPreview titre={form.titre} texte={form.texte_principal} description={form.description} imageUrl={form.image_url || null} objectif={form.objectif} />
+          <AdPreview
+            titre={form.titre}
+            texte={form.texte_principal}
+            description={form.description}
+            imageUrl={form.image_url || null}
+            videoUrl={form.media_type === 'video' ? form.video_url || null : null}
+            objectif={form.objectif}
+          />
         </aside>
       </div>
     </div>

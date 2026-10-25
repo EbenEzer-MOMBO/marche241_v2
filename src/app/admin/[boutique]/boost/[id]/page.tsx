@@ -239,12 +239,20 @@ function DetailContenu({ ctx }: { ctx: BoostPageContexte }) {
         </div>
 
         <aside className="space-y-3">
-          <AdPreview titre={boost.titre ?? ''} texte={boost.texte_principal ?? ''} description={boost.description} imageUrl={boost.image_url} objectif={boost.objectif} />
+          <AdPreview
+            titre={boost.titre ?? ''}
+            texte={boost.texte_principal ?? ''}
+            description={boost.description}
+            imageUrl={boost.image_url}
+            videoUrl={boost.media_type === 'video' ? boost.video_url : null}
+            objectif={boost.objectif}
+          />
           <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm">
             <dl className="space-y-1.5">
               <div className="flex justify-between"><dt className="text-gray-600">Payé</dt><dd className="font-medium">{formaterFcfa(boost.total_fcfa)}</dd></div>
               <div className="flex justify-between"><dt className="text-gray-600">dont budget Meta</dt><dd>{formaterFcfa(boost.budget_media_fcfa)}</dd></div>
               <div className="flex justify-between"><dt className="text-gray-600">dont frais de gestion</dt><dd>{formaterFcfa(boost.commission_fcfa)}</dd></div>
+              {(boost.frais_video_fcfa ?? 0) > 0 && <div className="flex justify-between"><dt className="text-gray-600">dont frais vidéo</dt><dd>{formaterFcfa(boost.frais_video_fcfa)}</dd></div>}
             </dl>
           </div>
         </aside>
