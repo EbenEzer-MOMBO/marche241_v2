@@ -63,7 +63,7 @@ const ETAPES = [
 ] as const;
 
 const CHAMPS_PAR_ETAPE: Record<number, string[]> = {
-  1: ['titre', 'texte_principal', 'image_url', 'video_url', 'media_type', 'produit_id', 'description', 'nom'],
+  1: ['titre', 'texte_principal', 'image_url', 'video_url', 'video_duree_sec', 'media_type', 'produit_id', 'description', 'nom'],
   2: ['whatsapp_e164', 'url_destination', 'objectif', 'ciblage'],
   3: ['total_fcfa', 'duree_jours']
 };
@@ -79,6 +79,7 @@ const CHAMPS_AFFICHES = new Set([
   'produit_id',
   'image_url',
   'video_url',
+  'video_duree_sec',
   'titre',
   'texte_principal',
   'description',
@@ -95,63 +96,68 @@ const TAILLE_MAX_VIDEO = 50 * 1024 * 1024;
 const TYPES_VIDEO = new Set(['video/mp4', 'video/quicktime']);
 const RATIOS_VIDEO = [4 / 5, 1, 9 / 16];
 
-const lireMetadonneesVideo = (fichier: File): Promise<{ duree: number; largeur: number; hauteur: number }> =>
-  new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(fichier);
-    const video = document.createElement('video');
-    video.preload = 'metadata';
-    video.muted = true;
-    video.playsInline = true;
-    video.src = url;
-    video.onloadedmetadata = () => {
-      const info = { duree: video.duration, largeur: video.videoWidth, hauteur: video.videoHeight };
-      URL.revokeObjectURL(url);
-      resolve(info);
-    };
-    video.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error('Impossible de lire la vidéo'));
-    };
-  });
+const DELAI_LECTURE_VIDEO_MS = 15_000;
+const COTE_MAX_MINIATURE = 1280;
+const MESSAGE_VIDEO_ILLISIBLE = 'Impossible de lire cette vidéo dans votre navigateur. Exportez-la en MP4 (H.264) puis réessayez.';
 
-const capturerMiniature = (fichier: File): Promise<File> =>
+/**
+ * Lit les métadonnées et capture la miniature sur un seul élément <video>, avec un délai maximum :
+ * un navigateur qui ne sait pas décoder le fichier (MOV HEVC, iOS) ne doit jamais bloquer le wizard.
+ */
+const analyserVideo = (fichier: File): Promise<{ duree: number; largeur: number; hauteur: number; miniature: File }> =>
   new Promise((resolve, reject) => {
     const url = URL.createObjectURL(fichier);
     const video = document.createElement('video');
+    let termine = false;
+    let minuteur: ReturnType<typeof setTimeout> | undefined;
+    const finir = (action: () => void) => {
+      if (termine) return;
+      termine = true;
+      clearTimeout(minuteur);
+      video.removeAttribute('src');
+      video.load();
+      URL.revokeObjectURL(url);
+      action();
+    };
+    const echec = () => finir(() => reject(new Error(MESSAGE_VIDEO_ILLISIBLE)));
+    minuteur = setTimeout(echec, DELAI_LECTURE_VIDEO_MS);
+
+    video.preload = 'auto';
     video.muted = true;
     video.playsInline = true;
-    video.src = url;
+    video.onerror = echec;
     video.onloadeddata = () => {
       video.currentTime = Math.min(0.4, Number.isFinite(video.duration) ? video.duration / 4 : 0.4);
     };
     video.onseeked = () => {
+      const { videoWidth: largeur, videoHeight: hauteur, duration: duree } = video;
+      if (!largeur || !hauteur) {
+        echec();
+        return;
+      }
+      const echelle = Math.min(1, COTE_MAX_MINIATURE / Math.max(largeur, hauteur));
       const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth || 1080;
-      canvas.height = video.videoHeight || 1080;
+      canvas.width = Math.round(largeur * echelle);
+      canvas.height = Math.round(hauteur * echelle);
       const ctx = canvas.getContext('2d');
       if (!ctx) {
-        URL.revokeObjectURL(url);
-        reject(new Error('Miniature impossible'));
+        echec();
         return;
       }
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       canvas.toBlob(
         (blob) => {
-          URL.revokeObjectURL(url);
           if (!blob) {
-            reject(new Error('Miniature impossible'));
+            echec();
             return;
           }
-          resolve(new File([blob], 'miniature-boost.jpg', { type: 'image/jpeg' }));
+          finir(() => resolve({ duree, largeur, hauteur, miniature: new File([blob], 'miniature-boost.jpg', { type: 'image/jpeg' }) }));
         },
         'image/jpeg',
         0.85
       );
     };
-    video.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error('Impossible de lire la vidéo'));
-    };
+    video.src = url;
   });
 
 const ratioVideoAccepte = (largeur: number, hauteur: number): boolean => {
@@ -184,6 +190,8 @@ interface Formulaire {
   media_type: 'image' | 'video';
   video_url: string;
   video_duree_sec: number | null;
+  /** Miniature de la vidéo, mémorisée si on bascule temporairement sur une image. */
+  miniature_video: string;
   url_destination: string;
   whatsapp_e164: string;
   total_fcfa: number;
@@ -204,6 +212,7 @@ function depuisBoost(b: Boost): Formulaire {
     media_type: b.media_type ?? 'image',
     video_url: b.video_url ?? '',
     video_duree_sec: b.video_duree_sec ?? null,
+    miniature_video: b.media_type === 'video' ? b.image_url ?? '' : '',
     url_destination: b.url_destination ?? '',
     whatsapp_e164: b.whatsapp_e164 ?? '',
     total_fcfa: b.total_fcfa,
@@ -223,8 +232,10 @@ function versApi(f: Formulaire, etape: number): DonneesBrouillonBoost {
     description: f.description || null,
     image_url: f.image_url || null,
     media_type: f.media_type,
-    video_url: f.media_type === 'video' ? f.video_url || null : null,
-    video_duree_sec: f.media_type === 'video' ? f.video_duree_sec : null,
+    // En mode image, une vidéo déjà envoyée est conservée (clé omise) pour pouvoir revenir en arrière ;
+    // null demande à l'API de la supprimer (remplacement explicite par une image)
+    video_url: f.media_type === 'video' ? f.video_url || null : f.video_url ? undefined : null,
+    video_duree_sec: f.media_type === 'video' ? f.video_duree_sec : f.video_url ? undefined : null,
     // Saisie en cours (« https: », « +241… ») : non envoyée, sinon l'API rejetterait tout le brouillon
     url_destination: estLienWeb(f.url_destination) ? f.url_destination.trim() : null,
     whatsapp_e164: WHATSAPP_E164.test(f.whatsapp_e164.replace(/\s/g, '')) ? f.whatsapp_e164.replace(/\s/g, '') : null,
@@ -292,6 +303,7 @@ export default function BoostWizard({
           media_type: 'image',
           video_url: '',
           video_duree_sec: null,
+          miniature_video: '',
           url_destination: '',
           whatsapp_e164: '',
           total_fcfa: premierPack?.total_fcfa ?? parametres.total_min_fcfa,
@@ -337,7 +349,8 @@ export default function BoostWizard({
           nom: p.nom ?? f.nom,
           titre: p.titre ?? f.titre,
           texte_principal: p.texte_principal ?? f.texte_principal,
-          image_url: p.image_url ?? f.image_url,
+          // La miniature d'une vidéo déjà envoyée ne doit pas être remplacée par l'image du produit
+          image_url: f.media_type === 'video' && f.video_url ? f.image_url : p.image_url ?? f.image_url,
           url_destination: p.url_destination ?? f.url_destination,
           whatsapp_e164: f.whatsapp_e164 || p.whatsapp_e164 || ''
         }));
@@ -578,7 +591,7 @@ export default function BoostWizard({
     setUpload(true);
     try {
       const r = await uploadImage(fichier, boutique.slug, 'boosts');
-      majForm({ image_url: r.url, media_type: 'image', video_url: '', video_duree_sec: null });
+      majForm({ image_url: r.url, media_type: 'image', video_url: '', video_duree_sec: null, miniature_video: '' });
     } catch (err) {
       setErreurs((e) => ({ ...e, image_url: messageErreur(err, "Échec de l'envoi de l'image") }));
     } finally {
@@ -599,25 +612,26 @@ export default function BoostWizard({
     setUpload(true);
     setProgressionVideo(0);
     try {
-      const meta = await lireMetadonneesVideo(fichier);
-      const duree = Math.round(meta.duree);
+      // Tout ce qui est local (lecture, miniature) passe avant l'envoi : un échec ne laisse aucun fichier sur R2
+      const analyse = await analyserVideo(fichier);
+      const duree = Math.round(analyse.duree);
       if (!Number.isFinite(duree) || duree < 1 || duree > 60) {
         setErreurs((e) => ({ ...e, video_url: 'La vidéo doit durer entre 1 et 60 secondes' }));
         return;
       }
-      if (!ratioVideoAccepte(meta.largeur, meta.hauteur)) {
+      if (!ratioVideoAccepte(analyse.largeur, analyse.hauteur)) {
         setErreurs((e) => ({ ...e, video_url: 'Le format doit être 4:5, 1:1 ou 9:16' }));
         return;
       }
+      const image = await uploadImage(analyse.miniature, boutique.slug, 'boosts');
       const presigne = await demanderUrlVideo(boutique.id, fichier.type, fichier.size);
       await televerserVideo(presigne.upload_url, fichier, setProgressionVideo);
-      const miniature = await capturerMiniature(fichier);
-      const image = await uploadImage(miniature, boutique.slug, 'boosts');
       majForm({
         media_type: 'video',
         video_url: presigne.url,
         video_duree_sec: duree,
-        image_url: image.url
+        image_url: image.url,
+        miniature_video: image.url
       });
     } catch (err) {
       setErreurs((e) => ({ ...e, video_url: messageErreur(err, "Échec de l'envoi de la vidéo") }));
@@ -805,14 +819,14 @@ export default function BoostWizard({
                 <div className="mb-3 flex gap-2">
                   <button
                     type="button"
-                    onClick={() => majForm({ media_type: 'image', video_url: '', video_duree_sec: null })}
+                    onClick={() => majForm({ media_type: 'image', miniature_video: form.video_url ? form.image_url : form.miniature_video })}
                     className={`rounded-lg border px-3 py-1.5 text-sm ${form.media_type === 'image' ? 'border-black ring-1 ring-black' : 'border-gray-200'}`}
                   >
                     Image
                   </button>
                   <button
                     type="button"
-                    onClick={() => majForm({ media_type: 'video' })}
+                    onClick={() => majForm(form.video_url && form.miniature_video ? { media_type: 'video', image_url: form.miniature_video } : { media_type: 'video' })}
                     className={`rounded-lg border px-3 py-1.5 text-sm ${form.media_type === 'video' ? 'border-black ring-1 ring-black' : 'border-gray-200'}`}
                   >
                     Vidéo
@@ -821,7 +835,7 @@ export default function BoostWizard({
                 {form.media_type === 'video' ? (
                   <Champ
                     label="Vidéo"
-                    erreur={erreurs.video_url || erreurs.image_url}
+                    erreur={erreurs.video_url || erreurs.video_duree_sec || erreurs.image_url}
                     aide="MP4 ou MOV, 60 s max, 50 Mo, format 4:5, 1:1 ou 9:16. La miniature est capturée automatiquement."
                   >
                     <div className="flex flex-col gap-2">
@@ -840,7 +854,11 @@ export default function BoostWizard({
                             accept="video/mp4,video/quicktime"
                             className="sr-only"
                             disabled={upload}
-                            onChange={(e) => void choisirVideo(e.target.files?.[0])}
+                            onChange={(e) => {
+                              const fichier = e.target.files?.[0];
+                              e.target.value = '';
+                              void choisirVideo(fichier);
+                            }}
                           />
                         </label>
                       </div>
@@ -861,7 +879,11 @@ export default function BoostWizard({
                       <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
                         {upload ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
                         {form.image_url ? 'Changer le visuel' : 'Ajouter un visuel'}
-                        <input type="file" accept="image/*" className="sr-only" disabled={upload} onChange={(e) => void choisirVisuel(e.target.files?.[0])} />
+                        <input type="file" accept="image/*" className="sr-only" disabled={upload} onChange={(e) => {
+                          const fichier = e.target.files?.[0];
+                          e.target.value = '';
+                          void choisirVisuel(fichier);
+                        }} />
                       </label>
                     </div>
                   </Champ>
