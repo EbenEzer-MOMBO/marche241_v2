@@ -30,6 +30,8 @@ export interface ParametresBoost {
   tva_bps: number;
   /** Frais d'encaissement non remboursables (250 = 2,5 % du total payé). */
   frais_encaissement_bps: number;
+  /** Frais fixe ajouté à une publicité vidéo (absent si l'API est plus ancienne). Remboursé si la pub n'a jamais diffusé. */
+  frais_video_fcfa?: number;
   budget_jour_min_fcfa: number;
   /** Plancher par jour de l'objectif WhatsApp, converti en FCFA par l'API (absent si l'API est plus ancienne). */
   budget_jour_min_whatsapp_fcfa?: number;
@@ -52,6 +54,8 @@ export interface DevisBoost {
   budget_media_fcfa: number;
   commission_bps: number;
   commission_fcfa: number;
+  /** Frais fixe d'une créa vidéo, déduit avant la commission (0 pour une image). */
+  frais_video_fcfa?: number;
   tva_bps: number;
   tva_fcfa: number;
   total_fcfa: number;
@@ -78,6 +82,9 @@ export interface DonneesBrouillonBoost {
   texte_principal?: string | null;
   description?: string | null;
   image_url?: string | null;
+  media_type?: 'image' | 'video';
+  video_url?: string | null;
+  video_duree_sec?: number | null;
 }
 
 export interface EvenementBoostVendeur {
@@ -154,8 +161,18 @@ export async function getPrefillBoost(boutiqueId: number, produitId?: number | n
   return verifier(r, 'Pré-remplissage indisponible').prefill;
 }
 
-export async function getDevisBoost(totalFcfa: number, dureeJours: number, objectif?: ObjectifBoost): Promise<DevisBoost> {
-  const r = await api.post<Reponse<{ devis: DevisBoost }>>('/boosts/devis', { total_fcfa: totalFcfa, duree_jours: dureeJours, ...(objectif ? { objectif } : {}) });
+export async function getDevisBoost(
+  totalFcfa: number,
+  dureeJours: number,
+  objectif?: ObjectifBoost,
+  mediaType: 'image' | 'video' = 'image'
+): Promise<DevisBoost> {
+  const r = await api.post<Reponse<{ devis: DevisBoost }>>('/boosts/devis', {
+    total_fcfa: totalFcfa,
+    duree_jours: dureeJours,
+    media_type: mediaType,
+    ...(objectif ? { objectif } : {})
+  });
   return verifier(r, 'Devis indisponible').devis;
 }
 
@@ -169,10 +186,15 @@ export async function estimerAudienceBoost(ciblage: Partial<CiblageBoost>): Prom
   return verifier(r, 'Estimation indisponible').audience;
 }
 
-export async function estimerImpressionsBoost(totauxFcfa: number[], dureeJours: number): Promise<EstimationImpressions[]> {
+export async function estimerImpressionsBoost(
+  totauxFcfa: number[],
+  dureeJours: number,
+  mediaType: 'image' | 'video' = 'image'
+): Promise<EstimationImpressions[]> {
   const r = await api.post<Reponse<{ impressions: EstimationImpressions[] }>>('/boosts/estimation/impressions', {
     totaux_fcfa: totauxFcfa,
-    duree_jours: dureeJours
+    duree_jours: dureeJours,
+    media_type: mediaType
   });
   return verifier(r, 'Estimation indisponible').impressions;
 }
@@ -196,6 +218,39 @@ export async function getDetailBoost(boostId: number): Promise<DetailBoost> {
 export async function creerBrouillonBoost(boutiqueId: number, donnees: DonneesBrouillonBoost): Promise<Boost> {
   const r = await api.post<Reponse<{ boost: Boost }>>('/boosts', { boutique_id: boutiqueId, ...donnees });
   return verifier(r, 'Impossible de créer le brouillon').boost;
+}
+
+export async function demanderUrlVideo(
+  boutiqueId: number,
+  contentType: string,
+  taille: number
+): Promise<{ upload_url: string; url: string; path: string; expire_en_sec: number }> {
+  const r = await api.post<
+    Reponse<{ upload_url: string; url: string; path: string; expire_en_sec: number }>
+  >('/boosts/video/upload-url', { boutique_id: boutiqueId, content_type: contentType, taille });
+  return verifier(r, "Impossible de préparer l'envoi de la vidéo");
+}
+
+/** PUT présigné vers R2, avec progression (0–100). */
+export function televerserVideo(
+  uploadUrl: string,
+  fichier: File,
+  onProgress?: (pourcent: number) => void
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', uploadUrl);
+    xhr.setRequestHeader('Content-Type', fichier.type);
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve();
+      else reject(new Error("Envoi de la vidéo impossible"));
+    };
+    xhr.onerror = () => reject(new Error("Envoi de la vidéo impossible"));
+    xhr.send(fichier);
+  });
 }
 
 export async function enregistrerBrouillonBoost(boostId: number, donnees: DonneesBrouillonBoost): Promise<Boost> {
@@ -292,11 +347,17 @@ export function budgetJourMinimum(objectif: ObjectifBoost, parametres: Parametre
     : parametres.budget_jour_min_fcfa;
 }
 
+/** Frais fixe applicable au visuel choisi : seulement pour une vidéo (miroir de fraisVideoPour côté API). */
+export function fraisVideoPour(mediaType: 'image' | 'video' | null | undefined, parametres: ParametresBoost): number {
+  return mediaType === 'video' ? Math.max(0, parametres.frais_video_fcfa ?? 0) : 0;
+}
+
 /** Budget média d'un total payé (miroir de devisDepuisTotal côté API, pour signaler les packs insuffisants). */
-export function budgetMediaDepuisTotal(totalFcfa: number, parametres: ParametresBoost): number {
+export function budgetMediaDepuisTotal(totalFcfa: number, parametres: ParametresBoost, fraisVideoFcfa = 0): number {
   const baseHt = Math.round((totalFcfa * 10_000) / (10_000 + parametres.tva_bps));
-  const commission = Math.max(parametres.commission_min_fcfa, Math.round((baseHt * parametres.commission_bps) / (10_000 + parametres.commission_bps)));
-  return Math.max(0, baseHt - commission);
+  const net = baseHt - Math.max(0, fraisVideoFcfa);
+  const commission = Math.max(parametres.commission_min_fcfa, Math.round((net * parametres.commission_bps) / (10_000 + parametres.commission_bps)));
+  return Math.max(0, net - commission);
 }
 
 export function formaterFcfa(montant: number): string {
