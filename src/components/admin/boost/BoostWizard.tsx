@@ -827,9 +827,16 @@ export default function BoostWizard({
                   <button
                     type="button"
                     onClick={() => majForm(form.video_url && form.miniature_video ? { media_type: 'video', image_url: form.miniature_video } : { media_type: 'video' })}
-                    className={`rounded-lg border px-3 py-1.5 text-sm ${form.media_type === 'video' ? 'border-black ring-1 ring-black' : 'border-gray-200'}`}
+                    className={`relative inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm transition motion-safe:hover:-translate-y-0.5 ${form.media_type === 'video' ? 'border-black ring-1 ring-black' : 'border-fuchsia-300 bg-fuchsia-50 text-fuchsia-900 hover:border-fuchsia-400'}`}
                   >
+                    <Video className="h-3.5 w-3.5" />
                     Vidéo
+                    {form.media_type !== 'video' && (
+                      <span className="absolute -right-1 -top-1 flex h-2.5 w-2.5" aria-hidden="true">
+                        <span className="absolute inline-flex h-full w-full rounded-full bg-fuchsia-400 opacity-75 motion-safe:animate-ping" />
+                        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-fuchsia-500" />
+                      </span>
+                    )}
                   </button>
                 </div>
                 {form.media_type === 'video' ? (
