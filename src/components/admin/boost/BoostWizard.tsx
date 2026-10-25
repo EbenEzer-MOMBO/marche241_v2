@@ -245,6 +245,51 @@ function versApi(f: Formulaire, etape: number): DonneesBrouillonBoost {
   };
 }
 
+/**
+ * Bouton du choix Image / Vidéo. `accent` met l'option en avant tant qu'elle n'est pas choisie : bordure
+ * assez contrastée, pastille qui pulse trois fois puis reste fixe, et texte masqué pour les lecteurs d'écran.
+ */
+function BoutonMedia({
+  actif,
+  accent = false,
+  icone,
+  onClick,
+  children
+}: {
+  actif: boolean;
+  accent?: boolean;
+  icone: React.ReactNode;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  const miseEnAvant = accent && !actif;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`relative inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm transition motion-safe:hover:-translate-y-0.5 ${
+        actif
+          ? 'border-black ring-1 ring-black'
+          : miseEnAvant
+            ? 'border-fuchsia-600 bg-fuchsia-50 text-fuchsia-900 hover:border-fuchsia-700'
+            : 'border-gray-200 hover:border-gray-300'
+      }`}
+    >
+      {icone}
+      {children}
+      {miseEnAvant && (
+        <>
+          <span className="sr-only"> (nouveau)</span>
+          <span className="absolute -right-1 -top-1 flex h-2.5 w-2.5" aria-hidden="true">
+            <span className="absolute inline-flex h-full w-full rounded-full bg-fuchsia-400 opacity-75 motion-safe:animate-[ping_1s_cubic-bezier(0,0,0.2,1)_3]" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-fuchsia-600" />
+          </span>
+        </>
+      )}
+    </button>
+  );
+}
+
 function Champ({ label, erreur, aide, children }: { label: string; erreur?: string; aide?: string; children: React.ReactNode }) {
   return (
     <label className="block">
@@ -817,20 +862,21 @@ export default function BoostWizard({
               <div>
                 <p className="mb-2 text-sm font-medium text-gray-900">Visuel</p>
                 <div className="mb-3 flex gap-2">
-                  <button
-                    type="button"
+                  <BoutonMedia
+                    actif={form.media_type === 'image'}
+                    icone={<ImagePlus className="h-3.5 w-3.5" />}
                     onClick={() => majForm({ media_type: 'image', miniature_video: form.video_url ? form.image_url : form.miniature_video })}
-                    className={`rounded-lg border px-3 py-1.5 text-sm ${form.media_type === 'image' ? 'border-black ring-1 ring-black' : 'border-gray-200'}`}
                   >
                     Image
-                  </button>
-                  <button
-                    type="button"
+                  </BoutonMedia>
+                  <BoutonMedia
+                    actif={form.media_type === 'video'}
+                    accent
+                    icone={<Video className="h-3.5 w-3.5" />}
                     onClick={() => majForm(form.video_url && form.miniature_video ? { media_type: 'video', image_url: form.miniature_video } : { media_type: 'video' })}
-                    className={`rounded-lg border px-3 py-1.5 text-sm ${form.media_type === 'video' ? 'border-black ring-1 ring-black' : 'border-gray-200'}`}
                   >
                     Vidéo
-                  </button>
+                  </BoutonMedia>
                 </div>
                 {form.media_type === 'video' ? (
                   <Champ
