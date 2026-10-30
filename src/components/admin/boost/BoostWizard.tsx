@@ -516,15 +516,15 @@ export default function BoostWizard({
   }, []);
 
   // ---------------------------------------------------------------- navigation
-  // Plancher de budget par jour de l'objectif : Meta refuse WhatsApp sous ~2 $US par jour
-  const minimumJour = devis?.budget_jour_min_fcfa ?? budgetJourMinimum(form.objectif, parametres);
-  const plancherWhatsapp = form.objectif === 'whatsapp' && minimumJour > parametres.budget_jour_min_fcfa;
-  const budgetWhatsappInsuffisant = plancherWhatsapp && !!devis && devis.budget_jour_fcfa < minimumJour;
+  // Plancher de budget par jour : Meta refuse tout objectif sous ~2 $US par jour
+  const minimumJour = devis?.budget_jour_min_fcfa ?? budgetJourMinimum(parametres);
+  const plancherMeta = minimumJour > parametres.budget_jour_min_fcfa;
+  const budgetMetaInsuffisant = plancherMeta && !!devis && devis.budget_jour_fcfa < minimumJour;
   // Une vidéo ajoute un frais fixe : certains packs ne laissent plus assez de budget média par jour
   const fraisVideo = fraisVideoPour(form.media_type, parametres);
   const packTropFaible = (p: { total_fcfa: number; duree_jours: number }) =>
-    (plancherWhatsapp || fraisVideo > 0) && budgetMediaDepuisTotal(p.total_fcfa, parametres, fraisVideo) / p.duree_jours < minimumJour;
-  const budgetVideoInsuffisant = fraisVideo > 0 && !plancherWhatsapp && !!devis && devis.budget_jour_fcfa < minimumJour;
+    (plancherMeta || fraisVideo > 0) && budgetMediaDepuisTotal(p.total_fcfa, parametres, fraisVideo) / p.duree_jours < minimumJour;
+  const budgetVideoInsuffisant = fraisVideo > 0 && !plancherMeta && !!devis && devis.budget_jour_fcfa < minimumJour;
 
   const validerEtape = (n: number): boolean => {
     const e: Record<string, string> = {};
@@ -557,9 +557,9 @@ export default function BoostWizard({
       }
       const minimum = minimumJour;
       if (devis && devis.budget_jour_fcfa < minimum) {
-        // Plancher WhatsApp : c'est le montant qu'il faut augmenter (même champ que l'API)
-        e[plancherWhatsapp ? 'total_fcfa' : 'duree_jours'] = plancherWhatsapp
-          ? `Pour recevoir des messages WhatsApp, Meta demande au moins ${formaterFcfa(minimum)} de publicité par jour${devis.total_minimum_fcfa ? ` : il faut au moins ${formaterFcfa(devis.total_minimum_fcfa)} pour ${form.duree_jours} jours` : ''}. Augmentez le montant, réduisez la durée ou choisissez l’objectif « Visites »`
+        // Plancher Meta : c'est le montant qu'il faut augmenter (même champ que l'API)
+        e[plancherMeta ? 'total_fcfa' : 'duree_jours'] = plancherMeta
+          ? `${form.objectif === 'whatsapp' ? 'Pour recevoir des messages WhatsApp, Meta' : 'Meta'} demande au moins ${formaterFcfa(minimum)} de publicité par jour${devis.total_minimum_fcfa ? ` : il faut au moins ${formaterFcfa(devis.total_minimum_fcfa)} pour ${form.duree_jours} jours` : ''}. Augmentez le montant, réduisez la durée${form.objectif === 'whatsapp' ? ' ou choisissez l’objectif « Visites »' : ''}`
           : `Budget publicitaire trop faible pour ${form.duree_jours} jours (${formaterFcfa(devis.budget_jour_fcfa)} par jour, minimum ${formaterFcfa(minimum)})${fraisVideo > 0 ? ` (dont ${formaterFcfa(fraisVideo)} de frais vidéo)` : ''} : augmentez le montant ou réduisez la durée`;
       }
     }
@@ -1016,14 +1016,14 @@ export default function BoostWizard({
                         key={p.code}
                         type="button"
                         disabled={tropFaible}
-                        title={tropFaible ? (plancherWhatsapp ? 'Budget trop faible pour recevoir des messages WhatsApp' : 'Budget trop faible pour une vidéo : les frais vidéo sont inclus') : undefined}
+                        title={tropFaible ? (plancherMeta ? `Budget trop faible : Meta demande au moins ${formaterFcfa(minimumJour)} par jour` : 'Budget trop faible pour une vidéo : les frais vidéo sont inclus') : undefined}
                         onClick={() => majForm({ total_fcfa: p.total_fcfa, duree_jours: p.duree_jours })}
                         className={`rounded-xl border p-3 text-left transition disabled:cursor-not-allowed disabled:bg-gray-50 disabled:opacity-60 ${actif ? 'border-black ring-1 ring-black' : 'border-gray-200 hover:border-gray-300'}`}
                       >
                         <p className="text-xs font-medium uppercase text-gray-500">{p.nom}</p>
                         <p className="mt-1 text-base font-bold text-gray-900">{formaterFcfa(p.total_fcfa)}</p>
                         <p className="text-xs text-gray-500">{p.duree_jours} jours conseillés</p>
-                        {tropFaible && <p className="mt-1 text-xs font-medium text-amber-700">{plancherWhatsapp ? 'Trop faible pour WhatsApp' : 'Trop faible pour une vidéo'}</p>}
+                        {tropFaible && <p className="mt-1 text-xs font-medium text-amber-700">{plancherMeta ? 'Sous le minimum Meta' : 'Trop faible pour une vidéo'}</p>}
                         {/* min/max = impressions par jour pour la durée actuellement choisie (API) */}
                         {est?.min ? (
                           <p className="mt-1 text-xs text-gray-600">
@@ -1064,10 +1064,10 @@ export default function BoostWizard({
                 </Champ>
               </div>
 
-              {budgetWhatsappInsuffisant && devis && (
+              {budgetMetaInsuffisant && devis && (
                 <div className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between">
                   <p>
-                    Pour recevoir des messages WhatsApp, Meta demande au moins <strong>{formaterFcfa(minimumJour)}</strong> de publicité par jour.
+                    {form.objectif === 'whatsapp' ? 'Pour recevoir des messages WhatsApp, Meta' : 'Meta'} demande au moins <strong>{formaterFcfa(minimumJour)}</strong> de publicité par jour.
                     {devis.total_minimum_fcfa ? <> Pour {form.duree_jours} jours, il faut au moins <strong>{formaterFcfa(devis.total_minimum_fcfa)}</strong>.</> : null}
                   </p>
                   <div className="flex shrink-0 flex-wrap gap-2">
@@ -1080,13 +1080,15 @@ export default function BoostWizard({
                         Passer à {formaterFcfa(devis.total_minimum_fcfa)}
                       </button>
                     ) : null}
-                    <button
-                      type="button"
-                      onClick={() => { majForm({ objectif: 'trafic' }); setEtape(2); }}
-                      className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs font-medium text-amber-900 hover:bg-amber-100"
-                    >
-                      Choisir « Visites »
-                    </button>
+                    {form.objectif === 'whatsapp' && (
+                      <button
+                        type="button"
+                        onClick={() => { majForm({ objectif: 'trafic' }); setEtape(2); }}
+                        className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs font-medium text-amber-900 hover:bg-amber-100"
+                      >
+                        Choisir « Visites »
+                      </button>
+                    )}
                   </div>
                 </div>
               )}

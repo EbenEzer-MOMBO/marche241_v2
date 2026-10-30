@@ -33,7 +33,9 @@ export interface ParametresBoost {
   /** Frais fixe ajouté à une publicité vidéo (absent si l'API est plus ancienne). Remboursé si la pub n'a jamais diffusé. */
   frais_video_fcfa?: number;
   budget_jour_min_fcfa: number;
-  /** Plancher par jour de l'objectif WhatsApp, converti en FCFA par l'API (absent si l'API est plus ancienne). */
+  /** Plancher Meta par jour (tous objectifs), converti en FCFA par l'API (absent si l'API est plus ancienne). */
+  budget_jour_min_meta_fcfa?: number;
+  /** Ancien nom de `budget_jour_min_meta_fcfa` (API non redéployée). */
   budget_jour_min_whatsapp_fcfa?: number;
   packs: PackBoost[];
   kill_switch: boolean;
@@ -340,11 +342,9 @@ export async function majPreferencesRelances(relancesBoost: boolean): Promise<bo
   return verifier(r, 'Impossible d’enregistrer les préférences').preferences.relances_boost;
 }
 
-/** Plancher de budget média par jour selon l'objectif (miroir de budgetJourMinimum côté API). */
-export function budgetJourMinimum(objectif: ObjectifBoost, parametres: ParametresBoost): number {
-  return objectif === 'whatsapp'
-    ? Math.max(parametres.budget_jour_min_fcfa, parametres.budget_jour_min_whatsapp_fcfa ?? 0)
-    : parametres.budget_jour_min_fcfa;
+/** Plancher de budget média par jour, identique pour tous les objectifs (miroir de budgetJourMinimum côté API). */
+export function budgetJourMinimum(parametres: ParametresBoost): number {
+  return Math.max(parametres.budget_jour_min_fcfa, parametres.budget_jour_min_meta_fcfa ?? parametres.budget_jour_min_whatsapp_fcfa ?? 0);
 }
 
 /** Frais fixe applicable au visuel choisi : seulement pour une vidéo (miroir de fraisVideoPour côté API). */
