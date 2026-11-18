@@ -1,5 +1,5 @@
 /**
- * Service pour vérifier et interagir avec WhatsApp via le backend de l'application
+ * Vérification d'existence d'un numéro WhatsApp via le backend (aucun envoi de message depuis le front)
  */
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001/api/v1';
@@ -43,50 +43,3 @@ export async function checkWhatsAppNumber(phoneNumber: string): Promise<CheckWha
     throw new Error('Impossible de vérifier le numéro WhatsApp');
   }
 }
-
-/**
- * Envoie un code de vérification via WhatsApp via l'API backend sécurisée
- * @param phoneNumber - Numéro de téléphone
- * @param code - Code de vérification à envoyer
- */
-export async function sendWhatsAppMessage(phoneNumber: string, message: string): Promise<boolean> {
-  try {
-    const cleanNumber = phoneNumber.replace(/[^\d]/g, '');
-    const url = `${API_BASE_URL}/whatsapp/envoyer-message`;
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        telephone: cleanNumber,
-        message,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Erreur HTTP: ${response.status}`);
-    }
-
-    return true;
-  } catch (error) {
-    console.error("Erreur lors de l'envoi du message WhatsApp via le backend:", error);
-    return false;
-  }
-}
-
-export async function sendWhatsAppCode(phoneNumber: string, code: string): Promise<boolean> {
-  const message = `Votre code de vérification Marché241 est: ${code}\n\nCe code expire dans 10 minutes.`;
-  return sendWhatsAppMessage(phoneNumber, message);
-}
-
-export const buildOnboardingWelcomeMessage = (prenom: string, boutiqueSlug?: string) => {
-  const dashboardHint = boutiqueSlug
-    ? `Accédez à votre espace : /admin/${boutiqueSlug}`
-    : 'Accédez à votre espace vendeur depuis le tableau de bord.';
-
-  return `Bienvenue ${prenom} !\n\nVotre boutique est prête.\n${dashboardHint}\n\nAjoutez des produits, partagez le lien et commencez à vendre.`;
-};
-
-
